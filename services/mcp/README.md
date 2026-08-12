@@ -85,7 +85,7 @@ POSTGRES_URL=postgresql://…?sslmode=require
 BRIDGE_ADMIN_TOKEN=<a second independently generated 48-byte secret>
 ```
 
-The Postgres store runs a versioned, advisory-locked schema migration before bridge routes are exposed, leases commands transactionally with `FOR UPDATE SKIP LOCKED`, and works across concurrent Vercel instances. Startup fails closed if migration validation fails or if the database schema is newer than this server. The device endpoint is short-polling (a quick `204` when idle), so it does not consume a long-running function. The MCP-to-device result wait is bounded at 25 seconds, under the configured 30-second function limit.
+The one-shot migrator creates and owns a hardcoded, non-exposed `ambient_private` schema. Normal web-service startup performs read-only verification: it requires the exact v4 migration ledger, relation/column/constraint/index layout, no leftover Ambient relations in `public`, and a least-privilege connected identity. Missing, outdated, future, malformed, or owner-connected schemas fail closed; runtime startup never issues `CREATE` or `ALTER`. The store leases commands transactionally with `FOR UPDATE SKIP LOCKED` and works across concurrent Vercel instances. The device endpoint is short-polling (a quick `204` when idle), so it does not consume a long-running function. The MCP-to-device result wait is bounded at 25 seconds, under the configured 30-second function limit.
 
 The production service applies PostgreSQL-backed fixed-window limits before request-body parsing: 300 MCP requests per client IP per minute with 120 post-auth requests, 300 bridge requests per client IP per minute, 120 requests per authenticated administrator, plus separate quotas of 100 polls and 100 result posts per authenticated device. A normal 1.5-second agent uses about 40 polls per minute, leaving 60 poll slots and an independent result budget. Keys are separated into MCP ingress/authorized and bridge ingress/admin/poll/result scopes and one-way hashed; they never contain an authorization token. Each scope has a hard 50,000-active-key cap. Expired rows in a scope are fully reclaimed on the next new-key slow path; at capacity or on a bounded database lock/query failure, requests fail closed with a generic `503` and established counters are never evicted.
 
@@ -95,35 +95,39 @@ On Vercel, ingress identity comes only from a validated first IP in Vercel's pla
 
 This is a server-first, maintenance-window rollout. Protocol-v1 agents must not be used after the migration; the server requires protocol v2 and the `lease_id` capability, and returns HTTP `426` before leasing any command to an incompatible agent.
 
-1. Stop command producers and device agents. Take a database backup or provider snapshot and record its identifier.
+1. Stop command producers and device agents. Take a database backup or provider snapshot and record its identifier. Create a dedicated login role, for example `ambient_runtime`, with `LOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS`, no role memberships, and a password set without placing it in shell history or checked-in SQL. Do not use `anon`, `authenticated`, `service_role`, `postgres`, or a `pg_*`/`supabase_*` role.
 2. Check for unexpected duplicate request IDs:
 
    ```sql
    SELECT device_id, COALESCE(request_id, operation ->> 'requestId') AS request_id, count(*)
-   FROM ambient_bridge_commands
+   FROM "ambient_private"."ambient_bridge_commands"
    WHERE COALESCE(request_id, operation ->> 'requestId') IS NOT NULL
    GROUP BY 1, 2 HAVING count(*) > 1;
    ```
+
+   The query above is for an existing private layout. For an alpha database that still has a complete legacy public layout, run the same read-only query against `"public"."ambient_bridge_commands"`; do not create or rename anything by hand.
 
 3. Build the release and run the one-shot migrator first against staging, then production, while bridge traffic remains blocked by maintenance mode or a network rule:
 
    ```sh
    npm run build
-   POSTGRES_URL='postgresql://…?sslmode=require' npm run migrate:bridge
+   # Load MIGRATION_DATABASE_URL from an encrypted secret manager without printing it.
+   AMBIENT_RUNTIME_DB_ROLE='ambient_runtime' npm run migrate:bridge
    ```
 
-   The migrator holds a transaction-level lock, applies versions 1–4 atomically, and refuses a newer or inconsistent ledger. It deletes no command rows. It terminally fails legacy leased commands rather than replaying ambiguous work, clears request identity from noncanonical duplicates, fails active rows whose stored request identifiers disagree or are invalid, and creates the distributed rate-counter table.
+   Use a direct or session-mode TLS connection (normally port `5432`); the CLI rejects transaction-pooler port `6543`. With Supabase's shared Supavisor pooler, the connection-string username must be `<database-role>.<project-ref>` even though the PostgreSQL role and `AMBIENT_RUNTIME_DB_ROLE` remain the bare role name. Percent-encode the password when placing it in a URI. Keep `MIGRATION_DATABASE_URL` out of Vercel/runtime secrets, terminal output, and shell history. The migrator holds a transaction-level lock, applies versions 1–4 atomically in `ambient_private`, revokes access from `PUBLIC` and Supabase exposed roles when present, and grants the configured pre-existing runtime role only its exact runtime rights. It refuses newer/inconsistent ledgers and ambiguous public/private layouts. A complete legacy `public` layout is moved transactionally. It deletes no command rows. It terminally fails legacy leased commands rather than replaying ambiguous work, clears request identity from noncanonical duplicates, fails active rows whose stored request identifiers disagree or are invalid, and creates the distributed rate-counter table.
 4. Verify the catalog and cleanup results before admitting traffic:
 
    ```sql
-   SELECT version, name, applied_at FROM ambient_bridge_schema_migrations ORDER BY version;
-   SELECT indexdef FROM pg_indexes WHERE indexname = 'ambient_bridge_commands_request_unique_idx';
-   SELECT status, count(*) FROM ambient_bridge_commands GROUP BY status ORDER BY status;
-   SELECT id, error FROM ambient_bridge_commands
+   SELECT version, name, applied_at FROM "ambient_private"."ambient_bridge_schema_migrations" ORDER BY version;
+   SELECT indexdef FROM pg_indexes WHERE schemaname = 'ambient_private' AND indexname = 'ambient_bridge_commands_request_unique_idx';
+   SELECT status, count(*) FROM "ambient_private"."ambient_bridge_commands" GROUP BY status ORDER BY status;
+   SELECT id, error FROM "ambient_private"."ambient_bridge_commands"
    WHERE error LIKE '%during%upgrade%' ORDER BY created_at;
    ```
 
-5. Deploy or restart the protocol-v2 Mac agent, confirm one lease/result round trip, then enable command producers and remote MCP traffic. Monitor `426`, migration, retry-exhaustion, and command-failure events.
+5. Set runtime `POSTGRES_URL` to the `ambient_runtime` credential through the provider's transaction pooler (Supabase/Supavisor port `6543`) with TLS—never the migration owner—and deploy/restart the service. For shared Supavisor, use `ambient_runtime.<project-ref>` as the connection-string username; the actual database role remains `ambient_runtime`. Percent-encode its generated password in the URI. The Node client uses unnamed statements compatible with transaction pooling. Runtime verification requires: database `CONNECT`; schema `USAGE`; ledger `SELECT`; devices/commands `SELECT, INSERT, UPDATE`; rate-limit counters `SELECT, INSERT, UPDATE, DELETE`; rate-limit state `SELECT, UPDATE`. It rejects ownership, schema/database `CREATE`, excess table privileges, elevated role flags, inheritance, and memberships. Before promotion, connect through the exact port-`6543` runtime URI and verify `current_user = session_user = 'ambient_runtime'`, then run the store readiness check and bridge transaction smoke suite; stop rather than relaxing the role policy if this gate fails.
+6. Deploy or restart the protocol-v2 Mac agent, confirm one lease/result round trip, then enable command producers and remote MCP traffic. Monitor `426`, migration, retry-exhaustion, and command-failure events.
 
 Do not roll the server back to protocol v1 after the database migration. If validation fails, keep bridge traffic disabled, preserve the failed startup evidence, and restore the snapshot into a new database rather than editing the migration ledger by hand.
 
@@ -198,7 +202,7 @@ npm run build
 npm run validate:registry
 ```
 
-The test suite validates schemas and annotations, idempotent retries, confirmation enforcement, path rejection, HTTP auth and MCP transport, bridge enrollment/revocation, request-correlated remote results, migration contracts, protocol-v2 fencing, and bounded retry exhaustion. When `TEST_POSTGRES_URL` is set, it also runs isolated-schema integration tests against a real PostgreSQL server; those tests never use production credentials.
+The test suite validates schemas and annotations, idempotent retries, confirmation enforcement, path rejection, HTTP auth and MCP transport, bridge enrollment/revocation, request-correlated remote results, migration contracts, protocol-v2 fencing, and bounded retry exhaustion. When `TEST_POSTGRES_URL` is set, its test-only credential needs `CREATEDB` and `CREATEROLE`; tests create randomly named disposable databases and runtime roles, never use production credentials, and clean up only their validated random names.
 
 ## Marketplace assets
 

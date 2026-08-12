@@ -34,7 +34,25 @@ Vercel can host the stateless MCP demo/review adapter. Its ephemeral filesystem 
 
 ### Production bridge
 
-Deploy the container to a stateful service and configure a durable Postgres or managed queue adapter. Keep the MCP web tier stateless. Run database migrations before traffic, require health/readiness probes, and alert on queue age, expired commands, authentication failures, duplicate claims, and result-post failures.
+Deploy the container to a stateful service and configure a durable Postgres or managed queue adapter. Keep the MCP web tier stateless. PostgreSQL state lives only in the hardcoded, non-exposed `ambient_private` schema; the runtime never creates or alters database objects.
+
+Use two database identities:
+
+- A migration owner, supplied only as `MIGRATION_DATABASE_URL` to the one-shot `npm run migrate:bridge` command. Load it from an encrypted secret manager without printing/pasting it. Use a direct or session-mode TLS URL (normally port `5432`), not transaction-pooler port `6543`, and never install this credential in Vercel or the running service. When using the shared Supavisor session pooler, the connection-string username is `<database-role>.<project-ref>`; the database role itself remains the bare name.
+- A dedicated runtime login, supplied as `POSTGRES_URL` through the provider transaction pooler (Supabase/Supavisor port `6543`) with TLS, created with `LOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS`, no memberships, no object ownership, and no database/schema `CREATE`. With shared Supavisor, use `ambient_runtime.<project-ref>` as the connection-string username while keeping `AMBIENT_RUNTIME_DB_ROLE=ambient_runtime`. Percent-encode generated passwords in connection URIs. The Node client uses unnamed statements compatible with transaction pooling. Set its password through a secret-safe provider workflow rather than checked-in or shell-history SQL. Before promotion, the exact port-`6543` credential must authenticate with `current_user = session_user = 'ambient_runtime'` and pass runtime readiness plus bridge transaction smoke tests.
+
+The one-shot migrator requires `AMBIENT_RUNTIME_DB_ROLE`, refuses Supabase exposed/reserved/elevated/member roles, revokes `PUBLIC`/`anon`/`authenticated`/`service_role` access, and installs this exact runtime matrix:
+
+| Object | Runtime privileges |
+|---|---|
+| Database | `CONNECT` |
+| `ambient_private` schema | `USAGE` |
+| Migration ledger | `SELECT` |
+| Devices and commands | `SELECT, INSERT, UPDATE` |
+| Rate-limit counters | `SELECT, INSERT, UPDATE, DELETE` |
+| Rate-limit state | `SELECT, UPDATE` |
+
+Runtime startup read-only verifies the exact v4 ledger and private catalog, rejects Ambient objects left in `public`, and audits the connected identity and effective privileges. Missing, outdated, future, structurally altered, or owner-connected databases fail closed. Run the migration before traffic, require health/readiness probes, and alert on queue age, expired commands, authentication failures, duplicate claims, and result-post failures.
 
 ## Enrollment
 

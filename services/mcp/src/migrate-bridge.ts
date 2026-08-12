@@ -1,11 +1,9 @@
 #!/usr/bin/env node
 import { Pool } from "pg";
 import { migratePostgresBridge, POSTGRES_BRIDGE_SCHEMA_VERSION } from "./bridge/postgres-migrations.js";
+import { readBridgeMigrationConfig } from "./bridge/migration-config.js";
 
-const connectionString = process.env.POSTGRES_URL ?? process.env.DATABASE_URL;
-if (!connectionString) {
-  throw new Error("POSTGRES_URL or DATABASE_URL is required for the bridge migration.");
-}
+const { connectionString, runtimeRole } = readBridgeMigrationConfig();
 
 const pool = new Pool({
   connectionString,
@@ -17,7 +15,7 @@ const pool = new Pool({
 try {
   const client = await pool.connect();
   try {
-    await migratePostgresBridge(client);
+    await migratePostgresBridge(client, { runtimeRole });
   } finally {
     client.release();
   }

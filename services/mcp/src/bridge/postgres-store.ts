@@ -1,7 +1,7 @@
 import { timingSafeEqual } from "node:crypto";
 import { isDeepStrictEqual } from "node:util";
 import { Pool, type PoolClient } from "pg";
-import { migratePostgresBridge } from "./postgres-migrations.js";
+import { verifyPostgresBridgeSchema } from "./postgres-migrations.js";
 import type {
   BridgeCommand,
   BridgeDevice,
@@ -136,7 +136,7 @@ export class PostgresBridgeStore implements BridgeStore {
     await this.initialize();
     return this.rateLimitTransaction(async (client) => {
       const fastPath = await client.query<{ total_hits: number; reset_at: Date | string }>(
-        `UPDATE ambient_bridge_rate_limits
+        `UPDATE "ambient_private"."ambient_bridge_rate_limits"
             SET total_hits = total_hits + 1
           WHERE scope = $1 AND key_hash = $2 AND reset_at > clock_timestamp()
           RETURNING total_hits, reset_at`,
@@ -150,23 +150,24 @@ export class PostgresBridgeStore implements BridgeStore {
         };
       }
       const state = await client.query(
-        "SELECT active_keys FROM ambient_bridge_rate_limit_state WHERE scope = $1 FOR UPDATE",
+        `SELECT active_keys FROM "ambient_private"."ambient_bridge_rate_limit_state"
+          WHERE scope = $1 FOR UPDATE`,
         [scope],
       );
       if ((state.rowCount ?? 0) !== 1) throw new Error("Rate-limit scope metadata is unavailable.");
       await client.query(
         `WITH removed AS (
-           DELETE FROM ambient_bridge_rate_limits
+           DELETE FROM "ambient_private"."ambient_bridge_rate_limits"
             WHERE scope = $1 AND reset_at <= clock_timestamp()
             RETURNING 1
          )
-         UPDATE ambient_bridge_rate_limit_state
+         UPDATE "ambient_private"."ambient_bridge_rate_limit_state"
             SET active_keys = GREATEST(active_keys - (SELECT count(*) FROM removed), 0)
           WHERE scope = $1`,
         [scope],
       );
       const concurrent = await client.query<{ total_hits: number; reset_at: Date | string }>(
-        `UPDATE ambient_bridge_rate_limits
+        `UPDATE "ambient_private"."ambient_bridge_rate_limits"
             SET total_hits = total_hits + 1
           WHERE scope = $1 AND key_hash = $2 AND reset_at > clock_timestamp()
           RETURNING total_hits, reset_at`,
@@ -182,7 +183,7 @@ export class PostgresBridgeStore implements BridgeStore {
         };
       }
       const capacity = await client.query(
-        `UPDATE ambient_bridge_rate_limit_state
+        `UPDATE "ambient_private"."ambient_bridge_rate_limit_state"
             SET active_keys = active_keys + 1
           WHERE scope = $1 AND active_keys < $2
           RETURNING active_keys`,
@@ -192,7 +193,7 @@ export class PostgresBridgeStore implements BridgeStore {
         throw new Error(`Distributed rate-limit counter capacity is exhausted for ${scope}.`);
       }
       const result = await client.query<{ total_hits: number; reset_at: Date | string }>(
-        `INSERT INTO ambient_bridge_rate_limits (scope, key_hash, total_hits, reset_at)
+        `INSERT INTO "ambient_private"."ambient_bridge_rate_limits" (scope, key_hash, total_hits, reset_at)
          VALUES ($1, $2, 1, clock_timestamp() + ($3 * INTERVAL '1 millisecond'))
          RETURNING total_hits, reset_at`,
         [scope, keyHash, windowMs],
@@ -210,18 +211,19 @@ export class PostgresBridgeStore implements BridgeStore {
     await this.initialize();
     await this.rateLimitTransaction(async (client) => {
       await client.query(
-        "SELECT active_keys FROM ambient_bridge_rate_limit_state WHERE scope = $1 FOR UPDATE",
+        `SELECT active_keys FROM "ambient_private"."ambient_bridge_rate_limit_state"
+          WHERE scope = $1 FOR UPDATE`,
         [scope],
       );
       const removed = await client.query(
-        `DELETE FROM ambient_bridge_rate_limits
+        `DELETE FROM "ambient_private"."ambient_bridge_rate_limits"
           WHERE scope = $1 AND key_hash = $2 AND total_hits = 1
           RETURNING key_hash`,
         [scope, keyHash],
       );
       if ((removed.rowCount ?? 0) > 0) {
         await client.query(
-          `UPDATE ambient_bridge_rate_limit_state
+          `UPDATE "ambient_private"."ambient_bridge_rate_limit_state"
             SET active_keys = GREATEST(active_keys - 1, 0)
             WHERE scope = $1`,
           [scope],
@@ -229,7 +231,7 @@ export class PostgresBridgeStore implements BridgeStore {
         return;
       }
       await client.query(
-        `UPDATE ambient_bridge_rate_limits
+        `UPDATE "ambient_private"."ambient_bridge_rate_limits"
             SET total_hits = total_hits - 1
           WHERE scope = $1 AND key_hash = $2 AND total_hits > 1`,
         [scope, keyHash],
@@ -241,16 +243,18 @@ export class PostgresBridgeStore implements BridgeStore {
     await this.initialize();
     await this.rateLimitTransaction(async (client) => {
       await client.query(
-        "SELECT active_keys FROM ambient_bridge_rate_limit_state WHERE scope = $1 FOR UPDATE",
+        `SELECT active_keys FROM "ambient_private"."ambient_bridge_rate_limit_state"
+          WHERE scope = $1 FOR UPDATE`,
         [scope],
       );
       const removed = await client.query(
-        "DELETE FROM ambient_bridge_rate_limits WHERE scope = $1 AND key_hash = $2 RETURNING key_hash",
+        `DELETE FROM "ambient_private"."ambient_bridge_rate_limits"
+          WHERE scope = $1 AND key_hash = $2 RETURNING key_hash`,
         [scope, keyHash],
       );
       if ((removed.rowCount ?? 0) > 0) {
         await client.query(
-          `UPDATE ambient_bridge_rate_limit_state
+          `UPDATE "ambient_private"."ambient_bridge_rate_limit_state"
             SET active_keys = GREATEST(active_keys - 1, 0)
             WHERE scope = $1`,
           [scope],
@@ -263,7 +267,7 @@ export class PostgresBridgeStore implements BridgeStore {
     let client: PoolClient | undefined;
     try {
       client = await this.pool.connect();
-      await migratePostgresBridge(client);
+      await verifyPostgresBridgeSchema(client);
     } catch (error) {
       if (error instanceof BridgeSchemaMigrationError) throw error;
       throw new BridgeSchemaMigrationError("Could not initialize the PostgreSQL bridge store.", { cause: error });
@@ -284,7 +288,7 @@ export class PostgresBridgeStore implements BridgeStore {
     await this.initialize();
     const { deviceId, token } = newDeviceIdentity();
     const { rows } = await this.pool.query<DeviceRow>(
-      `INSERT INTO ambient_bridge_devices
+      `INSERT INTO "ambient_private"."ambient_bridge_devices"
         (device_id, display_name, token_hash, enrolled_at, last_seen_at, revoked_at)
        VALUES ($1, $2, $3, clock_timestamp(), NULL, NULL)
        RETURNING *`,
@@ -298,7 +302,7 @@ export class PostgresBridgeStore implements BridgeStore {
   async getDevice(deviceId: string): Promise<BridgeDevice | null> {
     await this.initialize();
     const { rows } = await this.pool.query<DeviceRow>(
-      "SELECT * FROM ambient_bridge_devices WHERE device_id = $1",
+      `SELECT * FROM "ambient_private"."ambient_bridge_devices" WHERE device_id = $1`,
       [deviceId],
     );
     return rows[0] ? mapDevice(rows[0]) : null;
@@ -313,7 +317,8 @@ export class PostgresBridgeStore implements BridgeStore {
   async touchDevice(deviceId: string, at: string): Promise<void> {
     await this.initialize();
     await this.pool.query(
-      "UPDATE ambient_bridge_devices SET last_seen_at = $2::timestamptz WHERE device_id = $1",
+      `UPDATE "ambient_private"."ambient_bridge_devices"
+          SET last_seen_at = $2::timestamptz WHERE device_id = $1`,
       [deviceId, at],
     );
   }
@@ -322,7 +327,7 @@ export class PostgresBridgeStore implements BridgeStore {
     await this.initialize();
     return this.transaction(async (client) => {
       const result = await client.query(
-        `UPDATE ambient_bridge_devices
+        `UPDATE "ambient_private"."ambient_bridge_devices"
          SET revoked_at = $2::timestamptz
          WHERE device_id = $1 AND revoked_at IS NULL
          RETURNING device_id`,
@@ -330,7 +335,7 @@ export class PostgresBridgeStore implements BridgeStore {
       );
       if ((result.rowCount ?? 0) === 0) return false;
       await client.query(
-        `UPDATE ambient_bridge_commands
+        `UPDATE "ambient_private"."ambient_bridge_commands"
          SET status = 'failed', result = NULL,
              error = 'Device revoked before command completed.',
              lease_expires_at = NULL, lease_id = NULL
@@ -346,7 +351,7 @@ export class PostgresBridgeStore implements BridgeStore {
     const normalizedOperation = bridgeOperationSchema.parse(operation);
     return this.transaction(async (client) => {
       const activeDevice = await client.query(
-        `SELECT device_id FROM ambient_bridge_devices
+        `SELECT device_id FROM "ambient_private"."ambient_bridge_devices"
          WHERE device_id = $1 AND revoked_at IS NULL
          FOR SHARE`,
         [deviceId],
@@ -359,7 +364,7 @@ export class PostgresBridgeStore implements BridgeStore {
           JSON.stringify([deviceId, requestId]),
         ]);
         const existing = await client.query<CommandRow>(
-          `SELECT * FROM ambient_bridge_commands
+          `SELECT * FROM "ambient_private"."ambient_bridge_commands"
            WHERE device_id = $1 AND request_id = $2
            ORDER BY created_at ASC, id ASC
            LIMIT 1
@@ -372,7 +377,7 @@ export class PostgresBridgeStore implements BridgeStore {
             throw new BridgeRequestConflictError();
           }
           const revived = await client.query<CommandRow>(
-            `UPDATE ambient_bridge_commands
+            `UPDATE "ambient_private"."ambient_bridge_commands"
              SET status = 'pending',
                  expires_at = clock_timestamp() + ($2 * INTERVAL '1 second'),
                  lease_expires_at = NULL, lease_id = NULL,
@@ -388,7 +393,7 @@ export class PostgresBridgeStore implements BridgeStore {
       }
 
       const { rows } = await client.query<CommandRow>(
-        `INSERT INTO ambient_bridge_commands
+        `INSERT INTO "ambient_private"."ambient_bridge_commands"
           (id, device_id, operation, status, created_at, expires_at,
            lease_expires_at, lease_id, request_id, protocol_version,
            attempt_count, max_attempts, result, error)
@@ -416,7 +421,7 @@ export class PostgresBridgeStore implements BridgeStore {
     await this.initialize();
     return this.transaction(async (client) => {
       const activeDevice = await client.query(
-        `SELECT device_id FROM ambient_bridge_devices
+        `SELECT device_id FROM "ambient_private"."ambient_bridge_devices"
          WHERE device_id = $1 AND revoked_at IS NULL
          FOR SHARE`,
         [deviceId],
@@ -425,7 +430,7 @@ export class PostgresBridgeStore implements BridgeStore {
 
       await this.reconcileCommands(client, deviceId);
       await client.query(
-        `UPDATE ambient_bridge_commands
+        `UPDATE "ambient_private"."ambient_bridge_commands"
             SET status = 'expired', lease_expires_at = NULL, lease_id = NULL
           WHERE device_id = $1
             AND status = 'pending'
@@ -436,7 +441,7 @@ export class PostgresBridgeStore implements BridgeStore {
       const leased = await client.query<CommandRow>(
         `WITH candidate AS (
            SELECT id
-             FROM ambient_bridge_commands
+             FROM "ambient_private"."ambient_bridge_commands"
             WHERE device_id = $1
               AND status = 'pending'
               AND expires_at > clock_timestamp() + ($2 * INTERVAL '1 second')
@@ -445,7 +450,7 @@ export class PostgresBridgeStore implements BridgeStore {
             FOR UPDATE SKIP LOCKED
             LIMIT 1
          )
-         UPDATE ambient_bridge_commands AS command
+         UPDATE "ambient_private"."ambient_bridge_commands" AS command
             SET status = 'leased',
                 lease_expires_at = clock_timestamp() + ($2 * INTERVAL '1 second'),
                 lease_id = $3,
@@ -481,7 +486,7 @@ export class PostgresBridgeStore implements BridgeStore {
     await this.initialize();
     return this.transaction(async (client) => {
       const activeDevice = await client.query(
-        `SELECT device_id FROM ambient_bridge_devices
+        `SELECT device_id FROM "ambient_private"."ambient_bridge_devices"
          WHERE device_id = $1 AND revoked_at IS NULL
          FOR SHARE`,
         [deviceId],
@@ -489,7 +494,7 @@ export class PostgresBridgeStore implements BridgeStore {
       if ((activeDevice.rowCount ?? 0) === 0) return null;
 
       const { rows } = await client.query<CommandRow>(
-        `UPDATE ambient_bridge_commands
+        `UPDATE "ambient_private"."ambient_bridge_commands"
          SET status = $4, result = $5::jsonb, error = $6, lease_expires_at = NULL
          WHERE id = $1 AND device_id = $2 AND lease_id = $3 AND status = 'leased'
            AND lease_expires_at > clock_timestamp()
@@ -500,7 +505,7 @@ export class PostgresBridgeStore implements BridgeStore {
       if (rows[0]) return mapCommand(rows[0]);
 
       const idempotent = await client.query<CommandRow>(
-        `SELECT * FROM ambient_bridge_commands
+        `SELECT * FROM "ambient_private"."ambient_bridge_commands"
          WHERE id = $1 AND device_id = $2 AND lease_id = $3 AND status = $4`,
         [commandId, deviceId, leaseId, status],
       );
@@ -516,7 +521,7 @@ export class PostgresBridgeStore implements BridgeStore {
     return this.transaction(async (client) => {
       await this.reconcileCommands(client, undefined, commandId);
       const { rows } = await client.query<CommandRow>(
-        "SELECT * FROM ambient_bridge_commands WHERE id = $1",
+        `SELECT * FROM "ambient_private"."ambient_bridge_commands" WHERE id = $1`,
         [commandId],
       );
       return rows[0] ? mapCommand(rows[0]) : null;
@@ -540,7 +545,7 @@ export class PostgresBridgeStore implements BridgeStore {
     const scope = filters.join(" AND ");
 
     await client.query(
-      `UPDATE ambient_bridge_commands
+      `UPDATE "ambient_private"."ambient_bridge_commands"
           SET status = 'expired', lease_expires_at = NULL, lease_id = NULL
         WHERE ${scope}
           AND status IN ('pending', 'leased')
@@ -548,7 +553,7 @@ export class PostgresBridgeStore implements BridgeStore {
       values,
     );
     await client.query(
-      `UPDATE ambient_bridge_commands
+      `UPDATE "ambient_private"."ambient_bridge_commands"
           SET status = CASE WHEN attempt_count >= max_attempts THEN 'failed' ELSE 'pending' END,
               error = CASE
                 WHEN attempt_count >= max_attempts
@@ -564,7 +569,7 @@ export class PostgresBridgeStore implements BridgeStore {
       values,
     );
     await client.query(
-      `UPDATE ambient_bridge_commands
+      `UPDATE "ambient_private"."ambient_bridge_commands"
           SET status = 'failed',
               error = format('Command delivery failed after %s lease attempts.', max_attempts),
               lease_expires_at = NULL,
