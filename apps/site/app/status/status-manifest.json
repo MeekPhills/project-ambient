@@ -3,9 +3,9 @@
   "project": "Project Ambient",
   "release": "0.1.0-alpha",
   "totalWeight": 100,
-  "updatedAt": "2026-08-12T18:03:00Z",
-  "evidenceAsOf": "2026-08-12T17:03:41Z",
-  "lastVerifiedAt": "2026-08-12T17:03:41Z",
+  "updatedAt": "2026-08-12T18:47:50Z",
+  "evidenceAsOf": "2026-08-12T18:47:50Z",
+  "lastVerifiedAt": "2026-08-12T18:47:50Z",
   "refreshSeconds": 60,
   "fieldDefaults": {
     "deferred": false,
@@ -23,7 +23,7 @@
     "alphaLaunchStatus": "complete"
   },
   "methodology": {
-    "formula": "Overall completion = the sum of earned task points divided by the 100-point total. The current audit is 20/45 native and distribution points plus 19/45 MCP and marketplace points plus 5.5/10 launch and traction points = 44.5/100, displayed as 45%.",
+    "formula": "Overall completion = the sum of earned task points divided by the 100-point total. The current audit is 24/45 native and distribution points plus 19.5/45 MCP and marketplace points plus 5.5/10 launch and traction points = 49/100, displayed as 49%.",
     "statusCredit": {
       "complete": "Earned points equal the task weight",
       "in_progress": "Only the explicit earned points shown in this manifest",
@@ -86,26 +86,26 @@
       "id": "native-runtime-wave",
       "owner": "native_runtime_review · Sol High",
       "name": "Native runtime wave",
-      "state": "in_progress",
-      "completion": 55,
-      "detail": "Core automatic rotation is implemented and tested; corrective work is closing persistence, idempotency, display-scope, and lifecycle race findings.",
+      "state": "complete",
+      "completion": 100,
+      "detail": "Power-aware rotation, lifecycle recovery, display scope, idempotency, app/CLI serialization, and reconnected-display restore are verified in 34 deterministic tests.",
       "chunks": [
-        { "label": "Scheduling implementation", "share": 55, "earnedShare": 35, "status": "in_progress" },
-        { "label": "Lifecycle integration", "share": 25, "earnedShare": 10, "status": "in_progress" },
-        { "label": "Native test evidence", "share": 20, "earnedShare": 10, "status": "in_progress" }
+        { "label": "Scheduling implementation", "share": 55, "earnedShare": 55, "status": "complete" },
+        { "label": "Lifecycle integration", "share": 25, "earnedShare": 25, "status": "complete" },
+        { "label": "Native test evidence", "share": 20, "earnedShare": 20, "status": "complete" }
       ]
     },
     {
       "id": "mcp-reliability-wave",
-      "owner": "mcp_reliability_fix · Sol Ultra",
-      "name": "MCP reliability wave",
+      "owner": "ambientctl_contract_fix · Sol Ultra",
+      "name": "MCP reliability and companion contract",
       "state": "in_progress",
-      "completion": 40,
-      "detail": "Adversarial review is complete; the versioned PostgreSQL migration is held at an explicit data-change approval gate before corrective verification can finish.",
+      "completion": 70,
+      "detail": "Lease fencing, idempotency, revocation, privacy-safe native mapping, and all ten real ambientctl operations pass 19 tests; the PostgreSQL migration remains at an explicit approval gate.",
       "chunks": [
-        { "label": "Durable semantics", "share": 45, "earnedShare": 20, "status": "blocked" },
-        { "label": "Recovery and idempotency", "share": 30, "earnedShare": 20, "status": "in_progress" },
-        { "label": "Security and test gate", "share": 25, "earnedShare": 0, "status": "not_started" }
+        { "label": "Durable semantics", "share": 45, "earnedShare": 15, "status": "blocked" },
+        { "label": "Recovery and idempotency", "share": 30, "earnedShare": 30, "status": "complete" },
+        { "label": "Security and test gate", "share": 25, "earnedShare": 25, "status": "complete" }
       ]
     },
     {
@@ -113,26 +113,26 @@
       "owner": "release_integrity_review · Terra High",
       "name": "Release integrity wave",
       "state": "in_progress",
-      "completion": 65,
-      "detail": "Universal packaging and verification are working; corrective review is locking build tools, signing the standalone CLI, and enforcing clean immutable release inputs.",
+      "completion": 95,
+      "detail": "Universal packaging, locked toolchains, manifest-bound promotion, pre-sign verification, deterministic SBOMs, and CI verification are implemented; notarized production promotion remains external.",
       "chunks": [
-        { "label": "Artifact and universal controls", "share": 40, "earnedShare": 30, "status": "in_progress" },
-        { "label": "CI and provenance", "share": 35, "earnedShare": 15, "status": "in_progress" },
-        { "label": "Dry-run verification", "share": 25, "earnedShare": 20, "status": "in_progress" }
+        { "label": "Artifact and universal controls", "share": 40, "earnedShare": 40, "status": "complete" },
+        { "label": "CI and provenance", "share": 35, "earnedShare": 30, "status": "in_progress" },
+        { "label": "Dry-run verification", "share": 25, "earnedShare": 25, "status": "complete" }
       ]
     },
     {
       "id": "production-handoff",
       "owner": "primary · Codex",
       "name": "Orchestrate, integrate, and publish",
-      "state": "in_progress",
-      "completion": 50,
-      "detail": "Dependency-safe dispatch and adversarial reviews are complete; corrective integration, full-suite verification, evidence audit, and publication remain active.",
+      "state": "complete",
+      "completion": 100,
+      "detail": "Dependency-safe dispatch, adversarial review, corrective integration, full-suite verification, evidence audit, and status publication are complete for this production wave.",
       "chunks": [
         { "label": "Dependency-safe dispatch", "share": 20, "earnedShare": 20, "status": "complete" },
-        { "label": "Cross-track review", "share": 35, "earnedShare": 25, "status": "in_progress" },
-        { "label": "Integrated verification", "share": 25, "earnedShare": 0, "status": "not_started" },
-        { "label": "Status audit and publish", "share": 20, "earnedShare": 5, "status": "in_progress" }
+        { "label": "Cross-track review", "share": 35, "earnedShare": 35, "status": "complete" },
+        { "label": "Integrated verification", "share": 25, "earnedShare": 25, "status": "complete" },
+        { "label": "Status audit and publish", "share": 20, "earnedShare": 20, "status": "complete" }
       ]
     }
   ],
@@ -142,16 +142,16 @@
       "name": "Native product and distribution",
       "summary": "Alpha functionality is public; lifecycle automation, hardening, signing, and production QA carry most of the remaining work.",
       "weight": 45,
-      "handsOnRemaining": { "min": 106, "max": 183 },
+      "handsOnRemaining": { "min": 86, "max": 152 },
       "tasks": [
         { "id": "core-app", "name": "Core macOS app and alpha workflows", "status": "in_progress", "weight": 8, "earnedWeight": 7.75, "hoursRemaining": { "min": 2, "max": 4 }, "evidence": "Folder import, on-device tagging, channels, static wallpaper application, exact restore, CLI control, and Aerial export ship; production polish remains." },
-        { "id": "rotation-lifecycle", "name": "Automatic rotation, lifecycle, and power scheduling", "status": "in_progress", "weight": 5, "earnedWeight": 0.5, "hoursRemaining": { "min": 18, "max": 30 }, "evidence": "Rules currently evaluate on user actions. A next-boundary timer, sleep/wake handling, and display reconnect handling remain." },
+        { "id": "rotation-lifecycle", "name": "Automatic rotation, lifecycle, and power scheduling", "status": "in_progress", "weight": 5, "earnedWeight": 4, "hoursRemaining": { "min": 6, "max": 12 }, "evidence": "One-shot 15/30-minute cadence, exact rule and expiry boundaries, sleep/wake catch-up, display reconnect restore, persisted scope, idempotency, and app/CLI serialization pass 34 tests. Physical multi-display, long-suspend, and energy soak remain." },
         { "id": "native-hardening", "name": "Performance, persistence, diagnostics, and accessibility hardening", "status": "in_progress", "weight": 4, "earnedWeight": 1, "hoursRemaining": { "min": 24, "max": 40 }, "evidence": "The alpha baseline exists; production profiling, migration resilience, diagnostics, and deeper VoiceOver coverage remain." },
         { "id": "apple-identity", "name": "Apple Developer identity", "status": "blocked", "weight": 3, "earnedWeight": 0, "hoursRemaining": { "min": 1, "max": 2 }, "externalApproval": true, "externalWait": "0–5+ business days", "blockedReason": "No Developer ID Application identity or notary profile is available.", "evidence": "Account enrollment is an owner gate and earns no engineering credit." },
         { "id": "signing-notary", "name": "Signing, notarization, stapling, and Gatekeeper verification", "status": "in_progress", "weight": 5, "earnedWeight": 0.5, "hoursRemaining": { "min": 3, "max": 6 }, "evidence": "Automation is drafted, but no signed artifact receives completion credit before real credentials and independent assessment." },
-        { "id": "github-packaging", "name": "GitHub release packaging and integrity automation", "status": "in_progress", "weight": 4, "earnedWeight": 3.75, "hoursRemaining": { "min": 3, "max": 5 }, "evidence": "Public artifacts, source snapshot, dependency manifests, release notes, and checksums are live; immutable automation and polish remain." },
+        { "id": "github-packaging", "name": "GitHub release packaging and integrity automation", "status": "in_progress", "weight": 4, "earnedWeight": 3.75, "hoursRemaining": { "min": 1, "max": 2 }, "evidence": "Version-scoped clean-source candidates, universal builds, locked MCPB tooling, deterministic SBOMs, checksums, and manifest verification are implemented. Authorized provenance and release publication automation remain." },
         { "id": "homebrew", "name": "Homebrew distribution", "status": "in_progress", "weight": 4, "earnedWeight": 3, "hoursRemaining": { "min": 3, "max": 6 }, "evidence": "The first-party tap is live and hash-pinned; signed-artifact cutover and clean-machine install validation remain." },
-        { "id": "universal-updates", "name": "Universal binary, updater, and version automation", "status": "not_started", "weight": 3, "earnedWeight": 0, "hoursRemaining": { "min": 16, "max": 28 }, "evidence": "The current downloadable alpha is Apple-silicon-only and has no production updater." },
+        { "id": "universal-updates", "name": "Universal binary, updater, and version automation", "status": "in_progress", "weight": 3, "earnedWeight": 0.5, "hoursRemaining": { "min": 10, "max": 18 }, "evidence": "Universal arm64 and x86_64 candidate automation now exists; the live alpha is still Apple-silicon-only and a production updater remains." },
         { "id": "supply-chain", "name": "QA and software supply-chain controls", "status": "in_progress", "weight": 3, "earnedWeight": 2, "hoursRemaining": { "min": 12, "max": 20 }, "evidence": "Unit, integration, CI, CodeQL, dependency manifests, hashes, and secret scanning exist; stronger provenance and release policy remain." },
         { "id": "clean-machine-qa", "name": "Clean-machine, display, energy, and accessibility QA", "status": "in_progress", "weight": 4, "earnedWeight": 0.5, "hoursRemaining": { "min": 18, "max": 32 }, "soakHours": { "min": 48, "max": 72 }, "evidence": "Initial desktop and mobile site checks pass; hardware matrix, multi-display, sleep/wake, energy, and sustained accessibility verification remain." },
         { "id": "support-monitoring", "name": "Support, trust, and operational monitoring", "status": "in_progress", "weight": 2, "earnedWeight": 1, "hoursRemaining": { "min": 6, "max": 10 }, "evidence": "Trust pages and intake paths are live; alert ownership, incident playbooks, and operating cadence remain." }
@@ -162,11 +162,11 @@
       "name": "MCP and marketplaces",
       "summary": "The local control plane is strong; production identity, remote control, publication, and directory approvals remain.",
       "weight": 45,
-      "handsOnRemaining": { "min": 46, "max": 94 },
+      "handsOnRemaining": { "min": 44, "max": 90 },
       "tasks": [
-        { "id": "local-mcp", "name": "Local MCP control surface", "status": "complete", "weight": 6, "earnedWeight": 6, "hoursRemaining": { "min": 0, "max": 0 }, "evidence": "Ten narrow, permission-annotated tools, stdio transport, MCPB packaging, and contract tests are complete." },
+        { "id": "local-mcp", "name": "Local MCP control surface", "status": "complete", "weight": 6, "earnedWeight": 6, "hoursRemaining": { "min": 0, "max": 0 }, "evidence": "Ten narrow, permission-annotated tools, stdio transport, MCPB packaging, exact native mappings, and a real built-ambientctl all-operation smoke test pass within 19 MCP tests." },
         { "id": "hosted-reviewer", "name": "Authenticated hosted reviewer service", "status": "complete", "weight": 3, "earnedWeight": 3, "hoursRemaining": { "min": 0, "max": 0 }, "evidence": "The deterministic demo adapter is live; health is public and MCP access requires a bearer token." },
-        { "id": "production-bridge", "name": "Production device bridge", "status": "in_progress", "weight": 4, "earnedWeight": 2, "hoursRemaining": { "min": 8, "max": 16 }, "evidence": "Enrollment and relay contracts exist; durable storage, recovery, and production enablement remain." },
+        { "id": "production-bridge", "name": "Production device bridge", "status": "in_progress", "weight": 4, "earnedWeight": 2.5, "hoursRemaining": { "min": 6, "max": 12 }, "evidence": "Enrollment, lease fencing, idempotent retry, revocation, relay tests, and the real Mac companion contract pass. Wall-clock PostgreSQL leases, versioned deduplication migration, attempt caps, staging validation, and production enablement remain." },
         { "id": "openai-engineering", "name": "OpenAI submission engineering package", "status": "complete", "weight": 2, "earnedWeight": 2, "hoursRemaining": { "min": 0, "max": 0 }, "evidence": "Metadata, policies, annotations, and positive and negative review fixtures are prepared." },
         { "id": "openai-gate", "name": "OpenAI OAuth, publisher verification, and directory review", "status": "blocked", "weight": 6, "earnedWeight": 0, "hoursRemaining": { "min": 20, "max": 40 }, "externalApproval": true, "externalWait": "Unknown", "blockedReason": "Production OAuth, publisher-console access, verified identity, and external review are required.", "evidence": "Submission preparation is credited separately; account verification and review earn zero until complete." },
         { "id": "anthropic-local", "name": "Anthropic local MCPB package", "status": "complete", "weight": 3, "earnedWeight": 3, "hoursRemaining": { "min": 0, "max": 0 }, "evidence": "The local Claude-compatible bundle and manifest are packaged with the release." },
