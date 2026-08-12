@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import test, { type TestContext } from "node:test";
-import { Pool } from "pg";
+import { setTimeout as delay } from "node:timers/promises";
+import { Pool, type PoolClient } from "pg";
 import {
   POSTGRES_BRIDGE_MIGRATIONS,
   migratePostgresBridge,
@@ -57,6 +58,33 @@ async function migrate(database: IsolatedDatabase): Promise<void> {
   } finally {
     client.release();
   }
+}
+
+function withRateLimitRoundTripDelay(pool: Pool, delayMs: number): Pool {
+  return {
+    async connect() {
+      const client = await pool.connect();
+      let holdsScopeLock = false;
+      return new Proxy(client, {
+        get(target, property) {
+          if (property === "query") {
+            return (async (text: string, values?: unknown[]) => {
+              const result = await target.query(text, values);
+              if (/"ambient_private"\."ambient_bridge_rate_limit_state"[\s\S]*FOR UPDATE/i.test(text)) {
+                holdsScopeLock = true;
+              }
+              if (holdsScopeLock && !/^\s*(?:COMMIT|ROLLBACK)\s*$/i.test(text)) {
+                await delay(delayMs);
+              }
+              return result;
+            }) as PoolClient["query"];
+          }
+          const value: unknown = Reflect.get(target, property, target);
+          return typeof value === "function" ? value.bind(target) : value;
+        },
+      });
+    },
+  } as Pool;
 }
 
 test(
@@ -310,6 +338,56 @@ test(
       const exhausted = await first.getCommand(retryCommand.id);
       assert.equal(exhausted?.status, "failed");
       assert.match(exhausted?.error ?? "", /failed after 3 lease attempts/);
+    });
+
+    await t.test("distinct first-hit keys stay inside the scope-lock budget across delayed round trips", async (t) => {
+      const database = await isolatedDatabase(t);
+      await migrate(database);
+      const delayedPool = withRateLimitRoundTripDelay(database.runtime, 400);
+      const first = new PostgresBridgeStore(
+        { connectionString: database.runtimeUrl, rateLimitMaxActiveKeys: 2 },
+        delayedPool,
+      );
+      const second = new PostgresBridgeStore(
+        { connectionString: database.runtimeUrl, rateLimitMaxActiveKeys: 2 },
+        delayedPool,
+      );
+      await Promise.all([first.initialize(), second.initialize()]);
+
+      const expiredKey = "delayed-expired-target-000000000001";
+      assert.equal((await first.incrementRateLimit("admin", expiredKey, 60_000)).totalHits, 1);
+      await database.runtime.query(
+        `UPDATE "ambient_private"."ambient_bridge_rate_limits"
+            SET reset_at = clock_timestamp() - INTERVAL '1 second'
+          WHERE scope = 'admin' AND key_hash = $1`,
+        [expiredKey],
+      );
+      assert.equal((await second.incrementRateLimit("admin", expiredKey, 60_000)).totalHits, 1);
+      const renewedAccounting = await database.runtime.query<{ active_keys: number; count: string }>(
+        `SELECT state.active_keys, count(rate_limit.key_hash)::text AS count
+           FROM "ambient_private"."ambient_bridge_rate_limit_state" AS state
+           LEFT JOIN "ambient_private"."ambient_bridge_rate_limits" AS rate_limit
+             ON rate_limit.scope = state.scope
+          WHERE state.scope = 'admin'
+          GROUP BY state.active_keys`,
+      );
+      assert.deepEqual(renewedAccounting.rows[0], { active_keys: 1, count: "1" });
+
+      const hits = await Promise.all([
+        first.incrementRateLimit("mcp-authorized", "delayed-distinct-key-00000000000001", 60_000),
+        second.incrementRateLimit("mcp-authorized", "delayed-distinct-key-00000000000002", 60_000),
+      ]);
+      assert.deepEqual(hits.map(({ totalHits }) => totalHits), [1, 1]);
+
+      const accounting = await database.runtime.query<{ active_keys: number; count: string }>(
+        `SELECT state.active_keys, count(rate_limit.key_hash)::text AS count
+           FROM "ambient_private"."ambient_bridge_rate_limit_state" AS state
+           LEFT JOIN "ambient_private"."ambient_bridge_rate_limits" AS rate_limit
+             ON rate_limit.scope = state.scope
+          WHERE state.scope = 'mcp-authorized'
+          GROUP BY state.active_keys`,
+      );
+      assert.deepEqual(accounting.rows[0], { active_keys: 2, count: "2" });
     });
 
     await t.test("v1 and partially-upgraded data is normalized without deleting history", async (t) => {

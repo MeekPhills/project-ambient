@@ -170,41 +170,55 @@ export class PostgresBridgeStore implements BridgeStore {
             : new Date(concurrentRow.reset_at),
         };
       }
-      const state = await client.query(
-        `SELECT active_keys FROM "ambient_private"."ambient_bridge_rate_limit_state"
-          WHERE scope = $1 FOR UPDATE`,
-        [scope],
-      );
-      if ((state.rowCount ?? 0) !== 1) throw new Error("Rate-limit scope metadata is unavailable.");
-      await client.query(
-        `WITH removed AS (
-           DELETE FROM "ambient_private"."ambient_bridge_rate_limits"
-            WHERE scope = $1 AND reset_at <= clock_timestamp()
-            RETURNING 1
-         )
-         UPDATE "ambient_private"."ambient_bridge_rate_limit_state"
-            SET active_keys = GREATEST(active_keys - (SELECT count(*) FROM removed), 0)
-         WHERE scope = $1`,
-        [scope],
-      );
-      const capacity = await client.query(
-        `UPDATE "ambient_private"."ambient_bridge_rate_limit_state"
-            SET active_keys = active_keys + 1
-          WHERE scope = $1 AND active_keys < $2
-          RETURNING active_keys`,
-        [scope, this.rateLimitMaxActiveKeys],
-      );
-      if ((capacity.rowCount ?? 0) === 0) {
-        throw new Error(`Distributed rate-limit counter capacity is exhausted for ${scope}.`);
-      }
       const result = await client.query<{ total_hits: number; reset_at: Date | string }>(
-        `INSERT INTO "ambient_private"."ambient_bridge_rate_limits" (scope, key_hash, total_hits, reset_at)
-         VALUES ($1, $2, 1, clock_timestamp() + ($3 * INTERVAL '1 millisecond'))
+        `WITH scope_state AS MATERIALIZED (
+           SELECT active_keys
+             FROM "ambient_private"."ambient_bridge_rate_limit_state"
+            WHERE scope = $1
+            FOR UPDATE
+         ), target AS MATERIALIZED (
+           SELECT rate_limit.key_hash
+             FROM "ambient_private"."ambient_bridge_rate_limits" AS rate_limit
+             CROSS JOIN scope_state
+            WHERE rate_limit.scope = $1
+              AND rate_limit.key_hash = $3
+            FOR UPDATE OF rate_limit
+         ), removed AS (
+           DELETE FROM "ambient_private"."ambient_bridge_rate_limits" AS rate_limit
+            USING scope_state
+            WHERE rate_limit.scope = $1
+              AND rate_limit.key_hash <> $3
+              AND rate_limit.reset_at <= clock_timestamp()
+            RETURNING 1
+         ), reservation AS (
+           UPDATE "ambient_private"."ambient_bridge_rate_limit_state" AS state
+              SET active_keys = GREATEST(
+                scope_state.active_keys - (SELECT count(*)::integer FROM removed),
+                0
+              ) + CASE WHEN EXISTS (SELECT 1 FROM target) THEN 0 ELSE 1 END
+             FROM scope_state
+            WHERE state.scope = $1
+              AND (
+                GREATEST(
+                  scope_state.active_keys - (SELECT count(*)::integer FROM removed),
+                  0
+                ) + CASE WHEN EXISTS (SELECT 1 FROM target) THEN 0 ELSE 1 END
+              ) <= $2
+            RETURNING state.active_keys
+         )
+         INSERT INTO "ambient_private"."ambient_bridge_rate_limits" AS target_rate_limit
+           (scope, key_hash, total_hits, reset_at)
+         SELECT $1, $3, 1, clock_timestamp() + ($4 * INTERVAL '1 millisecond')
+           FROM reservation
+         ON CONFLICT (scope, key_hash) DO UPDATE
+           SET total_hits = EXCLUDED.total_hits,
+               reset_at = EXCLUDED.reset_at
+         WHERE target_rate_limit.reset_at <= clock_timestamp()
          RETURNING total_hits, reset_at`,
-        [scope, keyHash, windowMs],
+        [scope, this.rateLimitMaxActiveKeys, keyHash, windowMs],
       );
       const row = result.rows[0];
-      if (!row) throw new Error("Rate-limit increment did not return a row.");
+      if (!row) throw new Error(`Distributed rate-limit counter capacity is exhausted for ${scope}.`);
       return {
         totalHits: row.total_hits,
         resetTime: row.reset_at instanceof Date ? row.reset_at : new Date(row.reset_at),
