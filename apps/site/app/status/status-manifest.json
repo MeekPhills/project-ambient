@@ -3,7 +3,7 @@
   "project": "Project Ambient",
   "release": "0.1.0-alpha",
   "totalWeight": 100,
-  "updatedAt": "2026-08-12T17:03:41Z",
+  "updatedAt": "2026-08-12T17:08:26Z",
   "evidenceAsOf": "2026-08-12T17:03:41Z",
   "lastVerifiedAt": "2026-08-12T17:03:41Z",
   "refreshSeconds": 60,
@@ -12,6 +12,7 @@
     "externalWait": null
   },
   "automation": {
+    "agent": "Project Ambient Status Bot",
     "skill": "project-ambient-status",
     "weightedAuditCadence": "Every 6 hours and on demand",
     "liveHealthCadence": "Every 60 seconds",
@@ -123,7 +124,7 @@
       "chunks": [
         { "label": "Cross-track synthesis", "share": 25, "earnedShare": 25, "status": "complete" },
         { "label": "Dedicated status skill", "share": 25, "earnedShare": 25, "status": "complete" },
-        { "label": "Production publish", "share": 30, "earnedShare": 0, "status": "in_progress" },
+        { "label": "Production publish", "share": 30, "earnedShare": 30, "status": "complete" },
         { "label": "Recurring monitor", "share": 20, "earnedShare": 20, "status": "complete" }
       ]
     }

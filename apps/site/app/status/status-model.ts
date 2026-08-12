@@ -57,6 +57,7 @@ export type StatusManifest = {
     externalWait: null;
   };
   automation: {
+    agent: string;
     skill: string;
     weightedAuditCadence: string;
     liveHealthCadence: string;

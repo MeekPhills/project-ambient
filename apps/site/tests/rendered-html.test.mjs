@@ -56,6 +56,7 @@ test("status manifest is a fixed, conservative 100-point audit", () => {
   assert.match(statusManifest.updatedAt, /^\d{4}-\d{2}-\d{2}T/);
   assert.match(statusManifest.evidenceAsOf, /^\d{4}-\d{2}-\d{2}T/);
   assert.equal(statusManifest.automation.skill, "project-ambient-status");
+  assert.equal(statusManifest.automation.agent, "Project Ambient Status Bot");
   assert.equal(statusManifest.automation.weightedAuditCadence, "Every 6 hours and on demand");
   assert.equal(statusManifest.automation.liveHealthCadence, "Every 60 seconds");
   assert.deepEqual(statusManifest.phases.map((phase) => phase.weight), [45, 45, 10]);
@@ -133,6 +134,9 @@ test("status page renders the exact score, ETA boundaries, filters, and methodol
   assert.match(cleanHtml, /Every 60 seconds/);
   assert.match(cleanHtml, /One score, three accountable tracks/);
   assert.match(cleanHtml, /Exact parallel-agent progress/);
+  assert.match(cleanHtml, /Persistent Project Ambient delivery status/);
+  assert.match(cleanHtml, /Status bot/);
+  assert.match(cleanHtml, /Project Ambient Status Bot/);
   assert.match(cleanHtml, /macos_build.*Godel/is);
   assert.match(cleanHtml, /mcp_build.*Lovelace/is);
   assert.match(cleanHtml, /site_build.*Curie/is);

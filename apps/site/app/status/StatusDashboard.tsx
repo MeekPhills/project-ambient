@@ -483,7 +483,8 @@ export function StatusDashboard() {
               <h3>Public where it can be.</h3>
               <p>Task weights and dependencies live in schema v{statusManifest.schemaVersion}. Public checks use no private token and never alter progress.</p>
               <div className="automation-note" aria-label="Status automation policy">
-                <b>{statusManifest.automation.skill}</b>
+                <b>{statusManifest.automation.agent}</b>
+                <span>Skill: {statusManifest.automation.skill}</span>
                 <span>Weighted audit: {statusManifest.automation.weightedAuditCadence}</span>
                 <span>Live health: {statusManifest.automation.liveHealthCadence}</span>
                 <span>{statusManifest.automation.publishRule}</span>
@@ -495,6 +496,30 @@ export function StatusDashboard() {
           </div>
         </div>
       </section>
+
+      <aside className="running-status-dock" aria-label="Persistent Project Ambient delivery status">
+        <div className="running-status-dock-inner">
+          <div className="dock-total"><span><i aria-hidden="true" /> Status bot</span><strong>{roundedCompletion}%</strong></div>
+          <div className="dock-phase-bars" aria-label="Three phase progress">
+            {statusManifest.phases.map((phase, index) => {
+              const completion = phaseCompletion(phase);
+              return (
+                <span aria-label={`${phase.name}: ${formatPercent(completion)}`} title={phase.name} key={phase.id}>
+                  <small>0{index + 1}</small><i aria-hidden="true"><b style={{ width: `${completion}%` }} /></i><strong>{formatPercent(completion)}</strong>
+                </span>
+              );
+            })}
+          </div>
+          <div className="dock-agent-bars" aria-label="Four parallel workstreams">
+            {statusManifest.deliveryWorkstreams.map((workstream) => {
+              const completion = workstreamCompletion(workstream);
+              const owner = workstream.owner.split("·").at(-1)?.trim() ?? workstream.owner;
+              return <span aria-label={`${workstream.name}, ${owner}: ${formatPercent(completion)}`} title={workstream.name} key={workstream.id}><i aria-hidden="true"><b style={{ width: `${completion}%` }} /></i><strong>{owner}</strong><small>{formatPercent(completion)}</small></span>;
+            })}
+          </div>
+          <a href="#phases-title">Tasks <span aria-hidden="true">↑</span></a>
+        </div>
+      </aside>
     </main>
   );
 }
