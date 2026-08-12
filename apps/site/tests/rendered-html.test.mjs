@@ -88,14 +88,14 @@ test("status manifest is a fixed, conservative 100-point audit", () => {
     [...statuses].sort(),
     ["blocked", "complete", "in_progress", "not_started"].sort(),
   );
-  assert.equal(earned, 49);
-  assert.equal(Math.round(earned), 49);
+  assert.equal(earned, 49.75);
+  assert.equal(Math.round(earned), 50);
   assert.deepEqual(
     statusManifest.phases.map((phase) => phase.tasks.reduce(
       (sum, task) => sum + (task.status === "complete" || task.status === "in_progress" ? task.earnedWeight : 0),
       0,
     )),
-    [24, 19.5, 5.5],
+    [24, 20.25, 5.5],
   );
 
   for (const workstream of statusManifest.deliveryWorkstreams) {
@@ -105,9 +105,9 @@ test("status manifest is a fixed, conservative 100-point audit", () => {
     assert.equal(workstream.completion, derivedCompletion);
     assert.equal(workstream.state, derivedCompletion === 100 ? "complete" : "in_progress");
   }
-  assert.deepEqual(statusManifest.deliveryWorkstreams.map((workstream) => workstream.completion), [100, 70, 95, 100]);
+  assert.deepEqual(statusManifest.deliveryWorkstreams.map((workstream) => workstream.completion), [100, 85, 95, 100]);
   assert.match(statusManifest.deliveryWorkstreams[0].detail, /34/);
-  assert.match(statusManifest.deliveryWorkstreams[1].detail, /19/);
+  assert.match(statusManifest.deliveryWorkstreams[1].detail, /PostgreSQL/);
 
   const active = tasks.filter((task) => !task.deferred).reduce(
     (sum, task) => ({ min: sum.min + task.hoursRemaining.min, max: sum.max + task.hoursRemaining.max }),
@@ -121,10 +121,12 @@ test("status manifest is a fixed, conservative 100-point audit", () => {
     (sum, task) => ({ min: sum.min + (task.soakHours?.min ?? 0), max: sum.max + (task.soakHours?.max ?? 0) }),
     { min: 0, max: 0 },
   );
-  assert.deepEqual(active, { min: 142, max: 266 });
+  assert.deepEqual(active, { min: 140, max: 262 });
   assert.deepEqual(deferred, { min: 84, max: 168 });
   assert.deepEqual(soak, { min: 48, max: 72 });
   assert.ok(Object.values(statusManifest.evidenceSources).every((url) => url.startsWith("https://")));
+  assert.match(statusManifest.evidenceSources.postgresCi, /31639061413\/job\/94256664605/);
+  assert.match(statusManifest.evidenceSources.codeql, /94256919170/);
   assert.ok(statusManifest.liveChecks.every((check) => statusManifest.phases.some((phase) => phase.id === check.phaseId)));
 });
 
@@ -132,9 +134,9 @@ test("status page renders the exact score, ETA boundaries, filters, and methodol
   const response = await render("/status");
   const html = await response.text();
   const cleanHtml = html.replaceAll("<!-- -->", "");
-  assert.match(cleanHtml, /49%/);
-  assert.match(cleanHtml, /49\s*\/\s*100/);
-  assert.match(cleanHtml, /142[–-]266/);
+  assert.match(cleanHtml, /50%/);
+  assert.match(cleanHtml, /49\.75\s*\/\s*100/);
+  assert.match(cleanHtml, /140[–-]262/);
   assert.match(cleanHtml, /External wait/);
   assert.match(cleanHtml, /Deferred/);
   assert.match(cleanHtml, /Every 6 hours and on demand/);
