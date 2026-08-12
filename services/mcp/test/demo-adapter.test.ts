@@ -15,8 +15,8 @@ test("demo adapter is deterministic and command retries are idempotent", async (
     requestId,
   });
   const retry = await adapter.activateChannel({
-    channelId: "beaches",
-    displayScope: "primary",
+    channelId: "quiet-nature",
+    displayScope: "all",
     requestId,
   });
 
@@ -25,6 +25,17 @@ test("demo adapter is deterministic and command retries are idempotent", async (
   assert.equal(retry.status, "already_applied");
   assert.equal(retry.commandId, first.commandId);
   assert.equal(retry.effectiveChannelId, "quiet-nature");
+
+  await assert.rejects(
+    adapter.activateChannel({
+      channelId: "beaches",
+      displayScope: "primary",
+      requestId,
+    }),
+    (error: unknown) => error instanceof AmbientAdapterError
+      && error.code === "command_failed"
+      && /different Ambient command/.test(error.message),
+  );
 });
 
 test("demo adapter rejects unknown channels", async () => {
@@ -35,11 +46,11 @@ test("demo adapter rejects unknown channels", async () => {
   );
 });
 
-test("demo adapter records mutations in history", async () => {
+test("demo adapter reports recent wallpaper assets without implying action restore history", async () => {
   const adapter = new DemoAmbientAdapter(clock);
   await adapter.next({ requestId: "test-request-00000002" });
   const [latest] = await adapter.getHistory(1);
-  assert.equal(latest?.action, "next");
-  assert.equal(latest?.occurredAt, "2026-08-12T15:30:00.000Z");
-  assert.equal(latest?.restorable, true);
+  assert.equal(latest?.sceneTitle, "Cape May Sunrise");
+  assert.equal(latest?.position, 1);
+  assert.equal(latest?.mediaKind, "image");
 });

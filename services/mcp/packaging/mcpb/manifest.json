@@ -4,7 +4,7 @@
   "display_name": "Project Ambient Control",
   "version": "0.1.0",
   "description": "Inspect and control Project Ambient from Claude Desktop.",
-  "long_description": "A local-only MCP bundle for choosing Ambient channels, advancing scenes, pausing, restoring history, and managing power policy. It never exposes local files or accepts arbitrary shell commands.",
+  "long_description": "A local-only MCP bundle for choosing Ambient channels, advancing scenes, pausing, restoring the wallpapers that preceded Ambient, and managing power policy. It never exposes local files or accepts arbitrary shell commands.",
   "author": {
     "name": "Project Ambient contributors",
     "url": "https://github.com/MeekPhills/project-ambient"
@@ -50,7 +50,7 @@
     { "name": "pause_ambient", "description": "Pause Ambient." },
     { "name": "resume_ambient", "description": "Resume Ambient." },
     { "name": "set_power_policy", "description": "Change Ambient's power policy." },
-    { "name": "get_history", "description": "Inspect recent Ambient activity." },
-    { "name": "restore_previous", "description": "Restore a previous Ambient scene." }
+    { "name": "get_history", "description": "Inspect recently applied wallpaper assets." },
+    { "name": "restore_previous", "description": "Restore the wallpapers that were active before Ambient." }
   ]
 }

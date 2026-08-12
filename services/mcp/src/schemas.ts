@@ -69,13 +69,9 @@ export const commandOutputSchema = {
 
 export const historyItemSchema = z.object({
   id: z.string(),
-  action: z.enum(["next", "activate", "pause", "resume", "power_policy", "restore"]),
-  occurredAt: z.string(),
-  channelId: z.string().nullable(),
-  channelName: z.string().nullable(),
-  sceneTitle: z.string().nullable(),
-  explanation: z.string(),
-  restorable: z.boolean(),
+  position: z.number().int().positive(),
+  sceneTitle: z.string(),
+  mediaKind: z.enum(["image", "video"]),
 });
 
 export const statusSchema = z.object(statusOutputSchema);

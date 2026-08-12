@@ -1,7 +1,7 @@
 {
   "name": "Project Ambient",
   "short_description": "Control a local-first, power-aware Mac wallpaper collection from ChatGPT.",
-  "long_description": "Project Ambient turns a Mac wallpaper library into explainable channels and rules. Use the plugin to inspect the active scene, browse existing channels, switch channels, advance a wallpaper, pause or resume rotation, choose a power policy, and restore recent scenes. Files and media stay on the user's Mac; the plugin exposes no local paths or media bytes.",
+  "long_description": "Project Ambient turns a Mac wallpaper library into explainable channels and rules. Use the plugin to inspect the active scene, browse existing channels, switch channels, advance a wallpaper, pause or resume rotation, choose a power policy, review recently applied assets, and restore the wallpapers that were active before Ambient. Files and media stay on the user's Mac; the plugin exposes no local paths or media bytes.",
   "category": "Productivity",
   "language": "en-US",
   "mcp_url": "https://project-ambient-control.vercel.app/mcp",

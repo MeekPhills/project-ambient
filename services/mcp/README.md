@@ -14,7 +14,11 @@ Read-only tools: `get_status`, `list_channels`, `get_channel`, `get_history`.
 
 Confirmed mutation tools: `next_wallpaper`, `activate_channel`, `pause_ambient`, `resume_ambient`, `set_power_policy`, `restore_previous`.
 
-Every mutation requires `confirmation: "confirmed"` and a fresh `request_id`. The adapter treats a repeated request ID as the same command. Inputs do not accept paths, URLs, shell fragments, media, or credentials.
+`get_history` reports recently applied local wallpaper assets; it is not an action log or a restore list. For compatibility the restore tool keeps its original name, but `restore_previous` specifically stops Ambient and restores the wallpapers that were active before Ambient first took control. It does not select an item from recent history.
+
+Every mutation requires `confirmation: "confirmed"` and a fresh `request_id`. Repeating the same operation and inputs with the same request ID returns the same command; reusing it for different inputs is rejected. Inputs do not accept paths, URLs, shell fragments, media, or credentials.
+
+Native idempotency is persisted by `ambientctl`, so a retry remains side-effect free across MCP process restarts. The current native response does not identify a persisted replay; consequently, `already_applied` is exact within a running adapter process, while the first response after an MCP restart may conservatively report `applied` for a command the native ledger already handled.
 
 ## Run locally
 
@@ -30,7 +34,7 @@ The service starts at `http://127.0.0.1:8787`:
 - `GET /ready` — adapter readiness
 - `POST /mcp` — MCP Streamable HTTP
 
-For the installed Mac app, use `AMBIENT_ADAPTER=ambientctl` and set `AMBIENTCTL_PATH` if `ambientctl` is not on `PATH`. The adapter uses a fixed argument array with `execFile`; it never invokes a shell.
+For the installed Mac app, use `AMBIENT_ADAPTER=ambientctl` and set `AMBIENTCTL_PATH` if `ambientctl` is not on `PATH`. The adapter uses a fixed argument array with `execFile`; it never invokes a shell. Marketplace power modes map explicitly to the native companion: `still` → `efficiency`, `adaptive` → `automatic`, and `always_live` → `quality`. Ambient does not advertise a distinct “live only on AC” mode because the native engine cannot enforce one. Durations accepted in minutes by MCP are converted to seconds for the companion.
 
 ### Local MCP client / Claude Desktop
 

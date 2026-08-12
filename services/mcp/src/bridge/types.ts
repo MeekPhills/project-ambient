@@ -21,7 +21,7 @@ export const bridgeOperationSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("resume"), requestId: z.string().min(16).max(128) }),
   z.object({
     type: z.literal("set_power_policy"),
-    policy: z.enum(["still", "adaptive", "live_on_ac", "always_live"]),
+    policy: z.enum(["still", "adaptive", "always_live"]),
     requestId: z.string().min(16).max(128),
   }),
   z.object({ type: z.literal("get_history"), limit: z.number().int().min(1).max(50) }),

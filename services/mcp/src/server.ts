@@ -67,14 +67,14 @@ export const TOOL_METADATA = [
   },
   {
     name: "get_history",
-    title: "Get Ambient History",
-    description: "Use this when the user wants to inspect recent Ambient actions or find a previous scene that can be restored.",
+    title: "Get Recent Wallpapers",
+    description: "Use this when the user wants to inspect the recent wallpaper assets applied by Ambient. This history is informational and is not a restore list.",
     annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false, idempotentHint: true },
   },
   {
     name: "restore_previous",
-    title: "Restore Previous Ambient Scene",
-    description: "Use this when the user explicitly asks to restore the most recent restorable Ambient scene. Requires explicit confirmation.",
+    title: "Restore Pre-Ambient Wallpapers",
+    description: "Use this when the user explicitly asks to stop Ambient and restore the wallpapers that were active before Ambient took control. Requires explicit confirmation.",
     annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false, idempotentHint: true },
   },
 ] as const;
@@ -300,7 +300,7 @@ export function createAmbientMcpServer(adapter: AmbientAdapter): McpServer {
       title: metadata.set_power_policy.title,
       description: metadata.set_power_policy.description,
       inputSchema: {
-        policy: powerPolicySchema.describe("Still, adaptive, live on AC power, or always live."),
+        policy: powerPolicySchema.describe("Still, adaptive, or always live."),
         request_id: requestIdSchema,
         confirmation: confirmationSchema,
       },
@@ -328,12 +328,12 @@ export function createAmbientMcpServer(adapter: AmbientAdapter): McpServer {
       },
       outputSchema: { items: z.array(historyItemSchema) },
       annotations: metadata.get_history.annotations,
-      _meta: toolMeta("Loading Ambient history…", "Ambient history ready"),
+      _meta: toolMeta("Loading recent wallpapers…", "Recent wallpapers ready"),
     },
     async ({ limit }) => {
       try {
         const items = await adapter.getHistory(limit);
-        return textResult({ items }, `Loaded ${items.length} recent Ambient history items.`);
+        return textResult({ items }, `Loaded ${items.length} recent wallpaper assets.`);
       } catch (error) {
         return errorResult(error);
       }
@@ -351,7 +351,7 @@ export function createAmbientMcpServer(adapter: AmbientAdapter): McpServer {
       },
       outputSchema: commandOutputSchema,
       annotations: metadata.restore_previous.annotations,
-      _meta: toolMeta("Restoring previous scene…", "Previous scene restored"),
+      _meta: toolMeta("Restoring pre-Ambient wallpapers…", "Pre-Ambient wallpapers restored"),
     },
     async ({ request_id }) => {
       try {

@@ -1,4 +1,8 @@
-export const POWER_POLICIES = ["still", "adaptive", "live_on_ac", "always_live"] as const;
+// These are the three power modes the native macOS engine can enforce. Keep
+// the public contract narrower than the UI copy: there is no separate native
+// "live only on AC" mode, so advertising one would promise behavior the
+// companion cannot deliver.
+export const POWER_POLICIES = ["still", "adaptive", "always_live"] as const;
 export type PowerPolicy = (typeof POWER_POLICIES)[number];
 
 export const DISPLAY_SCOPES = ["all", "primary"] as const;
@@ -39,23 +43,11 @@ export interface AmbientChannel extends AmbientChannelSummary {
   sceneTitles: string[];
 }
 
-export type HistoryAction =
-  | "next"
-  | "activate"
-  | "pause"
-  | "resume"
-  | "power_policy"
-  | "restore";
-
 export interface AmbientHistoryItem {
   id: string;
-  action: HistoryAction;
-  occurredAt: string;
-  channelId: string | null;
-  channelName: string | null;
-  sceneTitle: string | null;
-  explanation: string;
-  restorable: boolean;
+  position: number;
+  sceneTitle: string;
+  mediaKind: "image" | "video";
 }
 
 export interface AmbientCommandResult {
