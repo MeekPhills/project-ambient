@@ -44,6 +44,17 @@ The native app is the product. AI directories are control and discovery surfaces
 
 Requirements: macOS 14 or newer, Xcode 16 or newer, and Swift 6.
 
+Install the unsigned Apple-silicon alpha with Homebrew:
+
+```bash
+brew tap MeekPhills/tap
+brew install --cask project-ambient
+```
+
+Gatekeeper may block this alpha. Do not disable Gatekeeper or remove quarantine attributes; use the source build below until a signed release is available.
+
+Build and run from source:
+
 ```bash
 ./script/build_and_run.sh
 ```
