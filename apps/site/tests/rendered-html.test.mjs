@@ -163,6 +163,10 @@ test("raw status manifest endpoint exposes the canonical machine-readable source
   const response = await render("/status/manifest");
   assert.equal(response.status, 200);
   assert.match(response.headers.get("content-type") ?? "", /^application\/json\b/i);
+  const cacheControl = response.headers.get("cache-control") ?? "";
+  assert.equal(cacheControl, "no-store, max-age=0");
+  assert.doesNotMatch(cacheControl, /\b(?:public|s-maxage|stale-while-revalidate)\b/i);
+  assert.equal(response.headers.get("x-content-type-options"), "nosniff");
   const manifest = await response.json();
   assert.equal(manifest.schemaVersion, 2);
   assert.equal(manifest.totalWeight, 100);
