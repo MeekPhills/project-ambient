@@ -123,52 +123,58 @@ private struct AmbientCLI {
         case "next":
             let requestID = value(after: "--request-id", in: arguments)
             let scope = try displayScope(in: arguments)
-            writeJSON(try engine.next(displayScope: scope, requestID: requestID))
+            writeMutation(try engine.next(displayScope: scope, requestID: requestID), engine: engine)
 
         case "activate":
             guard arguments.count >= 2 else { throw CLIError.usage("activate requires a channel ID or name.") }
             let duration = intValue(after: "--duration", in: arguments)
             let requestID = value(after: "--request-id", in: arguments)
             let scope = try displayScope(in: arguments)
-            writeJSON(try engine.activate(
+            writeMutation(try engine.activate(
                 arguments[1],
                 durationSeconds: duration,
                 displayScope: scope,
                 requestID: requestID
-            ))
+            ), engine: engine)
 
         case "pause":
-            writeJSON(try engine.pause(
+            writeMutation(try engine.pause(
                 durationSeconds: intValue(after: "--duration", in: arguments),
                 requestID: value(after: "--request-id", in: arguments)
-            ))
+            ), engine: engine)
 
         case "resume":
-            writeJSON(try engine.resume(requestID: value(after: "--request-id", in: arguments)))
+            writeMutation(try engine.resume(requestID: value(after: "--request-id", in: arguments)), engine: engine)
 
         case "power-policy":
             guard arguments.count >= 3, arguments[1] == "set" else {
                 throw CLIError.usage("Use power-policy set <automatic|efficiency|quality>.")
             }
-            writeJSON(try engine.setPowerPolicy(
+            writeMutation(try engine.setPowerPolicy(
                 try powerPolicy(arguments[2]),
                 requestID: value(after: "--request-id", in: arguments)
-            ))
+            ), engine: engine)
 
         case "history":
             let limit = intValue(after: "--limit", in: arguments) ?? 20
             writeJSON(HistoryEnvelope(items: engine.history(limit: limit)))
 
         case "restore":
-            writeJSON(try engine.restore(requestID: value(after: "--request-id", in: arguments)))
+            writeMutation(try engine.restore(requestID: value(after: "--request-id", in: arguments)), engine: engine)
 
         case "import":
             guard arguments.count >= 2 else { throw CLIError.usage("import requires a folder path.") }
-            writeJSON(try engine.importFolder(URL(fileURLWithPath: arguments[1], isDirectory: true)))
+            writeMutation(
+                try engine.importFolder(URL(fileURLWithPath: arguments[1], isDirectory: true)),
+                engine: engine
+            )
 
         case "scan":
             let count = engine.scanLibraries()
-            writeJSON(ScanEnvelope(assetCount: count, scannedAt: engine.state.lastScanAt ?? Date()))
+            writeMutation(
+                ScanEnvelope(assetCount: count, scannedAt: engine.state.lastScanAt ?? Date()),
+                engine: engine
+            )
 
         case "export-aerial":
             guard arguments.count >= 2,
@@ -236,6 +242,16 @@ private struct AmbientCLI {
             let fallback = "{\"ok\":false,\"error\":\"Unable to encode response\"}\n"
             try? handle.write(contentsOf: Data(fallback.utf8))
         }
+    }
+
+    private static func writeMutation<T: Encodable>(_ value: T, engine: AmbientEngine) {
+        writeJSON(value)
+        DistributedNotificationCenter.default().postNotificationName(
+            AmbientRuntimeNotification.stateStoreChanged,
+            object: nil,
+            userInfo: ["revision": NSNumber(value: engine.state.stateRevision ?? 0)],
+            deliverImmediately: true
+        )
     }
 
     private static let usage = """

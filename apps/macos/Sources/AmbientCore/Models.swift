@@ -129,6 +129,25 @@ public enum AmbientPowerPolicy: String, Codable, CaseIterable, Sendable {
     }
 }
 
+public struct AmbientRequestLedgerEntry: Codable, Sendable {
+    public var requestID: String
+    public var fingerprint: String
+    public var result: AmbientMutationResult
+    public var recordedAt: Date
+
+    public init(
+        requestID: String,
+        fingerprint: String,
+        result: AmbientMutationResult,
+        recordedAt: Date = Date()
+    ) {
+        self.requestID = requestID
+        self.fingerprint = fingerprint
+        self.result = result
+        self.recordedAt = recordedAt
+    }
+}
+
 public struct AmbientState: Codable, Sendable {
     public static let schemaVersion = 1
 
@@ -147,6 +166,16 @@ public struct AmbientState: Codable, Sendable {
     public var previousWallpaperPaths: [String: String]
     public var history: [UUID]
     public var lastScanAt: Date?
+    /// Monotonically increases for each serialized state mutation. Optional so
+    /// schema-v1 state files written by older releases continue to decode.
+    public var stateRevision: UInt64?
+    /// Display intent for automatic rotation and lifecycle reconciliation.
+    public var managedDisplayScope: AmbientDisplayScope?
+    /// The most recent successful wallpaper advance, used to fence a due timer
+    /// against an external command that already satisfied the same boundary.
+    public var lastRotationAt: Date?
+    /// Bounded, restart-persistent native idempotency ledger.
+    public var requestLedger: [AmbientRequestLedgerEntry]?
 
     public init(
         version: Int = AmbientState.schemaVersion,
@@ -163,7 +192,11 @@ public struct AmbientState: Codable, Sendable {
         powerPolicy: AmbientPowerPolicy = .automatic,
         previousWallpaperPaths: [String: String] = [:],
         history: [UUID] = [],
-        lastScanAt: Date? = nil
+        lastScanAt: Date? = nil,
+        stateRevision: UInt64? = nil,
+        managedDisplayScope: AmbientDisplayScope? = nil,
+        lastRotationAt: Date? = nil,
+        requestLedger: [AmbientRequestLedgerEntry]? = nil
     ) {
         self.version = version
         self.libraryFolders = libraryFolders
@@ -180,6 +213,10 @@ public struct AmbientState: Codable, Sendable {
         self.previousWallpaperPaths = previousWallpaperPaths
         self.history = history
         self.lastScanAt = lastScanAt
+        self.stateRevision = stateRevision
+        self.managedDisplayScope = managedDisplayScope
+        self.lastRotationAt = lastRotationAt
+        self.requestLedger = requestLedger
     }
 }
 

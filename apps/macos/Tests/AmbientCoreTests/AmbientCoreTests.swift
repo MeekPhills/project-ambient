@@ -109,6 +109,90 @@ final class AmbientCoreTests: XCTestCase {
         XCTAssertEqual(reloaded.playbackStatus, .paused)
     }
 
+    func testConcurrentStateTransactionsPreserveEveryMutationAndRevision() throws {
+        let directory = try temporaryDirectory()
+        let seedStore = AmbientStateStore(directoryURL: directory)
+        try seedStore.save(AmbientState())
+        let identifiers = (0..<40).map { _ in UUID() }
+        let errorLock = NSLock()
+        var errors: [Error] = []
+
+        DispatchQueue.concurrentPerform(iterations: identifiers.count) { index in
+            do {
+                let store = AmbientStateStore(directoryURL: directory)
+                _ = try store.withExclusiveState { state in
+                    state.history.append(identifiers[index])
+                    return ((), true)
+                }
+            } catch {
+                errorLock.lock()
+                errors.append(error)
+                errorLock.unlock()
+            }
+        }
+
+        XCTAssertTrue(errors.isEmpty, "Unexpected transaction errors: \(errors)")
+        let loaded = try seedStore.load()
+        XCTAssertEqual(Set(loaded.history), Set(identifiers))
+        XCTAssertEqual(loaded.stateRevision, 41)
+    }
+
+    func testConcurrentAmbientCtlProcessesSerializeMutations() throws {
+        let directory = try temporaryDirectory()
+        let store = AmbientStateStore(directoryURL: directory)
+        try store.save(AmbientState())
+        let executable = try ambientCtlExecutable()
+        var processes: [Process] = []
+
+        for index in 0..<12 {
+            let process = Process()
+            process.executableURL = executable
+            process.arguments = [
+                "power-policy", "set", index.isMultiple(of: 2) ? "automatic" : "efficiency",
+                "--request-id", String(format: "subprocess-request-%04d", index),
+                "--json"
+            ]
+            var environment = ProcessInfo.processInfo.environment
+            environment["AMBIENT_DATA_DIR"] = directory.path
+            process.environment = environment
+            process.standardOutput = Pipe()
+            process.standardError = Pipe()
+            try process.run()
+            processes.append(process)
+        }
+
+        for process in processes {
+            process.waitUntilExit()
+            XCTAssertEqual(process.terminationStatus, 0)
+        }
+
+        let loaded = try store.load()
+        let requestIDs = Set((loaded.requestLedger ?? []).map(\.requestID))
+        XCTAssertEqual(requestIDs.count, 12)
+        for index in 0..<12 {
+            XCTAssertTrue(requestIDs.contains(String(format: "subprocess-request-%04d", index)))
+        }
+    }
+
+    private func ambientCtlExecutable() throws -> URL {
+        let startingURLs = [
+            Bundle(for: AmbientCoreTests.self).bundleURL,
+            Bundle.main.bundleURL,
+            URL(fileURLWithPath: CommandLine.arguments[0]).deletingLastPathComponent()
+        ]
+        for startingURL in startingURLs {
+            var directory = startingURL
+            for _ in 0..<8 {
+                let candidate = directory.appendingPathComponent("ambientctl")
+                if FileManager.default.isExecutableFile(atPath: candidate.path) {
+                    return candidate
+                }
+                directory.deleteLastPathComponent()
+            }
+        }
+        throw XCTSkip("ambientctl build product was not available to the test bundle")
+    }
+
     private func temporaryDirectory() throws -> URL {
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent("ambient-tests-\(UUID().uuidString)", isDirectory: true)

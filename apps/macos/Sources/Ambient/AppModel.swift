@@ -22,11 +22,33 @@ final class AppModel: ObservableObject {
     @Published var showingNewRule = false
 
     private var engine: AmbientEngine?
+    private var rotationCoordinator: AmbientRotationCoordinator?
 
     init() {
         do {
-            engine = try AmbientEngine()
-            refresh()
+            let engine = try AmbientEngine()
+            self.engine = engine
+            refresh(rescheduleRotation: false)
+
+            let coordinator = AmbientRotationCoordinator(
+                driver: engine,
+                scheduler: MacBoundaryScheduler(),
+                events: MacRuntimeEventSource(),
+                cadenceProvider: { state in
+                    AmbientRotationCadence.production(
+                        for: state.powerPolicy,
+                        isLowPowerModeEnabled: ProcessInfo.processInfo.isLowPowerModeEnabled
+                    )
+                },
+                onChange: { [weak self] in
+                    self?.refresh(rescheduleRotation: false)
+                },
+                onError: { [weak self] error in
+                    self?.errorMessage = error.localizedDescription
+                }
+            )
+            rotationCoordinator = coordinator
+            coordinator.start()
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -45,7 +67,7 @@ final class AppModel: ObservableObject {
         AmbientRuleEngine.assets(in: channel, state: state).count
     }
 
-    func refresh() {
+    func refresh(rescheduleRotation: Bool = true) {
         guard let engine else { return }
         try? engine.reload()
         state = engine.state
@@ -53,6 +75,9 @@ final class AppModel: ObservableObject {
             selectedChannelID = state.activeChannelID
         }
         nowNext = engine.status()
+        if rescheduleRotation {
+            rotationCoordinator?.stateDidChange()
+        }
     }
 
     func chooseImportFolder() {

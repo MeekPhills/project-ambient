@@ -20,7 +20,13 @@ public enum AmbientDisplayScope: String, Codable, Sendable {
     case primary
 }
 
-public final class AmbientWallpaperService {
+public protocol AmbientWallpaperApplying: AnyObject {
+    func captureCurrentWallpapers() -> [String: String]
+    func apply(asset: AmbientAsset, scope: AmbientDisplayScope) throws
+    func restore(paths: [String: String]) throws
+}
+
+public final class AmbientWallpaperService: AmbientWallpaperApplying {
     public init() {}
 
     public func captureCurrentWallpapers() -> [String: String] {
