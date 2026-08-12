@@ -5,6 +5,7 @@ import test from "node:test";
 const statusManifest = JSON.parse(
   await readFile(new URL("../app/status/status-manifest.json", import.meta.url), "utf8"),
 );
+const statusRouteSource = await readFile(new URL("../app/api/status/route.ts", import.meta.url), "utf8");
 
 const routes = [
   ["/", /Your collection,.*alive.*right moment/is],
@@ -157,4 +158,12 @@ test("raw status manifest endpoint exposes the canonical machine-readable source
   assert.equal(manifest.totalWeight, 100);
   assert.equal(manifest.phases.length, 3);
   assert.equal(manifest.deliveryWorkstreams.length, 4);
+});
+
+test("status API does not recursively fetch its own production worker", () => {
+  assert.match(statusRouteSource, /The production status service is responding/);
+  assert.doesNotMatch(
+    statusRouteSource,
+    /probeUrl:\s*"https:\/\/project-ambient\.meekphillies\.chatgpt\.site"/,
+  );
 });
