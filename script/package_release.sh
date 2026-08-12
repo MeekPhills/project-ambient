@@ -108,6 +108,7 @@ mkdir -p "$RELEASE_PARENT"
 STAGE_DIR="$(mktemp -d "$RELEASE_PARENT/.${VERSION}.staging.XXXXXX")"
 cleanup() {
   [[ -n "$STAGE_DIR" && -d "$STAGE_DIR" ]] && rm -rf "$STAGE_DIR"
+  return 0
 }
 trap cleanup EXIT
 
