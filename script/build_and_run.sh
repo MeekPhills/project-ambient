@@ -33,7 +33,17 @@ MODULE_CACHE="$PACKAGE_DIR/.build/module-cache"
 
 mkdir -p "$BUILD_CACHE" "$BUILD_CONFIG" "$BUILD_SECURITY" "$MODULE_CACHE"
 
-pkill -x "$APP_NAME" >/dev/null 2>&1 || true
+case "$MODE" in
+  --stage|stage)
+    ;;
+  run|--debug|debug|--logs|logs|--telemetry|telemetry|--verify|verify)
+    pkill -x "$APP_NAME" >/dev/null 2>&1 || true
+    ;;
+  *)
+    echo "usage: $0 [run|--stage|--debug|--logs|--telemetry|--verify]" >&2
+    exit 2
+    ;;
+esac
 
 cd "$PACKAGE_DIR"
 export CLANG_MODULE_CACHE_PATH="$MODULE_CACHE"
@@ -94,9 +104,5 @@ case "$MODE" in
     sleep 1
     pgrep -x "$APP_NAME" >/dev/null
     echo "Verified $APP_NAME is running from $APP_BUNDLE"
-    ;;
-  *)
-    echo "usage: $0 [run|--stage|--debug|--logs|--telemetry|--verify]" >&2
-    exit 2
     ;;
 esac
