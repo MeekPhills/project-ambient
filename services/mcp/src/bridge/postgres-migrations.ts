@@ -127,7 +127,7 @@ const migrationV1: BridgeMigration = {
       error TEXT
     );
 
-    CREATE INDEX IF NOT EXISTS "ambient_private"."ambient_bridge_commands_delivery_idx"
+    CREATE INDEX IF NOT EXISTS "ambient_bridge_commands_delivery_idx"
       ON "ambient_private"."ambient_bridge_commands" (device_id, status, created_at, id);
   `,
 };
@@ -251,7 +251,7 @@ const migrationV2: BridgeMigration = {
     ALTER TABLE "ambient_private"."ambient_bridge_commands" ALTER COLUMN protocol_version SET NOT NULL;
 
     DROP INDEX IF EXISTS "ambient_private"."ambient_bridge_commands_request_idx";
-    CREATE UNIQUE INDEX IF NOT EXISTS "ambient_private"."ambient_bridge_commands_request_unique_idx"
+    CREATE UNIQUE INDEX IF NOT EXISTS "ambient_bridge_commands_request_unique_idx"
       ON "ambient_private"."ambient_bridge_commands" (device_id, request_id)
       WHERE request_id IS NOT NULL;
 
@@ -351,7 +351,7 @@ const migrationV4: BridgeMigration = {
       PRIMARY KEY (scope, key_hash)
     );
 
-    CREATE INDEX IF NOT EXISTS "ambient_private"."ambient_bridge_rate_limits_reset_idx"
+    CREATE INDEX IF NOT EXISTS "ambient_bridge_rate_limits_reset_idx"
       ON "ambient_private"."ambient_bridge_rate_limits" (scope, reset_at);
 
     CREATE TABLE IF NOT EXISTS "ambient_private"."ambient_bridge_rate_limit_state" (

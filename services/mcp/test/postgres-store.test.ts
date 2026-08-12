@@ -297,6 +297,10 @@ test("migration and runtime SQL are private-qualified and preserve delivery inva
   const migrations = POSTGRES_BRIDGE_MIGRATIONS.map(({ sql }) => sql).join("\n");
   const runtime = await readFile(new URL("../src/bridge/postgres-store.ts", import.meta.url), "utf8");
   assert.doesNotMatch(`${migrations}\n${runtime}`, /\bNOW\s*\(/i);
+  assert.doesNotMatch(
+    migrations,
+    /CREATE\s+(?:UNIQUE\s+)?INDEX(?:\s+IF\s+NOT\s+EXISTS)?\s+"ambient_private"\./i,
+  );
   assert.match(migrations, /CREATE UNIQUE INDEX[\s\S]*\(device_id, request_id\)[\s\S]*WHERE request_id IS NOT NULL/i);
   assert.match(migrations, /row_number\(\)[\s\S]*WHEN 'succeeded' THEN 0[\s\S]*WHEN 'failed' THEN 1/i);
   assert.match(migrations, /attempt_count >= 0 AND attempt_count <= max_attempts/i);
@@ -304,7 +308,10 @@ test("migration and runtime SQL are private-qualified and preserve delivery inva
   assert.match(runtime, /attempt_count < command\.max_attempts/i);
   assert.match(runtime, /protocol_version = \$4/i);
   assert.match(migrations, /CREATE TABLE IF NOT EXISTS "ambient_private"\."ambient_bridge_rate_limits"/i);
-  assert.match(migrations, /"ambient_private"\."ambient_bridge_rate_limits_reset_idx"/i);
+  assert.match(
+    migrations,
+    /"ambient_bridge_rate_limits_reset_idx"\s+ON "ambient_private"\."ambient_bridge_rate_limits"/i,
+  );
   assert.match(migrations, /PRIMARY KEY \(scope, key_hash\)/i);
   for (const scope of ["mcp-ingress", "mcp-authorized", "ingress", "admin", "device-poll", "device-result"]) {
     assert.match(migrations, new RegExp(`'${scope}'`));
