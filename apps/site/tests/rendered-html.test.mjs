@@ -143,10 +143,10 @@ test("status page renders the exact score, ETA boundaries, filters, and methodol
   assert.match(cleanHtml, /Project Ambient Status Bot/);
   assert.equal([...cleanHtml.matchAll(/data-status-dock-phase/g)].length, 3);
   assert.equal([...cleanHtml.matchAll(/data-status-dock-agent/g)].length, 4);
-  assert.match(cleanHtml, /macos_build.*Godel/is);
-  assert.match(cleanHtml, /mcp_build.*Lovelace/is);
-  assert.match(cleanHtml, /site_build.*Curie/is);
-  assert.match(cleanHtml, /primary.*Codex/is);
+  for (const workstream of statusManifest.deliveryWorkstreams) {
+    const [agent, model] = workstream.owner.split("·").map((part) => part.trim());
+    assert.match(cleanHtml, new RegExp(`${agent}.*${model}`, "is"));
+  }
   assert.match(cleanHtml, /All/);
   assert.match(cleanHtml, /Active/);
   assert.match(cleanHtml, /Blocked/);
