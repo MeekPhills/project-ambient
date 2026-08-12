@@ -155,6 +155,6 @@ The test suite validates schemas and annotations, idempotent retries, confirmati
 - `submission/app-metadata.json` — OpenAI listing copy and trust URLs
 - `submission/evals.json` — positive and negative review prompts
 - `submission/checklist.md` — account and production gates
-- `server.json` — official MCP Registry metadata (replace placeholder namespace/URLs)
+- `server.json` — production MCP Registry metadata for the GitHub namespace, npm package, and hosted endpoint
 - `packaging/mcpb/manifest.json` — MCP Bundle/Claude Desktop metadata
 - `claude-desktop.example.json` — manual local client configuration

@@ -9,8 +9,11 @@
   "terms_url": "https://project-ambient.meekphillies.chatgpt.site/terms",
   "support_url": "https://project-ambient.meekphillies.chatgpt.site/support",
   "homepage_url": "https://project-ambient.meekphillies.chatgpt.site",
+  "logo_file": "assets/project-ambient-logo-1024.png",
   "authentication": "Bearer token for the private alpha endpoint; OAuth 2.1 PKCE is required before public directory submission.",
   "review_mode": "Set AMBIENT_ADAPTER=demo for deterministic synthetic reviewer data.",
+  "starter_prompts_file": "starter-prompts.json",
+  "release_notes_file": "release-notes.md",
   "data_practices": [
     "No media files, thumbnails, local paths, or private tags are sent through MCP.",
     "Tool results contain channel names, scene titles, selection explanations, and bounded control outcomes.",
