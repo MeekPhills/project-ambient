@@ -37,8 +37,8 @@ else
   exit 1
 fi
 
-if rg -n --pcre2 --hidden --glob '!**/.git/**' --glob '!**/node_modules/**' \
-  '(?<![A-Za-z0-9])(?:gho_|ghp_)[A-Za-z0-9]{20,}|sk-[A-Za-z0-9_-]{20,}|-----BEGIN (?:RSA|OPENSSH|EC) PRIVATE KEY-----' "$ROOT_DIR"; then
+if grep -RInE --exclude-dir=.git --exclude-dir=node_modules \
+  '(gho_|ghp_)[A-Za-z0-9]{20,}|sk-[A-Za-z0-9_-]{20,}|-----BEGIN (RSA|OPENSSH|EC) PRIVATE KEY-----' "$ROOT_DIR"; then
   printf '\nPotential secret material found. Review before release.\n' >&2
   exit 1
 fi

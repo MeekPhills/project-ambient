@@ -92,10 +92,10 @@ validate_archive_entries() {
   local archive="$1"
   local entries
   entries="$(unzip -Z1 "$archive")" || fail "cannot read ZIP archive: $archive"
-  if printf '%s\n' "$entries" | rg -n '^(?:/|.*(?:^|/)\.\.(?:/|$))' >/dev/null; then
+  if printf '%s\n' "$entries" | grep -En '(^/)|(^|/)\.\.(/|$)' >/dev/null; then
     fail "archive contains an unsafe path: $archive"
   fi
-  printf '%s\n' "$entries" | rg -Fx 'Project Ambient/Project Ambient.app/Contents/Info.plist' >/dev/null || \
+  printf '%s\n' "$entries" | grep -Fx 'Project Ambient/Project Ambient.app/Contents/Info.plist' >/dev/null || \
     fail "archive does not contain the expected application bundle: $archive"
 }
 
@@ -104,7 +104,7 @@ assert_universal() {
   local architectures
   architectures="$(lipo -archs "$binary" 2>/dev/null)" || fail "not a Mach-O binary: $binary"
   for architecture in arm64 x86_64; do
-    if ! printf '%s\n' "$architectures" | tr ' ' '\n' | rg -Fx "$architecture" >/dev/null; then
+    if ! printf '%s\n' "$architectures" | tr ' ' '\n' | grep -Fx "$architecture" >/dev/null; then
       fail "missing $architecture slice in $binary (found: $architectures)"
     fi
   done
@@ -148,11 +148,11 @@ verify_macos_archive() {
     require_tool xcrun
     require_tool spctl
     codesign --verify --deep --strict --verbose=2 "$app_path" || fail 'codesign verification failed'
-    codesign -dvv "$app_path" 2>&1 | rg -F 'Authority=Developer ID Application' >/dev/null || \
+    codesign -dvv "$app_path" 2>&1 | grep -F 'Authority=Developer ID Application' >/dev/null || \
       fail 'application is not signed with a Developer ID Application certificate'
     codesign --verify --strict --verbose=2 "$top_level_cli" || \
       fail 'top-level ambientctl codesign verification failed'
-    codesign -dvv "$top_level_cli" 2>&1 | rg -F 'Authority=Developer ID Application' >/dev/null || \
+    codesign -dvv "$top_level_cli" 2>&1 | grep -F 'Authority=Developer ID Application' >/dev/null || \
       fail 'top-level ambientctl is not signed with a Developer ID Application certificate'
     xcrun stapler validate "$app_path" || fail 'notarization ticket is not stapled to the application'
     spctl --assess --type execute --verbose=4 "$app_path" || fail 'Gatekeeper rejected the application'
@@ -210,7 +210,7 @@ DEPENDENCY_LOCKS="$RELEASE_DIR/DEPENDENCY_LOCKS.sha256"
 [[ -f "$SUMS" ]] || fail 'SHA256SUMS.txt is missing'
 [[ -f "$DEPENDENCY_LOCKS" ]] || fail 'DEPENDENCY_LOCKS.sha256 is missing'
 
-if find "$RELEASE_DIR" -maxdepth 1 -type l -print -quit | rg -q .; then
+if find "$RELEASE_DIR" -maxdepth 1 -type l -print -quit | grep -q .; then
   fail 'release directory contains a symbolic link'
 fi
 
@@ -265,9 +265,9 @@ mcp_bundle_version="$(unzip -p "$RELEASE_DIR/$MCP_BUNDLE" manifest.json | node -
 [[ "$mcp_bundle_version" == "$VERSION" ]] || \
   fail "MCP bundle version $mcp_bundle_version does not match release version $VERSION"
 
-unzip -Z1 "$RELEASE_DIR/$MARKETPLACE_KIT" | rg -Fx 'Project Ambient Marketplace Kit/homebrew/project-ambient.rb' >/dev/null || \
+unzip -Z1 "$RELEASE_DIR/$MARKETPLACE_KIT" | grep -Fx 'Project Ambient Marketplace Kit/homebrew/project-ambient.rb' >/dev/null || \
   fail 'marketplace kit is missing the Homebrew cask'
-unzip -Z1 "$RELEASE_DIR/$SOURCE_ARCHIVE" | rg -F 'README.md' >/dev/null || \
+unzip -Z1 "$RELEASE_DIR/$SOURCE_ARCHIVE" | grep -F 'README.md' >/dev/null || \
   fail 'source archive is missing README.md'
 
 if [[ "$REQUIRE_HOMEBREW" == true ]]; then
