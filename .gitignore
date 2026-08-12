@@ -5,6 +5,8 @@
 **/.next/
 **/dist/
 **/build/
+!apps/site/build/
+!apps/site/build/sites-vite-plugin.ts
 **/.wrangler/
 **/.npm-cache/
 dist/
