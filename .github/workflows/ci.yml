@@ -24,7 +24,7 @@ jobs:
     runs-on: ubuntu-latest
     services:
       postgres:
-        image: postgres:17.6-alpine3.22@sha256:4d89c904835259bc58876520d20a64ea4877644f8988da8c978bccdde01e0701
+        image: postgres:17.6-alpine3.22@sha256:ef257d85f76e48da1c64832459b59fcaba1a4dac97bf5d7450c77753542eee94
         env:
           POSTGRES_DB: ambient_test
           POSTGRES_USER: ambient_test
