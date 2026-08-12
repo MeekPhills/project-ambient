@@ -5,7 +5,7 @@ import {
   BridgeSchemaMigrationError,
 } from "./types.js";
 
-export const POSTGRES_BRIDGE_SCHEMA_VERSION = 3;
+export const POSTGRES_BRIDGE_SCHEMA_VERSION = 4;
 
 // Two fixed signed int32 keys keep migration serialization scoped to Project Ambient.
 export const POSTGRES_BRIDGE_MIGRATION_LOCK = [1_096_644_681, 1_163_151_922] as const;
@@ -250,10 +250,48 @@ const migrationV3: BridgeMigration = {
   `,
 };
 
+const migrationV4: BridgeMigration = {
+  version: 4,
+  name: "distributed_rate_limits",
+  sql: `
+    CREATE TABLE IF NOT EXISTS ambient_bridge_rate_limits (
+      scope TEXT NOT NULL CHECK (scope IN (
+        'mcp-ingress', 'mcp-authorized', 'ingress', 'admin', 'device-poll', 'device-result'
+      )),
+      key_hash TEXT NOT NULL,
+      total_hits INTEGER NOT NULL CHECK (total_hits >= 1),
+      reset_at TIMESTAMPTZ NOT NULL,
+      CHECK (char_length(key_hash) BETWEEN 32 AND 128),
+      PRIMARY KEY (scope, key_hash)
+    );
+
+    CREATE INDEX IF NOT EXISTS ambient_bridge_rate_limits_reset_idx
+      ON ambient_bridge_rate_limits (scope, reset_at);
+
+    CREATE TABLE IF NOT EXISTS ambient_bridge_rate_limit_state (
+      scope TEXT PRIMARY KEY CHECK (scope IN (
+        'mcp-ingress', 'mcp-authorized', 'ingress', 'admin', 'device-poll', 'device-result'
+      )),
+      active_keys INTEGER NOT NULL DEFAULT 0 CHECK (active_keys BETWEEN 0 AND 100000)
+    );
+
+    INSERT INTO ambient_bridge_rate_limit_state (scope, active_keys)
+    SELECT configured.scope, count(rate_limit.key_hash)::integer
+      FROM (VALUES
+        ('mcp-ingress'), ('mcp-authorized'), ('ingress'), ('admin'),
+        ('device-poll'), ('device-result')
+      ) AS configured(scope)
+      LEFT JOIN ambient_bridge_rate_limits AS rate_limit ON rate_limit.scope = configured.scope
+     GROUP BY configured.scope
+    ON CONFLICT (scope) DO UPDATE SET active_keys = EXCLUDED.active_keys;
+  `,
+};
+
 export const POSTGRES_BRIDGE_MIGRATIONS: readonly BridgeMigration[] = [
   migrationV1,
   migrationV2,
   migrationV3,
+  migrationV4,
 ];
 
 function validateAppliedVersions(rows: Array<{ version: number }>): number {

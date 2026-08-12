@@ -6,6 +6,7 @@ import type {
   BridgeCommand,
   BridgeDevice,
   BridgeOperation,
+  BridgeRateLimitScope,
   BridgeStore,
 } from "./types.js";
 import {
@@ -94,14 +95,22 @@ function safeHashEqual(actual: string, expected: string): boolean {
 export interface PostgresBridgeStoreOptions {
   connectionString: string;
   poolMax?: number;
+  rateLimitMaxActiveKeys?: number;
 }
 
 /** Durable, multi-instance bridge store for serverless and horizontally scaled hosts. */
 export class PostgresBridgeStore implements BridgeStore {
+  readonly distributedRateLimit = true;
   private readonly pool: Pool;
+  private readonly rateLimitMaxActiveKeys: number;
   private initialization: Promise<void> | undefined;
 
   constructor(options: PostgresBridgeStoreOptions, pool?: Pool) {
+    const maxActiveKeys = options.rateLimitMaxActiveKeys ?? 50_000;
+    if (!Number.isInteger(maxActiveKeys) || maxActiveKeys < 1 || maxActiveKeys > 100_000) {
+      throw new Error("rateLimitMaxActiveKeys must be an integer between 1 and 100000.");
+    }
+    this.rateLimitMaxActiveKeys = maxActiveKeys;
     this.pool = pool ?? new Pool({
       connectionString: options.connectionString,
       max: options.poolMax ?? 3,
@@ -116,6 +125,140 @@ export class PostgresBridgeStore implements BridgeStore {
     return this.initialization;
   }
 
+  async incrementRateLimit(
+    scope: BridgeRateLimitScope,
+    keyHash: string,
+    windowMs: number,
+  ): Promise<{
+    totalHits: number;
+    resetTime: Date;
+  }> {
+    await this.initialize();
+    return this.rateLimitTransaction(async (client) => {
+      const fastPath = await client.query<{ total_hits: number; reset_at: Date | string }>(
+        `UPDATE ambient_bridge_rate_limits
+            SET total_hits = total_hits + 1
+          WHERE scope = $1 AND key_hash = $2 AND reset_at > clock_timestamp()
+          RETURNING total_hits, reset_at`,
+        [scope, keyHash],
+      );
+      const fastRow = fastPath.rows[0];
+      if (fastRow) {
+        return {
+          totalHits: fastRow.total_hits,
+          resetTime: fastRow.reset_at instanceof Date ? fastRow.reset_at : new Date(fastRow.reset_at),
+        };
+      }
+      const state = await client.query(
+        "SELECT active_keys FROM ambient_bridge_rate_limit_state WHERE scope = $1 FOR UPDATE",
+        [scope],
+      );
+      if ((state.rowCount ?? 0) !== 1) throw new Error("Rate-limit scope metadata is unavailable.");
+      await client.query(
+        `WITH removed AS (
+           DELETE FROM ambient_bridge_rate_limits
+            WHERE scope = $1 AND reset_at <= clock_timestamp()
+            RETURNING 1
+         )
+         UPDATE ambient_bridge_rate_limit_state
+            SET active_keys = GREATEST(active_keys - (SELECT count(*) FROM removed), 0)
+          WHERE scope = $1`,
+        [scope],
+      );
+      const concurrent = await client.query<{ total_hits: number; reset_at: Date | string }>(
+        `UPDATE ambient_bridge_rate_limits
+            SET total_hits = total_hits + 1
+          WHERE scope = $1 AND key_hash = $2 AND reset_at > clock_timestamp()
+          RETURNING total_hits, reset_at`,
+        [scope, keyHash],
+      );
+      const concurrentRow = concurrent.rows[0];
+      if (concurrentRow) {
+        return {
+          totalHits: concurrentRow.total_hits,
+          resetTime: concurrentRow.reset_at instanceof Date
+            ? concurrentRow.reset_at
+            : new Date(concurrentRow.reset_at),
+        };
+      }
+      const capacity = await client.query(
+        `UPDATE ambient_bridge_rate_limit_state
+            SET active_keys = active_keys + 1
+          WHERE scope = $1 AND active_keys < $2
+          RETURNING active_keys`,
+        [scope, this.rateLimitMaxActiveKeys],
+      );
+      if ((capacity.rowCount ?? 0) === 0) {
+        throw new Error(`Distributed rate-limit counter capacity is exhausted for ${scope}.`);
+      }
+      const result = await client.query<{ total_hits: number; reset_at: Date | string }>(
+        `INSERT INTO ambient_bridge_rate_limits (scope, key_hash, total_hits, reset_at)
+         VALUES ($1, $2, 1, clock_timestamp() + ($3 * INTERVAL '1 millisecond'))
+         RETURNING total_hits, reset_at`,
+        [scope, keyHash, windowMs],
+      );
+      const row = result.rows[0];
+      if (!row) throw new Error("Rate-limit increment did not return a row.");
+      return {
+        totalHits: row.total_hits,
+        resetTime: row.reset_at instanceof Date ? row.reset_at : new Date(row.reset_at),
+      };
+    });
+  }
+
+  async decrementRateLimit(scope: BridgeRateLimitScope, keyHash: string): Promise<void> {
+    await this.initialize();
+    await this.rateLimitTransaction(async (client) => {
+      await client.query(
+        "SELECT active_keys FROM ambient_bridge_rate_limit_state WHERE scope = $1 FOR UPDATE",
+        [scope],
+      );
+      const removed = await client.query(
+        `DELETE FROM ambient_bridge_rate_limits
+          WHERE scope = $1 AND key_hash = $2 AND total_hits = 1
+          RETURNING key_hash`,
+        [scope, keyHash],
+      );
+      if ((removed.rowCount ?? 0) > 0) {
+        await client.query(
+          `UPDATE ambient_bridge_rate_limit_state
+            SET active_keys = GREATEST(active_keys - 1, 0)
+            WHERE scope = $1`,
+          [scope],
+        );
+        return;
+      }
+      await client.query(
+        `UPDATE ambient_bridge_rate_limits
+            SET total_hits = total_hits - 1
+          WHERE scope = $1 AND key_hash = $2 AND total_hits > 1`,
+        [scope, keyHash],
+      );
+    });
+  }
+
+  async resetRateLimit(scope: BridgeRateLimitScope, keyHash: string): Promise<void> {
+    await this.initialize();
+    await this.rateLimitTransaction(async (client) => {
+      await client.query(
+        "SELECT active_keys FROM ambient_bridge_rate_limit_state WHERE scope = $1 FOR UPDATE",
+        [scope],
+      );
+      const removed = await client.query(
+        "DELETE FROM ambient_bridge_rate_limits WHERE scope = $1 AND key_hash = $2 RETURNING key_hash",
+        [scope, keyHash],
+      );
+      if ((removed.rowCount ?? 0) > 0) {
+        await client.query(
+          `UPDATE ambient_bridge_rate_limit_state
+            SET active_keys = GREATEST(active_keys - 1, 0)
+            WHERE scope = $1`,
+          [scope],
+        );
+      }
+    });
+  }
+
   private async runInitialization(): Promise<void> {
     let client: PoolClient | undefined;
     try {
@@ -127,6 +270,14 @@ export class PostgresBridgeStore implements BridgeStore {
     } finally {
       client?.release();
     }
+  }
+
+  private async rateLimitTransaction<T>(run: (client: PoolClient) => Promise<T>): Promise<T> {
+    return this.transaction(async (client) => {
+      await client.query("SET LOCAL lock_timeout = '1s'");
+      await client.query("SET LOCAL statement_timeout = '3s'");
+      return run(client);
+    });
   }
 
   async createDevice(displayName: string): Promise<{ device: BridgeDevice; token: string }> {
@@ -273,6 +424,14 @@ export class PostgresBridgeStore implements BridgeStore {
       if ((activeDevice.rowCount ?? 0) === 0) return null;
 
       await this.reconcileCommands(client, deviceId);
+      await client.query(
+        `UPDATE ambient_bridge_commands
+            SET status = 'expired', lease_expires_at = NULL, lease_id = NULL
+          WHERE device_id = $1
+            AND status = 'pending'
+            AND expires_at <= clock_timestamp() + ($2 * INTERVAL '1 second')`,
+        [deviceId, leaseSeconds],
+      );
       const leaseId = newLeaseId();
       const leased = await client.query<CommandRow>(
         `WITH candidate AS (
@@ -280,7 +439,7 @@ export class PostgresBridgeStore implements BridgeStore {
              FROM ambient_bridge_commands
             WHERE device_id = $1
               AND status = 'pending'
-              AND expires_at > clock_timestamp()
+              AND expires_at > clock_timestamp() + ($2 * INTERVAL '1 second')
               AND attempt_count < max_attempts
             ORDER BY created_at ASC, id ASC
             FOR UPDATE SKIP LOCKED

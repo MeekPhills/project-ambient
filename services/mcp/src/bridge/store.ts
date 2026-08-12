@@ -122,23 +122,28 @@ function migrateJsonState(value: unknown): BridgeState {
     const operationHasRequestId = Object.hasOwn(rawOperation, "requestId");
     const operationCandidate = jsonRequestId(rawOperation.requestId);
     const columnCandidate = jsonRequestId(command.requestId);
-    const mutationMissingRequestId = MUTATION_OPERATION_TYPES.has(String(rawOperation.type))
+    const mutationOperation = MUTATION_OPERATION_TYPES.has(String(rawOperation.type));
+    const mutationMissingRequestId = mutationOperation
       && !operationHasRequestId
       && columnCandidate.value === null;
-    const invalid = operationCandidate.invalid || columnCandidate.invalid || mutationMissingRequestId;
+    const readHasRequestId = !mutationOperation
+      && (operationHasRequestId || columnCandidate.value !== null);
+    const invalid = operationCandidate.invalid
+      || columnCandidate.invalid
+      || mutationMissingRequestId
+      || readHasRequestId;
     const disagrees = !invalid
       && operationHasRequestId
       && operationCandidate.value !== columnCandidate.value
       && columnCandidate.value !== null;
     if (
       !legacy
-      && command.status !== "failed"
-      && command.status !== "expired"
+      && (command.status === "pending" || command.status === "leased")
       && (
         invalid
         || operationCandidate.value !== columnCandidate.value
-        || (MUTATION_OPERATION_TYPES.has(String(rawOperation.type)) && columnCandidate.value === null)
-        || (!MUTATION_OPERATION_TYPES.has(String(rawOperation.type)) && columnCandidate.value !== null)
+        || (mutationOperation && columnCandidate.value === null)
+        || (!mutationOperation && columnCandidate.value !== null)
       )
     ) {
       throw new BridgeSchemaMigrationError(
@@ -402,6 +407,7 @@ export abstract class BaseBridgeStore implements BridgeStore {
       const device = state.devices.find((candidate) => candidate.deviceId === deviceId);
       if (!device || device.revokedAt) return null;
       const now = this.now();
+      const leaseDeadline = new Date(now.getTime() + leaseSeconds * 1_000);
       for (const command of state.commands) {
         if (
           (command.status === "pending" || command.status === "leased")
@@ -419,6 +425,11 @@ export abstract class BaseBridgeStore implements BridgeStore {
           command.leaseExpiresAt = null;
           command.leaseId = null;
         }
+        if (command.status === "pending" && new Date(command.expiresAt) <= leaseDeadline) {
+          command.status = "expired";
+          command.leaseExpiresAt = null;
+          command.leaseId = null;
+        }
       }
       const command = state.commands.find(
         (candidate) => candidate.deviceId === deviceId
@@ -427,7 +438,7 @@ export abstract class BaseBridgeStore implements BridgeStore {
       );
       if (!command) return null;
       command.status = "leased";
-      command.leaseExpiresAt = new Date(now.getTime() + leaseSeconds * 1_000).toISOString();
+      command.leaseExpiresAt = leaseDeadline.toISOString();
       command.leaseId = newLeaseId();
       command.attemptCount += 1;
       return clone(command);

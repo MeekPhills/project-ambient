@@ -33,6 +33,23 @@ test("bridge enrollment, authentication, leasing, completion, and revocation", a
   assert.equal(await store.authenticateDevice(device.deviceId, token), null);
 });
 
+test("a lease requires a full remaining delivery window", async () => {
+  let now = Date.parse("2026-08-12T15:30:00.000Z");
+  const store = new MemoryBridgeStore(() => new Date(now));
+  const { device } = await store.createDevice("Lease Boundary Mac");
+  const exact = await store.enqueue(device.deviceId, { type: "get_status" }, 120);
+  assert.equal(await store.leaseNext(device.deviceId, 120), null);
+  assert.equal((await store.getCommand(exact.id))?.status, "expired");
+
+  const sufficient = await store.enqueue(device.deviceId, { type: "get_status" }, 121);
+  const leased = await store.leaseNext(device.deviceId, 120);
+  assert.equal(leased?.id, sufficient.id);
+  assert.equal(Date.parse(leased?.leaseExpiresAt ?? ""), now + 120_000);
+
+  now += 2_000;
+  assert.equal((await store.getCommand(sufficient.id))?.status, "leased");
+});
+
 test("mutation request IDs deduplicate, reject conflicting reuse, and recover expired delivery", async () => {
   let now = Date.parse("2026-08-12T15:30:00.000Z");
   const store = new MemoryBridgeStore(() => new Date(now));
@@ -245,10 +262,37 @@ test("JSON migration deterministically resolves duplicate and conflicting reques
       },
       {
         ...base,
+        id: "duplicate_succeeded_noncanonical",
+        status: "succeeded",
+        operation: { type: "pause", requestId: "duplicate-request-0001" },
+      },
+      {
+        ...base,
         id: "mismatch_pending",
         status: "pending",
         requestId: "column-request---0001",
         operation: { type: "pause", requestId: "operation-request-0001" },
+      },
+      {
+        ...base,
+        id: "mismatch_succeeded",
+        status: "succeeded",
+        requestId: "column-request---0002",
+        operation: { type: "pause", requestId: "operation-request-0002" },
+      },
+      {
+        ...base,
+        id: "read_column_pending",
+        status: "pending",
+        requestId: "read-column-request-0001",
+        operation: { type: "get_status" },
+      },
+      {
+        ...base,
+        id: "read_column_leased",
+        status: "leased",
+        requestId: "read-column-request-0002",
+        operation: { type: "get_status" },
       },
     ],
   }));
@@ -256,6 +300,7 @@ test("JSON migration deterministically resolves duplicate and conflicting reques
   const store = new JsonFileBridgeStore(path);
   await store.initialize();
   assert.equal((await store.getCommand("duplicate_succeeded"))?.requestId, "duplicate-request-0001");
+  assert.equal((await store.getCommand("duplicate_succeeded_noncanonical"))?.requestId, null);
   const duplicate = await store.getCommand("duplicate_pending");
   assert.equal(duplicate?.status, "failed");
   assert.equal(duplicate?.requestId, null);
@@ -264,9 +309,24 @@ test("JSON migration deterministically resolves duplicate and conflicting reques
   assert.equal(mismatch?.status, "failed");
   assert.equal(mismatch?.requestId, null);
   assert.match(mismatch?.error ?? "", /identifiers disagreed/);
+  assert.equal((await store.getCommand("mismatch_succeeded"))?.requestId, null);
+  for (const id of ["read_column_pending", "read_column_leased"]) {
+    const readCommand = await store.getCommand(id);
+    assert.equal(readCommand?.status, "failed");
+    assert.equal(readCommand?.requestId, null);
+    assert.deepEqual(readCommand?.operation, { type: "get_status" });
+  }
   const reloaded = new JsonFileBridgeStore(path);
   assert.equal((await reloaded.getCommand("duplicate_pending"))?.requestId, null);
+  assert.equal((await reloaded.getCommand("duplicate_succeeded_noncanonical"))?.requestId, null);
   assert.equal((await reloaded.getCommand("mismatch_pending"))?.requestId, null);
+  assert.equal((await reloaded.getCommand("mismatch_succeeded"))?.requestId, null);
+  for (const id of ["read_column_pending", "read_column_leased"]) {
+    const readCommand = await reloaded.getCommand(id);
+    assert.equal(readCommand?.status, "failed");
+    assert.equal(readCommand?.requestId, null);
+    assert.deepEqual(readCommand?.operation, { type: "get_status" });
+  }
 });
 
 test("JSON migration caches a typed failure for malformed state", async (t) => {

@@ -34,7 +34,7 @@ test(
   async (t) => {
     assert.ok(connectionString);
 
-    await t.test("concurrent initialization is serialized and v3 delivery is fenced", async (t) => {
+    await t.test("concurrent initialization, v4 quotas, and delivery fencing hold", async (t) => {
       const pool = await isolatedPool(t);
       const first = new PostgresBridgeStore({ connectionString }, pool);
       const second = new PostgresBridgeStore({ connectionString }, pool);
@@ -42,9 +42,153 @@ test(
       const ledger = await pool.query<{ version: number }>(
         "SELECT version FROM ambient_bridge_schema_migrations ORDER BY version",
       );
-      assert.deepEqual(ledger.rows.map(({ version }) => version), [1, 2, 3]);
+      assert.deepEqual(ledger.rows.map(({ version }) => version), [1, 2, 3, 4]);
+
+      const ingressA = new PostgresBridgeStore({ connectionString, rateLimitMaxActiveKeys: 3 }, pool);
+      const ingressB = new PostgresBridgeStore({ connectionString, rateLimitMaxActiveKeys: 3 }, pool);
+      const sharedKey = "concurrent-scoped-key-hash-00000001";
+      const concurrentHits = await Promise.all(Array.from({ length: 20 }, (_value, index) => (
+        (index % 2 === 0 ? ingressA : ingressB).incrementRateLimit("ingress", sharedKey, 60_000)
+      )));
+      assert.deepEqual(
+        concurrentHits.map(({ totalHits }) => totalHits).sort((left, right) => left - right),
+        Array.from({ length: 20 }, (_value, index) => index + 1),
+      );
+      assert.equal(new Set(concurrentHits.map(({ resetTime }) => resetTime.toISOString())).size, 1);
+      await ingressB.decrementRateLimit("ingress", sharedKey);
+      assert.equal((await ingressA.incrementRateLimit("ingress", sharedKey, 60_000)).totalHits, 20);
+      await ingressA.resetRateLimit("ingress", sharedKey);
+      assert.equal((await ingressB.incrementRateLimit("ingress", sharedKey, 60_000)).totalHits, 1);
+      await ingressB.resetRateLimit("ingress", sharedKey);
+
+      const scopedKeys = [
+        "ingress-cap-key-000000000000000001",
+        "ingress-cap-key-000000000000000002",
+        "ingress-cap-key-000000000000000003",
+      ];
+      await Promise.all(scopedKeys.map((key) => ingressA.incrementRateLimit("ingress", key, 60_000)));
+      await assert.rejects(
+        ingressB.incrementRateLimit("ingress", "ingress-cap-key-000000000000000004", 60_000),
+        /capacity is exhausted for ingress/,
+      );
+      assert.equal(
+        (await ingressB.incrementRateLimit("ingress", scopedKeys[0]!, 60_000)).totalHits,
+        2,
+      );
+      assert.equal(
+        (await ingressA.incrementRateLimit("device-poll", "poll-isolated-key-0000000000000001", 60_000)).totalHits,
+        1,
+      );
+      const countsAtCapacity = await pool.query<{ scope: string; count: string }>(
+        "SELECT scope, count(*) FROM ambient_bridge_rate_limits GROUP BY scope ORDER BY scope",
+      );
+      assert.deepEqual(countsAtCapacity.rows, [
+        { scope: "device-poll", count: "1" },
+        { scope: "ingress", count: "3" },
+      ]);
+      const mcpIngress = await ingressA.incrementRateLimit(
+        "mcp-ingress",
+        "mcp-shared-key-hash-0000000000001",
+        60_000,
+      );
+      const mcpAuthorized = await ingressB.incrementRateLimit(
+        "mcp-authorized",
+        "mcp-shared-key-hash-0000000000001",
+        60_000,
+      );
+      assert.equal(mcpIngress.totalHits, 1);
+      assert.equal(mcpAuthorized.totalHits, 1);
+      assert.equal(
+        (await ingressB.incrementRateLimit(
+          "mcp-ingress",
+          "mcp-shared-key-hash-0000000000001",
+          60_000,
+        )).totalHits,
+        2,
+      );
+      assert.equal(
+        (await ingressA.incrementRateLimit("ingress", scopedKeys[0]!, 60_000)).totalHits,
+        3,
+      );
+      const lockClient = await pool.connect();
+      try {
+        await lockClient.query("BEGIN");
+        await lockClient.query(
+          "SELECT active_keys FROM ambient_bridge_rate_limit_state WHERE scope = 'mcp-ingress' FOR UPDATE",
+        );
+        const startedAt = Date.now();
+        await assert.rejects(
+          ingressA.incrementRateLimit(
+            "mcp-ingress",
+            "mcp-lock-timeout-key-0000000000001",
+            60_000,
+          ),
+          (error: unknown) => Boolean(
+            error && typeof error === "object" && "code" in error && error.code === "55P03"
+          ),
+        );
+        assert.ok(Date.now() - startedAt < 5_000);
+      } finally {
+        await lockClient.query("ROLLBACK");
+        lockClient.release();
+      }
+
+      await pool.query(
+        "UPDATE ambient_bridge_rate_limits SET reset_at = clock_timestamp() - INTERVAL '1 second' WHERE scope = 'ingress'",
+      );
+      assert.equal(
+        (await ingressB.incrementRateLimit("ingress", "ingress-cap-key-000000000000000004", 60_000)).totalHits,
+        1,
+      );
+      const reclaimed = await pool.query<{ active_keys: number }>(
+        "SELECT active_keys FROM ambient_bridge_rate_limit_state WHERE scope = 'ingress'",
+      );
+      assert.equal(reclaimed.rows[0]?.active_keys, 1);
+
+      const countOneKey = "admin-count-one-key-0000000000000001";
+      await ingressA.incrementRateLimit("admin", countOneKey, 60_000);
+      await ingressB.decrementRateLimit("admin", countOneKey);
+      assert.equal((await ingressA.incrementRateLimit("admin", countOneKey, 60_000)).totalHits, 1);
+
+      await pool.query(
+        `INSERT INTO ambient_bridge_rate_limits (scope, key_hash, total_hits, reset_at)
+         SELECT 'device-result', md5(generate_series::text), 1,
+                clock_timestamp() - INTERVAL '1 second'
+           FROM generate_series(1, 150)`,
+      );
+      await pool.query(
+        "UPDATE ambient_bridge_rate_limit_state SET active_keys = 150 WHERE scope = 'device-result'",
+      );
+      const wideCapacity = new PostgresBridgeStore(
+        { connectionString, rateLimitMaxActiveKeys: 200 },
+        pool,
+      );
+      await wideCapacity.initialize();
+      assert.equal(
+        (await wideCapacity.incrementRateLimit(
+          "device-result",
+          "result-after-full-expiry-purge-000001",
+          60_000,
+        )).totalHits,
+        1,
+      );
+      const fullyPurged = await pool.query<{ count: string; active_keys: number }>(
+        `SELECT count(*)::text AS count,
+                (SELECT active_keys FROM ambient_bridge_rate_limit_state WHERE scope = 'device-result') AS active_keys
+           FROM ambient_bridge_rate_limits WHERE scope = 'device-result'`,
+      );
+      assert.deepEqual(fullyPurged.rows[0], { count: "1", active_keys: 1 });
 
       const { device } = await first.createDevice("Integration Mac");
+      const exactBoundary = await first.enqueue(device.deviceId, { type: "get_status" }, 120);
+      assert.equal(await first.leaseNext(device.deviceId, 120), null);
+      assert.equal((await first.getCommand(exactBoundary.id))?.status, "expired");
+      const aboveBoundary = await first.enqueue(device.deviceId, { type: "get_status" }, 121);
+      const boundaryLease = await first.leaseNext(device.deviceId, 120);
+      assert.equal(boundaryLease?.id, aboveBoundary.id);
+      assert.ok(boundaryLease?.leaseId);
+      await first.complete(aboveBoundary.id, device.deviceId, boundaryLease.leaseId, { online: true });
+
       const command = await first.enqueue(device.deviceId, { type: "get_status" }, 120);
       const lease = await first.leaseNext(device.deviceId, 30);
       assert.equal(lease?.attemptCount, 1);

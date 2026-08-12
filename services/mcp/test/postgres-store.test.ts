@@ -52,7 +52,7 @@ test("Postgres initialization uses one locked transaction and caches concurrent 
   assert.deepEqual(
     calls.filter(({ text }) => text.includes("INSERT INTO ambient_bridge_schema_migrations"))
       .map(({ values }) => values?.[0]),
-    [1, 2, 3],
+    [1, 2, 3, 4],
   );
   assert.equal(calls.at(-1)?.text, "COMMIT");
 });
@@ -99,7 +99,7 @@ test("Postgres migration rejects a newer database version and rolls back", async
 
   await assert.rejects(
     migratePostgresBridge(client),
-    /schema version 99 is newer than supported version 3/,
+    /schema version 99 is newer than supported version 4/,
   );
   assert.equal(calls.at(-1), "ROLLBACK");
   assert.equal(calls.some((text) => text.includes("INSERT INTO ambient_bridge_schema_migrations")), false);
@@ -115,4 +115,13 @@ test("migration and runtime SQL enforce v2 fencing, bounded attempts, and wall-c
   assert.match(runtime, /WITH candidate AS[\s\S]*FOR UPDATE SKIP LOCKED[\s\S]*attempt_count = command\.attempt_count \+ 1/i);
   assert.match(runtime, /attempt_count < command\.max_attempts/i);
   assert.match(runtime, /protocol_version = \$4/i);
+  assert.match(migrations, /CREATE TABLE IF NOT EXISTS ambient_bridge_rate_limits/i);
+  assert.match(migrations, /ambient_bridge_rate_limits_reset_idx/i);
+  assert.match(migrations, /PRIMARY KEY \(scope, key_hash\)/i);
+  for (const scope of ["mcp-ingress", "mcp-authorized", "ingress", "admin", "device-poll", "device-result"]) {
+    assert.match(migrations, new RegExp(`'${scope}'`));
+  }
+  assert.match(runtime, /SET LOCAL lock_timeout = '1s'/i);
+  assert.match(runtime, /SET LOCAL statement_timeout = '3s'/i);
+  assert.match(runtime, /expires_at > clock_timestamp\(\) \+ \(\$2 \* INTERVAL '1 second'\)/i);
 });

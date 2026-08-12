@@ -64,8 +64,23 @@ export interface BridgeState {
   commands: BridgeCommand[];
 }
 
+export type BridgeRateLimitScope =
+  | "mcp-ingress"
+  | "mcp-authorized"
+  | "ingress"
+  | "admin"
+  | "device-poll"
+  | "device-result";
+
 export interface BridgeStore {
+  readonly distributedRateLimit?: boolean;
   initialize(): Promise<void>;
+  incrementRateLimit?(scope: BridgeRateLimitScope, keyHash: string, windowMs: number): Promise<{
+    totalHits: number;
+    resetTime: Date;
+  }>;
+  decrementRateLimit?(scope: BridgeRateLimitScope, keyHash: string): Promise<void>;
+  resetRateLimit?(scope: BridgeRateLimitScope, keyHash: string): Promise<void>;
   createDevice(displayName: string): Promise<{ device: BridgeDevice; token: string }>;
   getDevice(deviceId: string): Promise<BridgeDevice | null>;
   authenticateDevice(deviceId: string, token: string): Promise<BridgeDevice | null>;
@@ -102,6 +117,18 @@ export class BridgeSchemaMigrationError extends Error {
 export const BRIDGE_PROTOCOL_VERSION = 2 as const;
 export const BRIDGE_REQUIRED_CAPABILITY = "lease_id" as const;
 export const BRIDGE_DEFAULT_MAX_ATTEMPTS = 3;
+export const BRIDGE_NATIVE_EXECUTION_BUDGET_MS = 8_000;
+export const BRIDGE_RESULT_HTTP_TIMEOUT_MS = 15_000;
+export const BRIDGE_RESULT_DEADLINE_RESERVE_MS = 1_000;
+export const BRIDGE_MAX_RETRY_AFTER_MS = 60_000;
+export const BRIDGE_RESULT_DELIVERY_BUDGET_MS =
+  BRIDGE_NATIVE_EXECUTION_BUDGET_MS
+  + BRIDGE_RESULT_HTTP_TIMEOUT_MS
+  + BRIDGE_MAX_RETRY_AFTER_MS
+  + BRIDGE_RESULT_HTTP_TIMEOUT_MS;
+export const BRIDGE_LEASE_SECONDS = 120;
+export const BRIDGE_MIN_COMMAND_TTL_SECONDS = 180;
+export const BRIDGE_DEFAULT_COMMAND_TTL_SECONDS = 180;
 export const BRIDGE_LEGACY_LEASE_ERROR =
   "Command was failed during the bridge protocol v2 upgrade; it was not replayed.";
 export const BRIDGE_REQUEST_ID_CONFLICT_ERROR =
