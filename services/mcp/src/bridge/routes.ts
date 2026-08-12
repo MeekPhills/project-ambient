@@ -3,10 +3,33 @@ import express from "express";
 import * as z from "zod/v4";
 import type { BridgeStore } from "./types.js";
 import {
+  BRIDGE_PROTOCOL_VERSION,
+  BRIDGE_REQUIRED_CAPABILITY,
   BridgeDeviceUnavailableError,
   BridgeRequestConflictError,
   bridgeOperationSchema,
 } from "./types.js";
+
+function supportsBridgeProtocol(request: Request): boolean {
+  const version = request.header("x-ambient-protocol-version");
+  const capabilities = request.header("x-ambient-capabilities")
+    ?.split(",")
+    .map((capability) => capability.trim()) ?? [];
+  return version === String(BRIDGE_PROTOCOL_VERSION)
+    && capabilities.includes(BRIDGE_REQUIRED_CAPABILITY);
+}
+
+function requireBridgeProtocol(request: Request, response: Response): boolean {
+  response.setHeader("X-Ambient-Protocol-Version", String(BRIDGE_PROTOCOL_VERSION));
+  response.setHeader("X-Ambient-Capabilities", BRIDGE_REQUIRED_CAPABILITY);
+  if (supportsBridgeProtocol(request)) return true;
+  response.status(426).json({
+    error: "bridge_protocol_upgrade_required",
+    required_protocol_version: BRIDGE_PROTOCOL_VERSION,
+    required_capabilities: [BRIDGE_REQUIRED_CAPABILITY],
+  });
+  return false;
+}
 
 const enrollmentSchema = z.object({ display_name: z.string().min(1).max(80) });
 const commandSchema = z.object({
@@ -36,7 +59,6 @@ function deviceAuth(store: BridgeStore): RequestHandler {
       return;
     }
     response.locals.deviceId = credentials.deviceId;
-    await store.touchDevice(credentials.deviceId, new Date().toISOString());
     next();
   };
 }
@@ -106,8 +128,10 @@ export function createBridgeRouter(store: BridgeStore, adminAuth: RequestHandler
     response.json({ command });
   });
 
-  router.get("/agent/commands/next", deviceAuth(store), async (_request, response) => {
+  router.get("/agent/commands/next", deviceAuth(store), async (request, response) => {
+    if (!requireBridgeProtocol(request, response)) return;
     const deviceId = response.locals.deviceId as string;
+    await store.touchDevice(deviceId, new Date().toISOString());
     const command = await store.leaseNext(deviceId, 30);
     if (!command) {
       response.status(204).end();
@@ -117,12 +141,14 @@ export function createBridgeRouter(store: BridgeStore, adminAuth: RequestHandler
   });
 
   router.post("/agent/commands/:commandId/result", deviceAuth(store), async (request, response) => {
+    if (!requireBridgeProtocol(request, response)) return;
     const input = resultSchema.safeParse(request.body);
     if (!input.success) {
       response.status(400).json({ error: "invalid_request", details: input.error.issues });
       return;
     }
     const deviceId = response.locals.deviceId as string;
+    await store.touchDevice(deviceId, new Date().toISOString());
     const commandId = String(request.params.commandId);
     const command = input.data.status === "succeeded"
       ? await store.complete(commandId, deviceId, input.data.lease_id, input.data.result ?? null)

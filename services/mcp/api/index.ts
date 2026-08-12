@@ -24,6 +24,7 @@ if (bridgeEnabled && !databaseConfigured) {
 if (bridgeEnabled && production) requireStrongToken("BRIDGE_ADMIN_TOKEN", process.env.BRIDGE_ADMIN_TOKEN);
 
 const { store: bridgeStore } = createBridgeStoreFromEnv();
+if (bridgeEnabled) await bridgeStore.initialize();
 const adapter = createAdapter(adapterKind, {
   bridgeStore,
   deviceId: process.env.AMBIENT_DEVICE_ID,

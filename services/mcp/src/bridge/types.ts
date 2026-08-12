@@ -1,31 +1,33 @@
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import * as z from "zod/v4";
 
+const requestIdSchema = z.string().trim().min(16).max(128);
+
 export const bridgeOperationSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("get_status") }),
   z.object({ type: z.literal("list_channels") }),
   z.object({ type: z.literal("get_channel"), channelId: z.string().min(1).max(128) }),
-  z.object({ type: z.literal("next"), requestId: z.string().min(16).max(128) }),
+  z.object({ type: z.literal("next"), requestId: requestIdSchema }),
   z.object({
     type: z.literal("activate_channel"),
     channelId: z.string().min(1).max(128),
     displayScope: z.enum(["all", "primary"]),
     durationMinutes: z.number().int().min(1).max(1_440).optional(),
-    requestId: z.string().min(16).max(128),
+    requestId: requestIdSchema,
   }),
   z.object({
     type: z.literal("pause"),
     durationMinutes: z.number().int().min(1).max(1_440).optional(),
-    requestId: z.string().min(16).max(128),
+    requestId: requestIdSchema,
   }),
-  z.object({ type: z.literal("resume"), requestId: z.string().min(16).max(128) }),
+  z.object({ type: z.literal("resume"), requestId: requestIdSchema }),
   z.object({
     type: z.literal("set_power_policy"),
     policy: z.enum(["still", "adaptive", "always_live"]),
-    requestId: z.string().min(16).max(128),
+    requestId: requestIdSchema,
   }),
   z.object({ type: z.literal("get_history"), limit: z.number().int().min(1).max(50) }),
-  z.object({ type: z.literal("restore_previous"), requestId: z.string().min(16).max(128) }),
+  z.object({ type: z.literal("restore_previous"), requestId: requestIdSchema }),
 ]);
 
 export type BridgeOperation = z.infer<typeof bridgeOperationSchema>;
@@ -48,16 +50,22 @@ export interface BridgeCommand {
   expiresAt: string;
   leaseExpiresAt: string | null;
   leaseId: string | null;
+  requestId: string | null;
+  protocolVersion: 2;
+  attemptCount: number;
+  maxAttempts: number;
   result: unknown | null;
   error: string | null;
 }
 
 export interface BridgeState {
+  schemaVersion?: number;
   devices: BridgeDevice[];
   commands: BridgeCommand[];
 }
 
 export interface BridgeStore {
+  initialize(): Promise<void>;
   createDevice(displayName: string): Promise<{ device: BridgeDevice; token: string }>;
   getDevice(deviceId: string): Promise<BridgeDevice | null>;
   authenticateDevice(deviceId: string, token: string): Promise<BridgeDevice | null>;
@@ -84,6 +92,21 @@ export class BridgeRequestConflictError extends Error {
   }
 }
 
+export class BridgeSchemaMigrationError extends Error {
+  constructor(message: string, options?: ErrorOptions) {
+    super(message, options);
+    this.name = "BridgeSchemaMigrationError";
+  }
+}
+
+export const BRIDGE_PROTOCOL_VERSION = 2 as const;
+export const BRIDGE_REQUIRED_CAPABILITY = "lease_id" as const;
+export const BRIDGE_DEFAULT_MAX_ATTEMPTS = 3;
+export const BRIDGE_LEGACY_LEASE_ERROR =
+  "Command was failed during the bridge protocol v2 upgrade; it was not replayed.";
+export const BRIDGE_REQUEST_ID_CONFLICT_ERROR =
+  "Command was failed during upgrade because stored request identifiers disagreed.";
+
 export function hashToken(token: string): string {
   return createHash("sha256").update(token).digest("hex");
 }
@@ -104,5 +127,5 @@ export function newLeaseId(): string {
 }
 
 export function operationRequestId(operation: BridgeOperation): string | null {
-  return "requestId" in operation ? operation.requestId : null;
+  return "requestId" in operation ? operation.requestId.trim() : null;
 }

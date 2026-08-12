@@ -2,6 +2,7 @@
 import { AmbientCtlAdapter } from "./adapters/ambientctl.js";
 import type { BridgeOperation } from "./bridge/types.js";
 import { bridgeOperationSchema } from "./bridge/types.js";
+import { BRIDGE_PROTOCOL_VERSION, BRIDGE_REQUIRED_CAPABILITY } from "./bridge/types.js";
 import { log } from "./logger.js";
 import * as z from "zod/v4";
 
@@ -9,6 +10,7 @@ const commandEnvelopeSchema = z.object({
   id: z.string().min(1).max(128),
   deviceId: z.string().min(1).max(128),
   leaseId: z.string().min(1).max(128),
+  protocolVersion: z.literal(BRIDGE_PROTOCOL_VERSION),
   operation: z.unknown(),
 });
 type DeviceCommand = z.infer<typeof commandEnvelopeSchema>;
@@ -33,8 +35,22 @@ const adapter = new AmbientCtlAdapter();
 const headers = {
   authorization: `Bearer ${deviceToken}`,
   "x-ambient-device-id": deviceId,
+  "x-ambient-protocol-version": String(BRIDGE_PROTOCOL_VERSION),
+  "x-ambient-capabilities": BRIDGE_REQUIRED_CAPABILITY,
 };
 let stopped = false;
+
+function assertProtocolResponse(response: Response): void {
+  if (
+    response.headers.get("x-ambient-protocol-version") !== String(BRIDGE_PROTOCOL_VERSION)
+    || !response.headers.get("x-ambient-capabilities")
+      ?.split(",")
+      .map((capability) => capability.trim())
+      .includes(BRIDGE_REQUIRED_CAPABILITY)
+  ) {
+    throw new Error("Bridge response did not declare protocol v2 lease fencing.");
+  }
+}
 
 async function execute(operation: BridgeOperation): Promise<unknown> {
   switch (operation.type) {
@@ -77,6 +93,7 @@ async function postResult(command: DeviceCommand, body: Record<string, unknown>)
     signal: AbortSignal.timeout(15_000),
   });
   if (!response.ok) throw new Error(`Bridge rejected result with HTTP ${response.status}.`);
+  assertProtocolResponse(response);
 }
 
 async function pollOnce(): Promise<void> {
@@ -84,8 +101,9 @@ async function pollOnce(): Promise<void> {
     headers,
     signal: AbortSignal.timeout(35_000),
   });
-  if (response.status === 204) return;
   if (!response.ok) throw new Error(`Bridge poll failed with HTTP ${response.status}.`);
+  assertProtocolResponse(response);
+  if (response.status === 204) return;
   const body = z.object({ command: commandEnvelopeSchema }).safeParse(await response.json());
   if (!body.success || body.data.command.deviceId !== deviceId) {
     throw new Error("Bridge response did not include a valid command lease.");

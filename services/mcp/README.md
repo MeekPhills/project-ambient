@@ -81,7 +81,43 @@ POSTGRES_URL=postgresql://…?sslmode=require
 BRIDGE_ADMIN_TOKEN=<a second independently generated 48-byte secret>
 ```
 
-The Postgres store creates namespaced bridge tables lazily, leases commands transactionally with `FOR UPDATE SKIP LOCKED`, and works across concurrent Vercel instances. The device endpoint is short-polling (a quick `204` when idle), so it does not consume a long-running function. The MCP-to-device result wait is bounded at 25 seconds, under the configured 30-second function limit.
+The Postgres store runs a versioned, advisory-locked schema migration before bridge routes are exposed, leases commands transactionally with `FOR UPDATE SKIP LOCKED`, and works across concurrent Vercel instances. Startup fails closed if migration validation fails or if the database schema is newer than this server. The device endpoint is short-polling (a quick `204` when idle), so it does not consume a long-running function. The MCP-to-device result wait is bounded at 25 seconds, under the configured 30-second function limit.
+
+#### Production bridge upgrade runbook
+
+This is a server-first, maintenance-window rollout. Protocol-v1 agents must not be used after the migration; the server requires protocol v2 and the `lease_id` capability, and returns HTTP `426` before leasing any command to an incompatible agent.
+
+1. Stop command producers and device agents. Take a database backup or provider snapshot and record its identifier.
+2. Check for unexpected duplicate request IDs:
+
+   ```sql
+   SELECT device_id, COALESCE(request_id, operation ->> 'requestId') AS request_id, count(*)
+   FROM ambient_bridge_commands
+   WHERE COALESCE(request_id, operation ->> 'requestId') IS NOT NULL
+   GROUP BY 1, 2 HAVING count(*) > 1;
+   ```
+
+3. Build the release and run the one-shot migrator first against staging, then production, while bridge traffic remains blocked by maintenance mode or a network rule:
+
+   ```sh
+   npm run build
+   POSTGRES_URL='postgresql://…?sslmode=require' npm run migrate:bridge
+   ```
+
+   The migrator holds a transaction-level lock, applies versions 1–3 atomically, and refuses a newer or inconsistent ledger. It deletes no rows. It terminally fails legacy leased commands rather than replaying ambiguous work, clears request identity from noncanonical duplicates, and fails active rows whose stored request identifiers disagree or are invalid.
+4. Verify the catalog and cleanup results before admitting traffic:
+
+   ```sql
+   SELECT version, name, applied_at FROM ambient_bridge_schema_migrations ORDER BY version;
+   SELECT indexdef FROM pg_indexes WHERE indexname = 'ambient_bridge_commands_request_unique_idx';
+   SELECT status, count(*) FROM ambient_bridge_commands GROUP BY status ORDER BY status;
+   SELECT id, error FROM ambient_bridge_commands
+   WHERE error LIKE '%during%upgrade%' ORDER BY created_at;
+   ```
+
+5. Deploy or restart the protocol-v2 Mac agent, confirm one lease/result round trip, then enable command producers and remote MCP traffic. Monitor `426`, migration, retry-exhaustion, and command-failure events.
+
+Do not roll the server back to protocol v1 after the database migration. If validation fails, keep bridge traffic disabled, preserve the failed startup evidence, and restore the snapshot into a new database rather than editing the migration ledger by hand.
 
 ## Outbound device bridge
 
@@ -134,6 +170,8 @@ npm run start:device
 
 Restart the hosted service with `AMBIENT_ADAPTER=remote` and the same durable store plus `AMBIENT_DEVICE_ID`. MCP calls enqueue a typed command and wait for the Mac's result. Commands expire after 60 seconds and device leases expire after 30 seconds.
 
+Every lease is fenced by a unique lease ID and increments a persisted attempt counter. An expired lease can be retried up to three total attempts; after the third expiry the command is terminally failed rather than replayed indefinitely.
+
 ### Revoke a Mac
 
 ```sh
@@ -152,7 +190,7 @@ npm run build
 npm run validate:registry
 ```
 
-The test suite validates schemas and annotations, idempotent retries, confirmation enforcement, path rejection, HTTP auth and MCP transport, bridge enrollment/revocation, and request-correlated remote results.
+The test suite validates schemas and annotations, idempotent retries, confirmation enforcement, path rejection, HTTP auth and MCP transport, bridge enrollment/revocation, request-correlated remote results, migration contracts, protocol-v2 fencing, and bounded retry exhaustion. When `TEST_POSTGRES_URL` is set, it also runs isolated-schema integration tests against a real PostgreSQL server; those tests never use production credentials.
 
 ## Marketplace assets
 

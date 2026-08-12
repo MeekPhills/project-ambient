@@ -8,6 +8,7 @@ const port = Number(process.env.PORT ?? 8787);
 const adapterKind = adapterKindFrom(process.env.AMBIENT_ADAPTER, "demo");
 const bridgeEnabled = Boolean(process.env.BRIDGE_ADMIN_TOKEN || process.env.BRIDGE_STORE_PATH || adapterKind === "remote");
 const { store: bridgeStore, kind: bridgeStoreKind } = createBridgeStoreFromEnv();
+if (bridgeEnabled) await bridgeStore.initialize();
 const adapter = createAdapter(adapterKind, {
   bridgeStore,
   deviceId: process.env.AMBIENT_DEVICE_ID,
