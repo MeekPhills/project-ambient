@@ -1,0 +1,29 @@
+name: Channel or connector proposal
+description: Propose a rights-aware channel recipe, context trigger, renderer, or provider.
+title: "[Channel]: "
+labels: [proposal, rights-review]
+body:
+  - type: dropdown
+    attributes:
+      label: Proposal type
+      options: [Local recipe, Renderer adapter, Context trigger, Remote provider, Creator pack]
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: User job
+      description: What should happen, for whom, and under which condition?
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Rights and terms
+      description: Link the canonical API terms and asset license. Explain redistribution, attribution, commercial use, trademarks, and privacy/publicity restrictions.
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Safety boundaries
+      description: What permissions, confirmations, rate limits, caching, and failure behavior are required?
+    validations:
+      required: true

@@ -1,0 +1,85 @@
+import { createHash, randomBytes, randomUUID } from "node:crypto";
+import * as z from "zod/v4";
+
+export const bridgeOperationSchema = z.discriminatedUnion("type", [
+  z.object({ type: z.literal("get_status") }),
+  z.object({ type: z.literal("list_channels") }),
+  z.object({ type: z.literal("get_channel"), channelId: z.string().min(1).max(128) }),
+  z.object({ type: z.literal("next"), requestId: z.string().min(16).max(128) }),
+  z.object({
+    type: z.literal("activate_channel"),
+    channelId: z.string().min(1).max(128),
+    displayScope: z.enum(["all", "primary"]),
+    durationMinutes: z.number().int().min(1).max(1_440).optional(),
+    requestId: z.string().min(16).max(128),
+  }),
+  z.object({
+    type: z.literal("pause"),
+    durationMinutes: z.number().int().min(1).max(1_440).optional(),
+    requestId: z.string().min(16).max(128),
+  }),
+  z.object({ type: z.literal("resume"), requestId: z.string().min(16).max(128) }),
+  z.object({
+    type: z.literal("set_power_policy"),
+    policy: z.enum(["still", "adaptive", "live_on_ac", "always_live"]),
+    requestId: z.string().min(16).max(128),
+  }),
+  z.object({ type: z.literal("get_history"), limit: z.number().int().min(1).max(50) }),
+  z.object({ type: z.literal("restore_previous"), requestId: z.string().min(16).max(128) }),
+]);
+
+export type BridgeOperation = z.infer<typeof bridgeOperationSchema>;
+
+export interface BridgeDevice {
+  deviceId: string;
+  displayName: string;
+  tokenHash: string;
+  enrolledAt: string;
+  lastSeenAt: string | null;
+  revokedAt: string | null;
+}
+
+export interface BridgeCommand {
+  id: string;
+  deviceId: string;
+  operation: BridgeOperation;
+  status: "pending" | "leased" | "succeeded" | "failed" | "expired";
+  createdAt: string;
+  expiresAt: string;
+  leaseExpiresAt: string | null;
+  result: unknown | null;
+  error: string | null;
+}
+
+export interface BridgeState {
+  devices: BridgeDevice[];
+  commands: BridgeCommand[];
+}
+
+export interface BridgeStore {
+  createDevice(displayName: string): Promise<{ device: BridgeDevice; token: string }>;
+  getDevice(deviceId: string): Promise<BridgeDevice | null>;
+  authenticateDevice(deviceId: string, token: string): Promise<BridgeDevice | null>;
+  touchDevice(deviceId: string, at: string): Promise<void>;
+  revokeDevice(deviceId: string, at: string): Promise<boolean>;
+  enqueue(deviceId: string, operation: BridgeOperation, ttlSeconds: number): Promise<BridgeCommand>;
+  leaseNext(deviceId: string, leaseSeconds: number): Promise<BridgeCommand | null>;
+  complete(commandId: string, deviceId: string, result: unknown): Promise<BridgeCommand | null>;
+  fail(commandId: string, deviceId: string, error: string): Promise<BridgeCommand | null>;
+  getCommand(commandId: string): Promise<BridgeCommand | null>;
+}
+
+export function hashToken(token: string): string {
+  return createHash("sha256").update(token).digest("hex");
+}
+
+export function newDeviceIdentity() {
+  return {
+    deviceId: `device_${randomUUID()}`,
+    token: `amb_dev_${randomBytes(32).toString("base64url")}`,
+  };
+}
+
+export function newCommandId(): string {
+  return `bridge_${randomUUID()}`;
+}

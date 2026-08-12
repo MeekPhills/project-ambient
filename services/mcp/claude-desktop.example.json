@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "project-ambient": {
+      "command": "node",
+      "args": [
+        "/absolute/path/to/services/mcp/dist/src/stdio.js"
+      ],
+      "env": {
+        "AMBIENT_ADAPTER": "ambientctl",
+        "AMBIENTCTL_PATH": "/Applications/Project Ambient.app/Contents/Resources/ambientctl"
+      }
+    }
+  }
+}

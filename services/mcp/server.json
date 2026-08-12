@@ -1,0 +1,33 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.meekphills/project-ambient-control",
+  "description": "Safely inspect and control the local-first Project Ambient macOS wallpaper orchestrator.",
+  "version": "0.1.0",
+  "repository": {
+    "url": "https://github.com/MeekPhills/project-ambient",
+    "source": "github"
+  },
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "@meekphills/project-ambient-mcp",
+      "version": "0.1.0",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "AMBIENTCTL_PATH",
+          "description": "Absolute path to the installed Project Ambient ambientctl companion.",
+          "isRequired": false
+        }
+      ]
+    }
+  ],
+  "remotes": [
+    {
+      "transportType": "streamable-http",
+      "url": "https://ambient-api.example.com/mcp"
+    }
+  ]
+}

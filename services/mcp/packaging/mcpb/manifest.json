@@ -1,0 +1,56 @@
+{
+  "manifest_version": "0.3",
+  "name": "project-ambient-control",
+  "display_name": "Project Ambient Control",
+  "version": "0.1.0",
+  "description": "Inspect and control Project Ambient from Claude Desktop.",
+  "long_description": "A local-only MCP bundle for choosing Ambient channels, advancing scenes, pausing, restoring history, and managing power policy. It never exposes local files or accepts arbitrary shell commands.",
+  "author": {
+    "name": "Project Ambient contributors",
+    "url": "https://github.com/MeekPhills/project-ambient"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/MeekPhills/project-ambient.git"
+  },
+  "homepage": "https://github.com/MeekPhills/project-ambient",
+  "documentation": "https://github.com/MeekPhills/project-ambient/tree/main/services/mcp",
+  "support": "https://github.com/MeekPhills/project-ambient/issues",
+  "license": "MIT",
+  "server": {
+    "type": "node",
+    "entry_point": "dist/src/stdio.js",
+    "mcp_config": {
+      "command": "node",
+      "args": ["${__dirname}/dist/src/stdio.js"],
+      "env": {
+        "AMBIENT_ADAPTER": "ambientctl",
+        "AMBIENTCTL_PATH": "${user_config.ambientctl_path}"
+      }
+    }
+  },
+  "user_config": {
+    "ambientctl_path": {
+      "type": "file",
+      "title": "Ambient companion command",
+      "description": "Choose ambientctl from the installed Project Ambient app.",
+      "required": true
+    }
+  },
+  "compatibility": {
+    "platforms": ["darwin"],
+    "runtimes": { "node": ">=20.11" }
+  },
+  "tools": [
+    { "name": "get_status", "description": "See the current Ambient scene and why it was chosen." },
+    { "name": "list_channels", "description": "List existing Ambient channels." },
+    { "name": "get_channel", "description": "Inspect one Ambient channel." },
+    { "name": "next_wallpaper", "description": "Advance to the next wallpaper." },
+    { "name": "activate_channel", "description": "Activate an existing Ambient channel." },
+    { "name": "pause_ambient", "description": "Pause Ambient." },
+    { "name": "resume_ambient", "description": "Resume Ambient." },
+    { "name": "set_power_policy", "description": "Change Ambient's power policy." },
+    { "name": "get_history", "description": "Inspect recent Ambient activity." },
+    { "name": "restore_previous", "description": "Restore a previous Ambient scene." }
+  ]
+}

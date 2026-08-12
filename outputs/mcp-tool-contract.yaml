@@ -1,0 +1,213 @@
+contract: ambient-mcp-v1
+status: proposed
+purpose: >-
+  Safely inspect and control an installed Project Ambient Mac companion without
+  exposing local files, media bytes, arbitrary URLs, or shell access.
+
+transports:
+  local:
+    type: stdio
+    path: local_mcp_to_local_ipc
+    account_required: false
+  remote:
+    type: streamable_http
+    endpoint: https://api.example.invalid/mcp
+    account_required: true
+    auth: oauth_2_1_pkce
+    device_path: outbound_authenticated_channel
+
+global_invariants:
+  - Every state-changing call requires a client_request_id.
+  - State-changing calls are idempotent for the same account, device, and client_request_id.
+  - The server authorizes account and device scope for every call.
+  - Offline commands expire rather than applying unexpectedly later.
+  - No input accepts a local filesystem path, shell fragment, credential, or arbitrary download URL.
+  - No result returns local paths, media bytes, access tokens, raw calendar data, debug IDs, or private tags.
+  - Every result includes a user-readable outcome and never relies on hidden side effects.
+
+tools:
+  - name: list_devices
+    description: Use this when the user wants to see the Ambient-enabled Macs they can control.
+    input:
+      type: object
+      additionalProperties: false
+      properties: {}
+    annotations:
+      readOnlyHint: true
+      openWorldHint: false
+      destructiveHint: false
+      idempotentHint: true
+    output:
+      fields: [device_id, display_name, online_state, capabilities]
+
+  - name: list_channels
+    description: Use this when the user wants to see available Ambient channels or collections on one Mac.
+    input:
+      type: object
+      required: [device_id]
+      additionalProperties: false
+      properties:
+        device_id: {type: string, maxLength: 128}
+    annotations:
+      readOnlyHint: true
+      openWorldHint: false
+      destructiveHint: false
+      idempotentHint: true
+    output:
+      fields: [channel_id, name, media_count_bucket, renderer_compatibility, rights_status]
+
+  - name: get_current_scene
+    description: Use this when the user wants to know what Ambient selected, which rule won, and why.
+    input:
+      type: object
+      required: [device_id]
+      additionalProperties: false
+      properties:
+        device_id: {type: string, maxLength: 128}
+    annotations:
+      readOnlyHint: true
+      openWorldHint: false
+      destructiveHint: false
+      idempotentHint: true
+    output:
+      fields: [channel_name, scene_title, winning_rule, explanation, power_mode, renderer, applied_at]
+
+  - name: preview_channel
+    description: Use this when the user wants to inspect a channel and its matching rules before applying it.
+    input:
+      type: object
+      required: [device_id, channel_id]
+      additionalProperties: false
+      properties:
+        device_id: {type: string, maxLength: 128}
+        channel_id: {type: string, maxLength: 128}
+    annotations:
+      readOnlyHint: true
+      openWorldHint: false
+      destructiveHint: false
+      idempotentHint: true
+    output:
+      fields: [name, description, eligible_count_bucket, rules, power_policy, rights_summary]
+
+  - name: activate_channel
+    description: Use this when the user explicitly wants to activate an existing Ambient channel on a device.
+    input:
+      type: object
+      required: [device_id, channel_id, client_request_id]
+      additionalProperties: false
+      properties:
+        device_id: {type: string, maxLength: 128}
+        channel_id: {type: string, maxLength: 128}
+        display_scope: {type: string, enum: [all, primary]}
+        duration_minutes: {type: integer, minimum: 1, maximum: 1440}
+        client_request_id: {type: string, minLength: 16, maxLength: 128}
+    annotations:
+      readOnlyHint: false
+      openWorldHint: false
+      destructiveHint: false
+      idempotentHint: true
+    output:
+      fields: [command_id, status, expires_at, previous_channel_id, undo_available]
+
+  - name: set_power_policy
+    description: Use this when the user explicitly wants to change still, adaptive, or live behavior for Ambient.
+    input:
+      type: object
+      required: [device_id, policy, client_request_id]
+      additionalProperties: false
+      properties:
+        device_id: {type: string, maxLength: 128}
+        policy: {type: string, enum: [still, adaptive, live_on_ac, always_live]}
+        client_request_id: {type: string, minLength: 16, maxLength: 128}
+    annotations:
+      readOnlyHint: false
+      openWorldHint: false
+      destructiveHint: false
+      idempotentHint: true
+    output:
+      fields: [command_id, status, effective_policy, warning]
+
+  - name: set_schedule
+    description: Use this when the user explicitly wants to create or replace a bounded schedule for an existing channel.
+    input:
+      type: object
+      required: [device_id, channel_id, schedule, client_request_id]
+      additionalProperties: false
+      properties:
+        device_id: {type: string, maxLength: 128}
+        channel_id: {type: string, maxLength: 128}
+        schedule:
+          type: object
+          required: [days, start_local_time, end_local_time]
+          additionalProperties: false
+          properties:
+            days:
+              type: array
+              minItems: 1
+              uniqueItems: true
+              items: {type: string, enum: [mon, tue, wed, thu, fri, sat, sun]}
+            start_local_time: {type: string, pattern: "^[0-2][0-9]:[0-5][0-9]$"}
+            end_local_time: {type: string, pattern: "^[0-2][0-9]:[0-5][0-9]$"}
+        client_request_id: {type: string, minLength: 16, maxLength: 128}
+    annotations:
+      readOnlyHint: false
+      openWorldHint: false
+      destructiveHint: false
+      idempotentHint: true
+    output:
+      fields: [rule_id, status, normalized_schedule, conflicts]
+
+  - name: pause_ambient
+    description: Use this when the user explicitly wants to pause Ambient without removing their configuration.
+    input:
+      type: object
+      required: [device_id, client_request_id]
+      additionalProperties: false
+      properties:
+        device_id: {type: string, maxLength: 128}
+        duration_minutes: {type: integer, minimum: 1, maximum: 1440}
+        client_request_id: {type: string, minLength: 16, maxLength: 128}
+    annotations:
+      readOnlyHint: false
+      openWorldHint: false
+      destructiveHint: false
+      idempotentHint: true
+    output:
+      fields: [command_id, status, resume_at]
+
+  - name: resume_ambient
+    description: Use this when the user explicitly wants Ambient to resume its existing rules.
+    input:
+      type: object
+      required: [device_id, client_request_id]
+      additionalProperties: false
+      properties:
+        device_id: {type: string, maxLength: 128}
+        client_request_id: {type: string, minLength: 16, maxLength: 128}
+    annotations:
+      readOnlyHint: false
+      openWorldHint: false
+      destructiveHint: false
+      idempotentHint: true
+    output:
+      fields: [command_id, status, effective_channel_id]
+
+submission_tests:
+  positive_count_required: 5
+  negative_count_required: 3
+  positive_scenarios:
+    - List the user's linked devices.
+    - Explain the current scene and winning rule.
+    - Preview an existing channel without applying it.
+    - Activate a channel for a bounded duration.
+    - Set an adaptive power policy and confirm the result.
+  negative_scenarios:
+    - Do not invoke for requests to generate an unrelated image.
+    - Do not invoke for requests to download a video from an arbitrary URL.
+    - Do not invoke for requests to browse or expose local files.
+
+review_notes:
+  - Every tool must declare a real outputSchema in the implementation.
+  - Tool annotations must be rechecked against implementation before marketplace submission.
+  - The production OpenAI plugin should ship tool-only unless user research justifies a widget.
+  - Authentication test credentials must use synthetic data and avoid inaccessible 2FA during review.

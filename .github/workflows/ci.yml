@@ -1,0 +1,64 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  macos:
+    name: macOS companion
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build
+        run: swift build --package-path apps/macos
+      - name: Test
+        run: swift test --package-path apps/macos
+
+  mcp:
+    name: MCP service
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/mcp
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: services/mcp/package-lock.json
+      - run: npm ci
+      - run: npm run check
+      - run: npm test
+
+  site:
+    name: Launch site
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/site
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/site/package-lock.json
+      - run: npm ci
+      - run: npm run build
+
+  secret-scan:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

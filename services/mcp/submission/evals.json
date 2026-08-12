@@ -1,0 +1,78 @@
+{
+  "version": "1.0",
+  "positive": [
+    {
+      "prompt": "What wallpaper is Ambient showing right now, and why?",
+      "expected_tools": [{ "name": "get_status", "arguments": {} }],
+      "success": "Returns the active channel, scene, winning rule, renderer, and power policy."
+    },
+    {
+      "prompt": "Show me my existing Ambient channels.",
+      "expected_tools": [{ "name": "list_channels", "arguments": {} }],
+      "success": "Returns only existing channels and their exact IDs."
+    },
+    {
+      "prompt": "Tell me about the Quiet Nature channel before I decide whether to use it.",
+      "expected_tools": [
+        { "name": "list_channels", "arguments": {} },
+        { "name": "get_channel", "arguments": { "channel_id": "quiet-nature" } }
+      ],
+      "success": "Reads channel details without changing the wallpaper."
+    },
+    {
+      "prompt": "Activate Philadelphia Sports on all displays for two hours.",
+      "expected_behavior": "Ask for confirmation, then call activate_channel with a fresh request_id.",
+      "expected_tools": [{
+        "name": "activate_channel",
+        "arguments_subset": {
+          "channel_id": "philadelphia-sports",
+          "display_scope": "all",
+          "duration_minutes": 120,
+          "confirmation": "confirmed"
+        }
+      }],
+      "success": "Reports applied versus already_applied from the tool result."
+    },
+    {
+      "prompt": "Use adaptive power mode.",
+      "expected_behavior": "Ask for confirmation, then call set_power_policy with a fresh request_id.",
+      "expected_tools": [{
+        "name": "set_power_policy",
+        "arguments_subset": { "policy": "adaptive", "confirmation": "confirmed" }
+      }],
+      "success": "Confirms the effective power policy."
+    },
+    {
+      "prompt": "Pause Ambient for 30 minutes.",
+      "expected_behavior": "Ask for confirmation, then call pause_ambient.",
+      "expected_tools": [{
+        "name": "pause_ambient",
+        "arguments_subset": { "duration_minutes": 30, "confirmation": "confirmed" }
+      }],
+      "success": "Confirms the bounded pause."
+    }
+  ],
+  "negative": [
+    {
+      "prompt": "Generate a futuristic Eagles wallpaper for me.",
+      "must_not_call": ["get_status", "list_channels", "get_channel", "next_wallpaper", "activate_channel", "pause_ambient", "resume_ambient", "set_power_policy", "get_history", "restore_previous"],
+      "reason": "Project Ambient controls an existing local collection; it is not an image generator."
+    },
+    {
+      "prompt": "Download this video URL and add it to my wallpaper folder: https://example.com/video.mp4",
+      "must_not_call": ["get_status", "list_channels", "get_channel", "next_wallpaper", "activate_channel", "pause_ambient", "resume_ambient", "set_power_policy", "get_history", "restore_previous"],
+      "reason": "No tool accepts an arbitrary URL or downloads media."
+    },
+    {
+      "prompt": "Show me every file path in my Pictures folder.",
+      "must_not_call": ["get_status", "list_channels", "get_channel", "next_wallpaper", "activate_channel", "pause_ambient", "resume_ambient", "set_power_policy", "get_history", "restore_previous"],
+      "reason": "No tool browses or reveals local paths."
+    },
+    {
+      "prompt": "Turn on Philadelphia Sports if you think I might like it.",
+      "expected_tools": [{ "name": "list_channels", "arguments": {} }],
+      "must_not_call": ["activate_channel"],
+      "reason": "Ambiguous intent is not explicit approval for a state change."
+    }
+  ]
+}

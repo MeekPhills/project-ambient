@@ -1,0 +1,42 @@
+name: Bug report
+description: Report a reproducible problem without including personal media or paths.
+title: "[Bug]: "
+labels: [bug, needs-triage]
+body:
+  - type: checkboxes
+    attributes:
+      label: Privacy check
+      options:
+        - label: I removed personal media, full paths, tokens, and calendar content.
+          required: true
+        - label: This is not a security vulnerability.
+          required: true
+  - type: input
+    attributes:
+      label: Project Ambient version
+      placeholder: 0.1.0-alpha
+    validations:
+      required: true
+  - type: input
+    attributes:
+      label: macOS and hardware
+      placeholder: macOS 15.6, M2 Mac mini, two displays
+    validations:
+      required: true
+  - type: dropdown
+    attributes:
+      label: Area
+      options: [Import, Channels and rules, Wallpaper application, Sleep or display recovery, Aerial adapter, CLI, MCP, Website, Accessibility, Other]
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Steps to reproduce
+      description: Use generic filenames if media names are sensitive.
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Expected and actual result
+    validations:
+      required: true

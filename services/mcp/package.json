@@ -1,0 +1,52 @@
+{
+  "name": "@meekphills/project-ambient-mcp",
+  "version": "0.1.0",
+  "description": "Local-first MCP controls for the Project Ambient macOS wallpaper orchestrator.",
+  "type": "module",
+  "private": true,
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MeekPhills/project-ambient.git",
+    "directory": "services/mcp"
+  },
+  "homepage": "https://github.com/MeekPhills/project-ambient#readme",
+  "bugs": { "url": "https://github.com/MeekPhills/project-ambient/issues" },
+  "engines": {
+    "node": ">=20.11"
+  },
+  "bin": {
+    "project-ambient-mcp": "dist/src/stdio.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "check": "tsc -p tsconfig.json --noEmit",
+    "dev:http": "tsx src/http.ts",
+    "dev:stdio": "tsx src/stdio.ts",
+    "start": "node dist/src/http.js",
+    "start:stdio": "node dist/src/stdio.js",
+    "start:device": "node dist/src/device-agent.js",
+    "test": "node --import tsx --test test/**/*.test.ts",
+    "test:coverage": "node --import tsx --test --experimental-test-coverage test/**/*.test.ts",
+    "validate:registry": "node scripts/validate-registry.mjs",
+    "pack:mcpb": "node scripts/pack-mcpb.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.30.0",
+    "express": "5.2.1",
+    "pg": "^8.23.0",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/node": "^24.10.0",
+    "@types/pg": "^8.21.0",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3"
+  }
+}
