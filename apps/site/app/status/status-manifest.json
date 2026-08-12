@@ -3,7 +3,7 @@
   "project": "Project Ambient",
   "release": "0.1.0-alpha",
   "totalWeight": 100,
-  "updatedAt": "2026-08-12T17:37:02Z",
+  "updatedAt": "2026-08-12T19:06:00Z",
   "evidenceAsOf": "2026-08-12T17:03:41Z",
   "lastVerifiedAt": "2026-08-12T17:03:41Z",
   "refreshSeconds": 60,
@@ -84,41 +84,41 @@
   "deliveryWorkstreams": [
     {
       "id": "native-runtime-wave",
-      "owner": "native_runtime_wave · Sol Ultra",
+      "owner": "native_runtime_review · Sol High",
       "name": "Native runtime wave",
       "state": "in_progress",
-      "completion": 0,
-      "detail": "Automatic rotation, lifecycle notifications, power scheduling, and deterministic native tests.",
+      "completion": 55,
+      "detail": "Core automatic rotation is implemented and tested; corrective work is closing persistence, idempotency, display-scope, and lifecycle race findings.",
       "chunks": [
-        { "label": "Scheduling implementation", "share": 55, "earnedShare": 0, "status": "in_progress" },
-        { "label": "Lifecycle integration", "share": 25, "earnedShare": 0, "status": "not_started" },
-        { "label": "Native test evidence", "share": 20, "earnedShare": 0, "status": "not_started" }
+        { "label": "Scheduling implementation", "share": 55, "earnedShare": 35, "status": "in_progress" },
+        { "label": "Lifecycle integration", "share": 25, "earnedShare": 10, "status": "in_progress" },
+        { "label": "Native test evidence", "share": 20, "earnedShare": 10, "status": "in_progress" }
       ]
     },
     {
       "id": "mcp-reliability-wave",
-      "owner": "mcp_reliability_wave · Sol High",
+      "owner": "mcp_reliability_fix · Sol Ultra",
       "name": "MCP reliability wave",
       "state": "in_progress",
-      "completion": 0,
-      "detail": "Durable queue semantics, idempotent recovery, device safety, and bounded production failures.",
+      "completion": 40,
+      "detail": "Adversarial review is complete; the versioned PostgreSQL migration is held at an explicit data-change approval gate before corrective verification can finish.",
       "chunks": [
-        { "label": "Durable semantics", "share": 45, "earnedShare": 0, "status": "in_progress" },
-        { "label": "Recovery and idempotency", "share": 30, "earnedShare": 0, "status": "not_started" },
+        { "label": "Durable semantics", "share": 45, "earnedShare": 20, "status": "blocked" },
+        { "label": "Recovery and idempotency", "share": 30, "earnedShare": 20, "status": "in_progress" },
         { "label": "Security and test gate", "share": 25, "earnedShare": 0, "status": "not_started" }
       ]
     },
     {
       "id": "release-integrity-wave",
-      "owner": "release_integrity_wave · Terra XHigh",
+      "owner": "release_integrity_review · Terra High",
       "name": "Release integrity wave",
       "state": "in_progress",
-      "completion": 0,
-      "detail": "Universal readiness, deterministic artifact verification, CI provenance, and Homebrew consistency.",
+      "completion": 65,
+      "detail": "Universal packaging and verification are working; corrective review is locking build tools, signing the standalone CLI, and enforcing clean immutable release inputs.",
       "chunks": [
-        { "label": "Artifact and universal controls", "share": 40, "earnedShare": 0, "status": "in_progress" },
-        { "label": "CI and provenance", "share": 35, "earnedShare": 0, "status": "not_started" },
-        { "label": "Dry-run verification", "share": 25, "earnedShare": 0, "status": "not_started" }
+        { "label": "Artifact and universal controls", "share": 40, "earnedShare": 30, "status": "in_progress" },
+        { "label": "CI and provenance", "share": 35, "earnedShare": 15, "status": "in_progress" },
+        { "label": "Dry-run verification", "share": 25, "earnedShare": 20, "status": "in_progress" }
       ]
     },
     {
@@ -126,13 +126,13 @@
       "owner": "primary · Codex",
       "name": "Orchestrate, integrate, and publish",
       "state": "in_progress",
-      "completion": 20,
-      "detail": "Dependency-safe dispatch, cross-track review, full-suite verification, evidence audit, and publication.",
+      "completion": 50,
+      "detail": "Dependency-safe dispatch and adversarial reviews are complete; corrective integration, full-suite verification, evidence audit, and publication remain active.",
       "chunks": [
         { "label": "Dependency-safe dispatch", "share": 20, "earnedShare": 20, "status": "complete" },
-        { "label": "Cross-track review", "share": 35, "earnedShare": 0, "status": "in_progress" },
+        { "label": "Cross-track review", "share": 35, "earnedShare": 25, "status": "in_progress" },
         { "label": "Integrated verification", "share": 25, "earnedShare": 0, "status": "not_started" },
-        { "label": "Status audit and publish", "share": 20, "earnedShare": 0, "status": "not_started" }
+        { "label": "Status audit and publish", "share": 20, "earnedShare": 5, "status": "in_progress" }
       ]
     }
   ],
