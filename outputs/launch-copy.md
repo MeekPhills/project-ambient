@@ -1,6 +1,6 @@
 # Project Ambient Launch Copy
 
-Use these only after replacing bracketed links and confirming the linked artifact’s actual signing status. Never ask for votes or instruct users to bypass Gatekeeper.
+The public launch copy below is ready to use with live links and the verified alpha status. The two individual outreach templates retain only recipient-specific placeholders. Never ask for votes or instruct users to bypass Gatekeeper.
 
 ## GitHub release
 
@@ -24,14 +24,21 @@ Privacy is the default: no account for local use, no telemetry by default, and n
 
 Known alpha limitations:
 
-- [State whether this artifact is Developer ID-signed and notarized.]
+- The Apple-silicon Mac build targets macOS 14+ and is not Developer ID-signed or notarized. Gatekeeper may block it; do not disable Gatekeeper or remove quarantine attributes. Building from source is the safer early-access path.
 - Video playback is delegated to Aerial rather than a private wallpaper API.
 - Hosted assistant control requires the optional authenticated device bridge.
 - Reliability testing across every display topology is still growing.
 
-Download: [release URL]
-Documentation: [repository URL]
+Download: https://github.com/MeekPhills/project-ambient/releases/tag/v0.1.0-alpha
+Documentation: https://github.com/MeekPhills/project-ambient
 Security reports: use GitHub private vulnerability reporting.
+
+Homebrew:
+
+```sh
+brew tap MeekPhills/tap
+brew install --cask project-ambient
+```
 
 ## Show HN
 
@@ -47,9 +54,9 @@ Project Ambient is my open-source orchestration layer. It indexes a folder local
 
 The repo also includes a CLI and a narrow MCP surface so local assistants can list and activate channels without receiving the media. Persistent changes require confirmation; there is no general shell or arbitrary filesystem tool.
 
-The part I care most about is trust: exact restore, a still fallback, transparent power behavior, no account for local use, and no telemetry by default. The alpha is rough around [current limitation], and I would especially value reports from people using multiple displays, docking, VoiceOver, or Low Power Mode.
+The part I care most about is trust: exact restore, a still fallback, transparent power behavior, no account for local use, and no telemetry by default. The alpha is unsigned, Apple-silicon-only, and still growing its coverage across display topologies. I would especially value reports from people using multiple displays, docking, VoiceOver, or Low Power Mode.
 
-[repository URL]
+https://github.com/MeekPhills/project-ambient
 
 ## r/MacApps
 
@@ -67,9 +74,16 @@ Comparison: this is not trying to replace Aerial’s renderer or become another 
 
 Pricing: free, MIT-licensed, no account for local use, no telemetry by default.
 
-Alpha status: [signing/notarization status and real limitations]. I’m looking for installation and recovery feedback, especially on multi-display Macs. Please don’t share private media in bug reports.
+Alpha status: the Apple-silicon build requires macOS 14+ and is not Developer ID-signed or notarized. Gatekeeper may block it; please do not disable Gatekeeper or strip quarantine. Building from source is the safer route until the signed build lands. I’m looking for installation and recovery feedback, especially on multi-display Macs. Please don’t share private media in bug reports.
 
-[repository/download URL]
+Install with Homebrew:
+
+```sh
+brew tap MeekPhills/tap
+brew install --cask project-ambient
+```
+
+Source and direct download: https://github.com/MeekPhills/project-ambient/releases/tag/v0.1.0-alpha
 
 ## Product Hunt
 
@@ -107,8 +121,8 @@ The distinction is that it does not try to replace Aerial’s renderer or build 
 
 The story may fit your coverage of thoughtful Mac utilities: [one sentence tailored to the publication]. I can provide a review build, uncut demo, architecture note, energy methodology, privacy/security brief, and known-limitations list. No embargo or coverage expectation.
 
-Project: [site URL]
-Source: [repository URL]
+Project: https://project-ambient.meekphillies.chatgpt.site
+Source: https://github.com/MeekPhills/project-ambient
 
 Thank you,
 [name]
@@ -125,8 +139,8 @@ I would value your feedback on the channel manifest and attribution view. The go
 
 If the approach fits your work, I’d be glad to prepare a private compatibility example using only media and terms you approve.
 
-Project: [site URL]
-Technical notes: [repository URL]
+Project: https://project-ambient.meekphillies.chatgpt.site
+Technical notes: https://github.com/MeekPhills/project-ambient
 
 Best,
 [name]
