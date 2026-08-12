@@ -5,6 +5,17 @@ MODE="${1:-run}"
 APP_NAME="Ambient"
 BUNDLE_ID="io.projectambient.mac"
 MIN_SYSTEM_VERSION="14.0"
+BUNDLE_SHORT_VERSION="${AMBIENT_BUNDLE_VERSION:-0.1.0}"
+BUNDLE_BUILD_VERSION="${AMBIENT_BUNDLE_BUILD:-1}"
+
+if [[ ! "$BUNDLE_SHORT_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+  printf 'AMBIENT_BUNDLE_VERSION must be a numeric major.minor.patch version.\n' >&2
+  exit 2
+fi
+if [[ ! "$BUNDLE_BUILD_VERSION" =~ ^[0-9]+([.][0-9]+){0,2}$ ]]; then
+  printf 'AMBIENT_BUNDLE_BUILD must contain one to three numeric components.\n' >&2
+  exit 2
+fi
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PACKAGE_DIR="$ROOT_DIR/apps/macos"
@@ -50,8 +61,8 @@ chmod +x "$APP_BINARY" "$APP_RESOURCES/ambientctl"
 /usr/bin/plutil -insert CFBundleDisplayName -string "Project Ambient" "$INFO_PLIST"
 /usr/bin/plutil -insert CFBundleIconFile -string "AppIcon" "$INFO_PLIST"
 /usr/bin/plutil -insert CFBundlePackageType -string "APPL" "$INFO_PLIST"
-/usr/bin/plutil -insert CFBundleShortVersionString -string "0.1.0" "$INFO_PLIST"
-/usr/bin/plutil -insert CFBundleVersion -string "1" "$INFO_PLIST"
+/usr/bin/plutil -insert CFBundleShortVersionString -string "$BUNDLE_SHORT_VERSION" "$INFO_PLIST"
+/usr/bin/plutil -insert CFBundleVersion -string "$BUNDLE_BUILD_VERSION" "$INFO_PLIST"
 /usr/bin/plutil -insert LSMinimumSystemVersion -string "$MIN_SYSTEM_VERSION" "$INFO_PLIST"
 /usr/bin/plutil -insert NSPrincipalClass -string "NSApplication" "$INFO_PLIST"
 /usr/bin/plutil -insert NSHighResolutionCapable -bool true "$INFO_PLIST"

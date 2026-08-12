@@ -1,0 +1,9 @@
+{
+  "name": "project-ambient-mcpb-tooling",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Locked release-only MCPB packer tooling.",
+  "dependencies": {
+    "@anthropic-ai/mcpb": "2.1.2"
+  }
+}

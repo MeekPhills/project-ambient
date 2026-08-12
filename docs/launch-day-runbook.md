@@ -2,8 +2,9 @@
 
 ## Before publishing
 
-- Freeze the release commit and record its SHA.
-- Run `./script/verify_release.sh` and the full release checklist.
+- Freeze the release commit, record its SHA, and create the matching `v<version>` tag.
+- From a clean checkout at that tag, run `./script/verify_release.sh`, package with `./script/package_release.sh --tagged-release v<version> <version>`, and run `./script/verify_release_artifacts.sh dist/release/<version>`.
+- After notarization, update the cask from the promoted archive checksum and run `./script/verify_release_artifacts.sh --require-homebrew dist/release/<version>` before publishing any download.
 - Publish the site and verify downloads, trust pages, mobile layout, and keyboard navigation.
 - Publish the GitHub Release and project-owned Homebrew cask only after the immutable artifact is available.
 - Open an announcement Discussion with known limitations and the diagnostic-report link.
