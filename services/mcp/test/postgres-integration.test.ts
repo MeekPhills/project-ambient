@@ -2,30 +2,61 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import test, { type TestContext } from "node:test";
 import { Pool } from "pg";
-import { POSTGRES_BRIDGE_MIGRATIONS } from "../src/bridge/postgres-migrations.js";
+import {
+  POSTGRES_BRIDGE_MIGRATIONS,
+  migratePostgresBridge,
+} from "../src/bridge/postgres-migrations.js";
 import { PostgresBridgeStore } from "../src/bridge/postgres-store.js";
 import { BridgeSchemaMigrationError } from "../src/bridge/types.js";
 
 const connectionString = process.env.TEST_POSTGRES_URL;
 
-async function isolatedPool(t: TestContext): Promise<Pool> {
+interface IsolatedDatabase {
+  owner: Pool;
+  runtime: Pool;
+  runtimeRole: string;
+  runtimeUrl: string;
+}
+
+async function isolatedDatabase(t: TestContext): Promise<IsolatedDatabase> {
   assert.ok(connectionString);
-  const schema = `ambient_test_${randomUUID().replaceAll("-", "")}`;
-  assert.match(schema, /^ambient_test_[a-f0-9]{32}$/);
+  const suffix = randomUUID().replaceAll("-", "");
+  const database = `ambient_test_${suffix}`;
+  const runtimeRole = `ambient_runtime_${suffix}`;
+  const runtimePassword = `test_${randomUUID()}`;
+  assert.match(database, /^ambient_test_[a-f0-9]{32}$/);
+  assert.match(runtimeRole, /^ambient_runtime_[a-f0-9]{32}$/);
   const admin = new Pool({ connectionString, max: 1 });
-  await admin.query(`CREATE SCHEMA "${schema}"`);
-  const pool = new Pool({
-    connectionString,
-    options: `-c search_path=${schema}`,
-    max: 10,
-  });
+  await admin.query(
+    `CREATE ROLE "${runtimeRole}" LOGIN NOINHERIT NOSUPERUSER NOCREATEDB
+       NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD '${runtimePassword}'`,
+  );
+  await admin.query(`CREATE DATABASE "${database}"`);
+  const isolatedUrl = new URL(connectionString);
+  isolatedUrl.pathname = `/${database}`;
+  const runtimeUrl = new URL(isolatedUrl);
+  runtimeUrl.username = runtimeRole;
+  runtimeUrl.password = runtimePassword;
+  const owner = new Pool({ connectionString: isolatedUrl.toString(), max: 10 });
+  const runtime = new Pool({ connectionString: runtimeUrl.toString(), max: 10 });
   t.after(async () => {
-    await pool.end();
-    // This exact, randomly generated test schema is the only cleanup target.
-    await admin.query(`DROP SCHEMA "${schema}" CASCADE`);
+    await runtime.end();
+    await owner.end();
+    // This exact, randomly generated test database is the only cleanup target.
+    await admin.query(`DROP DATABASE "${database}" WITH (FORCE)`);
+    await admin.query(`DROP ROLE "${runtimeRole}"`);
     await admin.end();
   });
-  return pool;
+  return { owner, runtime, runtimeRole, runtimeUrl: runtimeUrl.toString() };
+}
+
+async function migrate(database: IsolatedDatabase): Promise<void> {
+  const client = await database.owner.connect();
+  try {
+    await migratePostgresBridge(client, { runtimeRole: database.runtimeRole });
+  } finally {
+    client.release();
+  }
 }
 
 test(
@@ -35,17 +66,25 @@ test(
     assert.ok(connectionString);
 
     await t.test("concurrent initialization, v4 quotas, and delivery fencing hold", async (t) => {
-      const pool = await isolatedPool(t);
-      const first = new PostgresBridgeStore({ connectionString }, pool);
-      const second = new PostgresBridgeStore({ connectionString }, pool);
+      const database = await isolatedDatabase(t);
+      await migrate(database);
+      const pool = database.runtime;
+      const first = new PostgresBridgeStore({ connectionString: database.runtimeUrl }, pool);
+      const second = new PostgresBridgeStore({ connectionString: database.runtimeUrl }, pool);
       await Promise.all([first.initialize(), second.initialize()]);
       const ledger = await pool.query<{ version: number }>(
-        "SELECT version FROM ambient_bridge_schema_migrations ORDER BY version",
+        `SELECT version FROM "ambient_private"."ambient_bridge_schema_migrations" ORDER BY version`,
       );
       assert.deepEqual(ledger.rows.map(({ version }) => version), [1, 2, 3, 4]);
 
-      const ingressA = new PostgresBridgeStore({ connectionString, rateLimitMaxActiveKeys: 3 }, pool);
-      const ingressB = new PostgresBridgeStore({ connectionString, rateLimitMaxActiveKeys: 3 }, pool);
+      const ingressA = new PostgresBridgeStore(
+        { connectionString: database.runtimeUrl, rateLimitMaxActiveKeys: 3 },
+        pool,
+      );
+      const ingressB = new PostgresBridgeStore(
+        { connectionString: database.runtimeUrl, rateLimitMaxActiveKeys: 3 },
+        pool,
+      );
       const sharedKey = "concurrent-scoped-key-hash-00000001";
       const concurrentHits = await Promise.all(Array.from({ length: 20 }, (_value, index) => (
         (index % 2 === 0 ? ingressA : ingressB).incrementRateLimit("ingress", sharedKey, 60_000)
@@ -80,7 +119,7 @@ test(
         1,
       );
       const countsAtCapacity = await pool.query<{ scope: string; count: string }>(
-        "SELECT scope, count(*) FROM ambient_bridge_rate_limits GROUP BY scope ORDER BY scope",
+        `SELECT scope, count(*) FROM "ambient_private"."ambient_bridge_rate_limits" GROUP BY scope ORDER BY scope`,
       );
       assert.deepEqual(countsAtCapacity.rows, [
         { scope: "device-poll", count: "1" },
@@ -114,7 +153,8 @@ test(
       try {
         await lockClient.query("BEGIN");
         await lockClient.query(
-          "SELECT active_keys FROM ambient_bridge_rate_limit_state WHERE scope = 'mcp-ingress' FOR UPDATE",
+          `SELECT active_keys FROM "ambient_private"."ambient_bridge_rate_limit_state"
+            WHERE scope = 'mcp-ingress' FOR UPDATE`,
         );
         const startedAt = Date.now();
         await assert.rejects(
@@ -134,14 +174,15 @@ test(
       }
 
       await pool.query(
-        "UPDATE ambient_bridge_rate_limits SET reset_at = clock_timestamp() - INTERVAL '1 second' WHERE scope = 'ingress'",
+        `UPDATE "ambient_private"."ambient_bridge_rate_limits"
+            SET reset_at = clock_timestamp() - INTERVAL '1 second' WHERE scope = 'ingress'`,
       );
       assert.equal(
         (await ingressB.incrementRateLimit("ingress", "ingress-cap-key-000000000000000004", 60_000)).totalHits,
         1,
       );
       const reclaimed = await pool.query<{ active_keys: number }>(
-        "SELECT active_keys FROM ambient_bridge_rate_limit_state WHERE scope = 'ingress'",
+        `SELECT active_keys FROM "ambient_private"."ambient_bridge_rate_limit_state" WHERE scope = 'ingress'`,
       );
       assert.equal(reclaimed.rows[0]?.active_keys, 1);
 
@@ -151,16 +192,17 @@ test(
       assert.equal((await ingressA.incrementRateLimit("admin", countOneKey, 60_000)).totalHits, 1);
 
       await pool.query(
-        `INSERT INTO ambient_bridge_rate_limits (scope, key_hash, total_hits, reset_at)
+        `INSERT INTO "ambient_private"."ambient_bridge_rate_limits" (scope, key_hash, total_hits, reset_at)
          SELECT 'device-result', md5(generate_series::text), 1,
                 clock_timestamp() - INTERVAL '1 second'
            FROM generate_series(1, 150)`,
       );
       await pool.query(
-        "UPDATE ambient_bridge_rate_limit_state SET active_keys = 150 WHERE scope = 'device-result'",
+        `UPDATE "ambient_private"."ambient_bridge_rate_limit_state"
+            SET active_keys = 150 WHERE scope = 'device-result'`,
       );
       const wideCapacity = new PostgresBridgeStore(
-        { connectionString, rateLimitMaxActiveKeys: 200 },
+        { connectionString: database.runtimeUrl, rateLimitMaxActiveKeys: 200 },
         pool,
       );
       await wideCapacity.initialize();
@@ -174,8 +216,9 @@ test(
       );
       const fullyPurged = await pool.query<{ count: string; active_keys: number }>(
         `SELECT count(*)::text AS count,
-                (SELECT active_keys FROM ambient_bridge_rate_limit_state WHERE scope = 'device-result') AS active_keys
-           FROM ambient_bridge_rate_limits WHERE scope = 'device-result'`,
+                (SELECT active_keys FROM "ambient_private"."ambient_bridge_rate_limit_state"
+                  WHERE scope = 'device-result') AS active_keys
+           FROM "ambient_private"."ambient_bridge_rate_limits" WHERE scope = 'device-result'`,
       );
       assert.deepEqual(fullyPurged.rows[0], { count: "1", active_keys: 1 });
 
@@ -206,7 +249,8 @@ test(
       assert.equal(staleLease?.id, fenced.id);
       assert.ok(staleLease?.leaseId);
       await pool.query(
-        "UPDATE ambient_bridge_commands SET lease_expires_at = clock_timestamp() - INTERVAL '1 second' WHERE id = $1",
+        `UPDATE "ambient_private"."ambient_bridge_commands"
+            SET lease_expires_at = clock_timestamp() - INTERVAL '1 second' WHERE id = $1`,
         [fenced.id],
       );
       assert.equal(
@@ -232,14 +276,14 @@ test(
       );
       await assert.rejects(
         pool.query(
-          `INSERT INTO ambient_bridge_commands
+          `INSERT INTO "ambient_private"."ambient_bridge_commands"
             (id, device_id, operation, status, created_at, expires_at,
              lease_expires_at, lease_id, request_id, protocol_version,
              attempt_count, max_attempts, result, error)
            SELECT 'bridge_forced_duplicate', device_id, operation, 'pending',
              clock_timestamp(), clock_timestamp() + INTERVAL '1 minute',
              NULL, NULL, request_id, 2, 0, 3, NULL, NULL
-             FROM ambient_bridge_commands WHERE id = $1`,
+             FROM "ambient_private"."ambient_bridge_commands" WHERE id = $1`,
           [mutation.id],
         ),
         (error: unknown) => Boolean(
@@ -257,7 +301,8 @@ test(
         assert.equal(retryLease?.id, retryCommand.id);
         assert.equal(retryLease?.attemptCount, attempt);
         await pool.query(
-          "UPDATE ambient_bridge_commands SET lease_expires_at = clock_timestamp() - INTERVAL '1 second' WHERE id = $1",
+          `UPDATE "ambient_private"."ambient_bridge_commands"
+              SET lease_expires_at = clock_timestamp() - INTERVAL '1 second' WHERE id = $1`,
           [retryCommand.id],
         );
       }
@@ -268,24 +313,26 @@ test(
     });
 
     await t.test("v1 and partially-upgraded data is normalized without deleting history", async (t) => {
-      const pool = await isolatedPool(t);
+      const database = await isolatedDatabase(t);
+      const pool = database.owner;
       const v1 = POSTGRES_BRIDGE_MIGRATIONS[0];
       assert.ok(v1);
-      await pool.query(v1.sql);
+      await pool.query(v1.sql.replaceAll('"ambient_private".', '"public".'));
       await pool.query(`
-        CREATE TABLE ambient_bridge_schema_migrations (
+        CREATE TABLE "public"."ambient_bridge_schema_migrations" (
           version INTEGER PRIMARY KEY,
           name TEXT NOT NULL,
           applied_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp()
         )
       `);
       await pool.query(
-        "INSERT INTO ambient_bridge_schema_migrations (version, name) VALUES (1, 'base_bridge_schema')",
+        `INSERT INTO "public"."ambient_bridge_schema_migrations" (version, name)
+         VALUES (1, 'base_bridge_schema')`,
       );
-      await pool.query("ALTER TABLE ambient_bridge_commands ADD COLUMN lease_id TEXT");
-      await pool.query("ALTER TABLE ambient_bridge_commands ADD COLUMN request_id TEXT");
+      await pool.query(`ALTER TABLE "public"."ambient_bridge_commands" ADD COLUMN lease_id TEXT`);
+      await pool.query(`ALTER TABLE "public"."ambient_bridge_commands" ADD COLUMN request_id TEXT`);
       await pool.query(`
-        INSERT INTO ambient_bridge_devices
+        INSERT INTO "public"."ambient_bridge_devices"
           (device_id, display_name, token_hash, enrolled_at, last_seen_at, revoked_at)
         VALUES ('device_legacy', 'Legacy Mac', 'hash', clock_timestamp(), NULL, NULL)
       `);
@@ -298,7 +345,7 @@ test(
         offset: number,
       ): Promise<void> => {
         await pool.query(
-          `INSERT INTO ambient_bridge_commands
+          `INSERT INTO "public"."ambient_bridge_commands"
             (id, device_id, operation, status, created_at, expires_at,
              lease_expires_at, result, error, lease_id, request_id)
            VALUES ($1, 'device_legacy', $2::jsonb, $3,
@@ -323,10 +370,18 @@ test(
       await insertLegacy("column_repair", { type: "pause" }, "pending", "column-canonical-0001", 5);
       await insertLegacy("nonstring", { type: "pause", requestId: 42 }, "pending", null, 6);
 
-      const before = await pool.query<{ count: string }>("SELECT count(*) FROM ambient_bridge_commands");
-      const store = new PostgresBridgeStore({ connectionString }, pool);
+      const before = await pool.query<{ count: string }>(
+        `SELECT count(*) FROM "public"."ambient_bridge_commands"`,
+      );
+      await migrate(database);
+      const store = new PostgresBridgeStore(
+        { connectionString: database.runtimeUrl },
+        database.runtime,
+      );
       await store.initialize();
-      const after = await pool.query<{ count: string }>("SELECT count(*) FROM ambient_bridge_commands");
+      const after = await pool.query<{ count: string }>(
+        `SELECT count(*) FROM "ambient_private"."ambient_bridge_commands"`,
+      );
       assert.equal(after.rows[0]?.count, before.rows[0]?.count);
 
       const rows = await pool.query<{
@@ -335,7 +390,8 @@ test(
         request_id: string | null;
         operation: Record<string, unknown>;
         error: string | null;
-      }>("SELECT id, status, request_id, operation, error FROM ambient_bridge_commands ORDER BY id");
+      }>(`SELECT id, status, request_id, operation, error
+            FROM "ambient_private"."ambient_bridge_commands" ORDER BY id`);
       const byId = new Map(rows.rows.map((row) => [row.id, row]));
       assert.equal(byId.get("dup_succeeded")?.request_id, "duplicate-request-0001");
       assert.equal(byId.get("dup_pending")?.request_id, null);
@@ -354,35 +410,44 @@ test(
     });
 
     await t.test("future versions and failed migrations remain fail-closed", async (t) => {
-      const futurePool = await isolatedPool(t);
+      const futureDatabase = await isolatedDatabase(t);
+      const futurePool = futureDatabase.owner;
+      await futurePool.query(`CREATE SCHEMA "ambient_private"`);
       await futurePool.query(`
-        CREATE TABLE ambient_bridge_schema_migrations (
+        CREATE TABLE "ambient_private"."ambient_bridge_schema_migrations" (
           version INTEGER PRIMARY KEY,
           name TEXT NOT NULL,
           applied_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp()
         )
       `);
       await futurePool.query(
-        "INSERT INTO ambient_bridge_schema_migrations (version, name) VALUES (99, 'future')",
+        `INSERT INTO "ambient_private"."ambient_bridge_schema_migrations" (version, name)
+         VALUES (99, 'future')`,
       );
-      const future = new PostgresBridgeStore({ connectionString }, futurePool);
+      const future = new PostgresBridgeStore({ connectionString: futureDatabase.runtimeUrl }, futurePool);
       await assert.rejects(future.initialize(), /schema version 99 is newer/);
 
-      const malformedPool = await isolatedPool(t);
+      const malformedDatabase = await isolatedDatabase(t);
+      const malformedPool = malformedDatabase.owner;
+      await malformedPool.query(`CREATE SCHEMA "ambient_private"`);
       await malformedPool.query(`
-        CREATE TABLE ambient_bridge_schema_migrations (
+        CREATE TABLE "ambient_private"."ambient_bridge_schema_migrations" (
           version INTEGER PRIMARY KEY,
           name TEXT NOT NULL,
           applied_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp()
         )
       `);
       await malformedPool.query(
-        "INSERT INTO ambient_bridge_schema_migrations (version, name) VALUES (1, 'base_bridge_schema')",
+        `INSERT INTO "ambient_private"."ambient_bridge_schema_migrations" (version, name)
+         VALUES (1, 'base_bridge_schema')`,
       );
-      const malformed = new PostgresBridgeStore({ connectionString }, malformedPool);
+      const malformed = new PostgresBridgeStore(
+        { connectionString: malformedDatabase.runtimeUrl },
+        malformedPool,
+      );
       await assert.rejects(malformed.initialize(), BridgeSchemaMigrationError);
       const ledger = await malformedPool.query<{ version: number }>(
-        "SELECT version FROM ambient_bridge_schema_migrations ORDER BY version",
+        `SELECT version FROM "ambient_private"."ambient_bridge_schema_migrations" ORDER BY version`,
       );
       assert.deepEqual(ledger.rows.map(({ version }) => version), [1]);
       await assert.rejects(malformed.initialize(), BridgeSchemaMigrationError);
