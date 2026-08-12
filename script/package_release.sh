@@ -43,7 +43,7 @@ ditto -c -k --sequesterRsrc --keepParent \
 git -C "$ROOT_DIR" archive --format=zip \
   --output "$RELEASE_DIR/Project-Ambient-$VERSION-source.zip" HEAD
 
-(cd "$ROOT_DIR/services/mcp" && npm pack --pack-destination "$RELEASE_DIR")
+(cd "$ROOT_DIR/services/mcp" && npm_config_cache="$ROOT_DIR/services/mcp/.npm-cache" npm pack --pack-destination "$RELEASE_DIR")
 
 cp "$ROOT_DIR/services/mcp/project-ambient-control.mcpb" \
   "$RELEASE_DIR/Project-Ambient-Control-$VERSION.mcpb"
