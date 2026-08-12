@@ -318,6 +318,22 @@ test("migration and runtime SQL are private-qualified and preserve delivery inva
   }
   assert.match(runtime, /SET LOCAL lock_timeout = '1s'/i);
   assert.match(runtime, /SET LOCAL statement_timeout = '3s'/i);
+  const incrementSql = runtime.slice(
+    runtime.indexOf("async incrementRateLimit"),
+    runtime.indexOf("async decrementRateLimit"),
+  );
+  const fastPathIndex = incrementSql.indexOf("const fastPath");
+  const keyLockIndex = incrementSql.indexOf("pg_advisory_xact_lock");
+  const concurrentRecheckIndex = incrementSql.indexOf("const concurrent");
+  const scopeLockIndex = incrementSql.indexOf("SELECT active_keys");
+  assert.ok(
+    fastPathIndex >= 0
+      && keyLockIndex > fastPathIndex
+      && concurrentRecheckIndex > keyLockIndex
+      && scopeLockIndex > concurrentRecheckIndex,
+    "a same-key first-hit race must be rechecked under a per-key lock before taking the scope-capacity lock",
+  );
+  assert.match(incrementSql, /JSON\.stringify\(\[scope, keyHash\]\)/);
   assert.match(runtime, /expires_at > clock_timestamp\(\) \+ \(\$2 \* INTERVAL '1 second'\)/i);
   const unqualified = /\b(?:FROM|JOIN|UPDATE|INTO|TABLE|REFERENCES)\s+(?!"ambient_private"\."|\(|candidate\b|classified\b|ranked\b|resolved\b|pg_catalog\.)ambient_bridge_/gi;
   assert.doesNotMatch(`${migrations}\n${runtime}`, unqualified);

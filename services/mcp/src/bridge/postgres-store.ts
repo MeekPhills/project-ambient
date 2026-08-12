@@ -149,23 +149,11 @@ export class PostgresBridgeStore implements BridgeStore {
           resetTime: fastRow.reset_at instanceof Date ? fastRow.reset_at : new Date(fastRow.reset_at),
         };
       }
-      const state = await client.query(
-        `SELECT active_keys FROM "ambient_private"."ambient_bridge_rate_limit_state"
-          WHERE scope = $1 FOR UPDATE`,
-        [scope],
-      );
-      if ((state.rowCount ?? 0) !== 1) throw new Error("Rate-limit scope metadata is unavailable.");
-      await client.query(
-        `WITH removed AS (
-           DELETE FROM "ambient_private"."ambient_bridge_rate_limits"
-            WHERE scope = $1 AND reset_at <= clock_timestamp()
-            RETURNING 1
-         )
-         UPDATE "ambient_private"."ambient_bridge_rate_limit_state"
-            SET active_keys = GREATEST(active_keys - (SELECT count(*) FROM removed), 0)
-          WHERE scope = $1`,
-        [scope],
-      );
+      // First-hit contenders serialize by key, then recheck before touching the
+      // per-scope capacity row. Only the actual creator needs the broader lock.
+      await client.query("SELECT pg_advisory_xact_lock(hashtextextended($1, 0))", [
+        JSON.stringify([scope, keyHash]),
+      ]);
       const concurrent = await client.query<{ total_hits: number; reset_at: Date | string }>(
         `UPDATE "ambient_private"."ambient_bridge_rate_limits"
             SET total_hits = total_hits + 1
@@ -182,6 +170,23 @@ export class PostgresBridgeStore implements BridgeStore {
             : new Date(concurrentRow.reset_at),
         };
       }
+      const state = await client.query(
+        `SELECT active_keys FROM "ambient_private"."ambient_bridge_rate_limit_state"
+          WHERE scope = $1 FOR UPDATE`,
+        [scope],
+      );
+      if ((state.rowCount ?? 0) !== 1) throw new Error("Rate-limit scope metadata is unavailable.");
+      await client.query(
+        `WITH removed AS (
+           DELETE FROM "ambient_private"."ambient_bridge_rate_limits"
+            WHERE scope = $1 AND reset_at <= clock_timestamp()
+            RETURNING 1
+         )
+         UPDATE "ambient_private"."ambient_bridge_rate_limit_state"
+            SET active_keys = GREATEST(active_keys - (SELECT count(*) FROM removed), 0)
+         WHERE scope = $1`,
+        [scope],
+      );
       const capacity = await client.query(
         `UPDATE "ambient_private"."ambient_bridge_rate_limit_state"
             SET active_keys = active_keys + 1
