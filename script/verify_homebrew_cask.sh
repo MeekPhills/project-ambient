@@ -54,13 +54,13 @@ formula_sha="$(sed -nE 's/^  sha256 "([0-9a-f]{64})"$/\1/p' "$FORMULA")"
   fail "invalid semantic version: ${formula_version:-<missing>}"
 [[ "$formula_sha" =~ ^[0-9a-f]{64}$ ]] || fail 'sha256 must be a 64-character lowercase hexadecimal digest'
 
-rg -Fq 'url "https://github.com/MeekPhills/project-ambient/releases/download/v#{version}/Project-Ambient-#{version}.zip"' "$FORMULA" || \
+grep -Fq 'url "https://github.com/MeekPhills/project-ambient/releases/download/v#{version}/Project-Ambient-#{version}.zip"' "$FORMULA" || \
   fail 'release URL must interpolate the cask version and canonical archive name'
-rg -Fq 'app "Project Ambient/Project Ambient.app"' "$FORMULA" || \
+grep -Fq 'app "Project Ambient/Project Ambient.app"' "$FORMULA" || \
   fail 'app stanza does not match the release archive layout'
-rg -Fq 'binary "Project Ambient/ambientctl"' "$FORMULA" || \
+grep -Fq 'binary "Project Ambient/ambientctl"' "$FORMULA" || \
   fail 'binary stanza does not match the release archive layout'
-rg -Fq 'depends_on macos: ">= :sonoma"' "$FORMULA" || \
+grep -Fq 'depends_on macos: ">= :sonoma"' "$FORMULA" || \
   fail 'minimum macOS version must remain aligned with the native package (macOS 14)'
 
 if [[ -n "$RELEASE_DIR" ]]; then
@@ -93,7 +93,7 @@ NODE
   [[ "$archive_sha" == "$formula_sha" ]] || \
     fail "formula SHA-256 does not match the promoted release archive"
 
-  if rg -q '^  depends_on arch:' "$FORMULA"; then
+  if grep -Eq '^  depends_on arch:' "$FORMULA"; then
     fail 'a universal release cannot retain an architecture restriction in the cask'
   fi
 fi
