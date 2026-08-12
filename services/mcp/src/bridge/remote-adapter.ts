@@ -11,6 +11,7 @@ import type {
 } from "../domain.js";
 import { AmbientAdapterError } from "../domain.js";
 import type { BridgeOperation, BridgeStore } from "./types.js";
+import { BridgeDeviceUnavailableError, BridgeRequestConflictError } from "./types.js";
 import {
   channelListSchema,
   channelSchema,
@@ -108,11 +109,25 @@ export class RemoteAmbientAdapter implements AmbientAdapter {
     if (!device || device.revokedAt) {
       throw new AmbientAdapterError("The selected Ambient device is not enrolled.", "not_available");
     }
-    const command = await this.options.store.enqueue(
-      this.options.deviceId,
-      operation,
-      this.commandTtlSeconds,
-    );
+    let command;
+    try {
+      command = await this.options.store.enqueue(
+        this.options.deviceId,
+        operation,
+        this.commandTtlSeconds,
+      );
+    } catch (error) {
+      if (error instanceof BridgeDeviceUnavailableError) {
+        throw new AmbientAdapterError("The selected Ambient device is not enrolled.", "not_available");
+      }
+      if (error instanceof BridgeRequestConflictError) {
+        throw new AmbientAdapterError(
+          "This request ID was already used for a different Ambient command.",
+          "command_failed",
+        );
+      }
+      throw error;
+    }
     const deadline = Date.now() + this.resultTimeoutMs;
     while (Date.now() < deadline) {
       const current = await this.options.store.getCommand(command.id);

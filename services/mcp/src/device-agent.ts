@@ -1,8 +1,17 @@
 #!/usr/bin/env node
 import { AmbientCtlAdapter } from "./adapters/ambientctl.js";
-import type { BridgeCommand, BridgeOperation } from "./bridge/types.js";
+import type { BridgeOperation } from "./bridge/types.js";
 import { bridgeOperationSchema } from "./bridge/types.js";
 import { log } from "./logger.js";
+import * as z from "zod/v4";
+
+const commandEnvelopeSchema = z.object({
+  id: z.string().min(1).max(128),
+  deviceId: z.string().min(1).max(128),
+  leaseId: z.string().min(1).max(128),
+  operation: z.unknown(),
+});
+type DeviceCommand = z.infer<typeof commandEnvelopeSchema>;
 
 const configuredBridgeUrl = process.env.AMBIENT_BRIDGE_URL?.replace(/\/$/, "");
 const deviceId = process.env.AMBIENT_DEVICE_ID;
@@ -60,11 +69,11 @@ async function execute(operation: BridgeOperation): Promise<unknown> {
   }
 }
 
-async function postResult(command: BridgeCommand, body: Record<string, unknown>): Promise<void> {
+async function postResult(command: DeviceCommand, body: Record<string, unknown>): Promise<void> {
   const response = await fetch(`${bridgeUrl}/bridge/v1/agent/commands/${encodeURIComponent(command.id)}/result`, {
     method: "POST",
     headers: { ...headers, "content-type": "application/json" },
-    body: JSON.stringify(body),
+    body: JSON.stringify({ ...body, lease_id: command.leaseId }),
     signal: AbortSignal.timeout(15_000),
   });
   if (!response.ok) throw new Error(`Bridge rejected result with HTTP ${response.status}.`);
@@ -77,33 +86,43 @@ async function pollOnce(): Promise<void> {
   });
   if (response.status === 204) return;
   if (!response.ok) throw new Error(`Bridge poll failed with HTTP ${response.status}.`);
-  const body = await response.json() as { command?: BridgeCommand };
-  if (!body.command) throw new Error("Bridge response did not include a command.");
-  const parsed = bridgeOperationSchema.safeParse(body.command.operation);
+  const body = z.object({ command: commandEnvelopeSchema }).safeParse(await response.json());
+  if (!body.success || body.data.command.deviceId !== deviceId) {
+    throw new Error("Bridge response did not include a valid command lease.");
+  }
+  const command = body.data.command;
+  const parsed = bridgeOperationSchema.safeParse(command.operation);
   if (!parsed.success) {
-    await postResult(body.command, { status: "failed", error: "Unsupported bridge operation." });
+    await postResult(command, { status: "failed", error: "Unsupported bridge operation." });
     return;
   }
+  let result: unknown;
   try {
-    const result = await execute(parsed.data);
-    await postResult(body.command, { status: "succeeded", result });
-    log("info", "device_command_succeeded", { commandId: body.command.id, operation: parsed.data.type });
+    result = await execute(parsed.data);
   } catch (error) {
     const message = error instanceof Error ? error.message.slice(0, 500) : "Device command failed.";
-    await postResult(body.command, { status: "failed", error: message });
-    log("warn", "device_command_failed", { commandId: body.command.id, operation: parsed.data.type });
+    await postResult(command, { status: "failed", error: message });
+    log("warn", "device_command_failed", { commandId: command.id, operation: parsed.data.type });
+    return;
   }
+  await postResult(command, { status: "succeeded", result });
+  log("info", "device_command_succeeded", { commandId: command.id, operation: parsed.data.type });
 }
 
 async function main(): Promise<void> {
   log("info", "device_agent_started", { deviceId, bridgeHost: new URL(bridgeUrl).host });
+  let consecutivePollFailures = 0;
   while (!stopped) {
     try {
       await pollOnce();
+      consecutivePollFailures = 0;
     } catch (error) {
+      consecutivePollFailures += 1;
       log("warn", "device_poll_failed", { errorType: error instanceof Error ? error.name : typeof error });
     }
-    if (!stopped) await new Promise((resolve) => setTimeout(resolve, pollIntervalMs));
+    const backoffMultiplier = 2 ** Math.min(Math.max(consecutivePollFailures - 1, 0), 5);
+    const nextPollDelayMs = Math.min(pollIntervalMs * backoffMultiplier, 60_000);
+    if (!stopped) await new Promise((resolve) => setTimeout(resolve, nextPollDelayMs));
   }
 }
 

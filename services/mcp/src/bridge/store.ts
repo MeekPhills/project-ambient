@@ -1,6 +1,7 @@
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { timingSafeEqual } from "node:crypto";
+import { isDeepStrictEqual } from "node:util";
 import type {
   BridgeCommand,
   BridgeDevice,
@@ -8,7 +9,15 @@ import type {
   BridgeState,
   BridgeStore,
 } from "./types.js";
-import { hashToken, newCommandId, newDeviceIdentity } from "./types.js";
+import {
+  BridgeDeviceUnavailableError,
+  BridgeRequestConflictError,
+  hashToken,
+  newCommandId,
+  newDeviceIdentity,
+  newLeaseId,
+  operationRequestId,
+} from "./types.js";
 
 const EMPTY_STATE: BridgeState = { devices: [], commands: [] };
 
@@ -24,6 +33,8 @@ function clone<T>(value: T): T {
 
 export abstract class BaseBridgeStore implements BridgeStore {
   private queue = Promise.resolve();
+
+  protected constructor(private readonly now: () => Date = () => new Date()) {}
 
   protected abstract readState(): Promise<BridgeState>;
   protected abstract writeState(state: BridgeState): Promise<void>;
@@ -46,7 +57,7 @@ export abstract class BaseBridgeStore implements BridgeStore {
         deviceId,
         displayName,
         tokenHash: hashToken(token),
-        enrolledAt: new Date().toISOString(),
+        enrolledAt: this.now().toISOString(),
         lastSeenAt: null,
         revokedAt: null,
       };
@@ -79,13 +90,47 @@ export abstract class BaseBridgeStore implements BridgeStore {
       const device = state.devices.find((candidate) => candidate.deviceId === deviceId);
       if (!device || device.revokedAt) return false;
       device.revokedAt = at;
+      for (const command of state.commands) {
+        if (command.deviceId === deviceId && (command.status === "pending" || command.status === "leased")) {
+          command.status = "failed";
+          command.error = "Device revoked before command completed.";
+          command.result = null;
+          command.leaseExpiresAt = null;
+          command.leaseId = null;
+        }
+      }
       return true;
     });
   }
 
   async enqueue(deviceId: string, operation: BridgeOperation, ttlSeconds: number): Promise<BridgeCommand> {
     return this.transaction((state) => {
-      const now = new Date();
+      const device = state.devices.find((candidate) => candidate.deviceId === deviceId);
+      if (!device || device.revokedAt) throw new BridgeDeviceUnavailableError();
+      const now = this.now();
+      const requestId = operationRequestId(operation);
+      if (requestId) {
+        const existing = state.commands.find(
+          (candidate) => candidate.deviceId === deviceId
+            && operationRequestId(candidate.operation) === requestId,
+        );
+        if (existing) {
+          if (!isDeepStrictEqual(existing.operation, operation)) throw new BridgeRequestConflictError();
+          if (
+            existing.status === "expired"
+            || ((existing.status === "pending" || existing.status === "leased")
+              && new Date(existing.expiresAt) <= now)
+          ) {
+            existing.status = "pending";
+            existing.expiresAt = new Date(now.getTime() + ttlSeconds * 1_000).toISOString();
+            existing.leaseExpiresAt = null;
+            existing.leaseId = null;
+            existing.result = null;
+            existing.error = null;
+          }
+          return clone(existing);
+        }
+      }
       const command: BridgeCommand = {
         id: newCommandId(),
         deviceId,
@@ -94,6 +139,7 @@ export abstract class BaseBridgeStore implements BridgeStore {
         createdAt: now.toISOString(),
         expiresAt: new Date(now.getTime() + ttlSeconds * 1_000).toISOString(),
         leaseExpiresAt: null,
+        leaseId: null,
         result: null,
         error: null,
       };
@@ -104,12 +150,22 @@ export abstract class BaseBridgeStore implements BridgeStore {
 
   async leaseNext(deviceId: string, leaseSeconds: number): Promise<BridgeCommand | null> {
     return this.transaction((state) => {
-      const now = new Date();
+      const device = state.devices.find((candidate) => candidate.deviceId === deviceId);
+      if (!device || device.revokedAt) return null;
+      const now = this.now();
       for (const command of state.commands) {
-        if (command.status === "pending" && new Date(command.expiresAt) <= now) command.status = "expired";
+        if (
+          (command.status === "pending" || command.status === "leased")
+          && new Date(command.expiresAt) <= now
+        ) {
+          command.status = "expired";
+          command.leaseExpiresAt = null;
+          command.leaseId = null;
+        }
         if (command.status === "leased" && command.leaseExpiresAt && new Date(command.leaseExpiresAt) <= now) {
           command.status = "pending";
           command.leaseExpiresAt = null;
+          command.leaseId = null;
         }
       }
       const command = state.commands.find(
@@ -118,21 +174,23 @@ export abstract class BaseBridgeStore implements BridgeStore {
       if (!command) return null;
       command.status = "leased";
       command.leaseExpiresAt = new Date(now.getTime() + leaseSeconds * 1_000).toISOString();
+      command.leaseId = newLeaseId();
       return clone(command);
     });
   }
 
-  async complete(commandId: string, deviceId: string, result: unknown): Promise<BridgeCommand | null> {
-    return this.finish(commandId, deviceId, "succeeded", result, null);
+  async complete(commandId: string, deviceId: string, leaseId: string, result: unknown): Promise<BridgeCommand | null> {
+    return this.finish(commandId, deviceId, leaseId, "succeeded", result, null);
   }
 
-  async fail(commandId: string, deviceId: string, error: string): Promise<BridgeCommand | null> {
-    return this.finish(commandId, deviceId, "failed", null, error);
+  async fail(commandId: string, deviceId: string, leaseId: string, error: string): Promise<BridgeCommand | null> {
+    return this.finish(commandId, deviceId, leaseId, "failed", null, error);
   }
 
   private async finish(
     commandId: string,
     deviceId: string,
+    leaseId: string,
     status: "succeeded" | "failed",
     result: unknown,
     error: string | null,
@@ -141,7 +199,24 @@ export abstract class BaseBridgeStore implements BridgeStore {
       const command = state.commands.find(
         (candidate) => candidate.id === commandId && candidate.deviceId === deviceId,
       );
-      if (!command || (command.status !== "leased" && command.status !== status)) return null;
+      if (!command || command.leaseId !== leaseId) return null;
+      if (command.status === status) return clone(command);
+      if (command.status !== "leased") return null;
+      const device = state.devices.find((candidate) => candidate.deviceId === deviceId);
+      if (!device || device.revokedAt) return null;
+      const now = this.now();
+      if (new Date(command.expiresAt) <= now) {
+        command.status = "expired";
+        command.leaseExpiresAt = null;
+        command.leaseId = null;
+        return null;
+      }
+      if (!command.leaseExpiresAt || new Date(command.leaseExpiresAt) <= now) {
+        command.status = "pending";
+        command.leaseExpiresAt = null;
+        command.leaseId = null;
+        return null;
+      }
       command.status = status;
       command.result = clone(result);
       command.error = error;
@@ -151,13 +226,28 @@ export abstract class BaseBridgeStore implements BridgeStore {
   }
 
   async getCommand(commandId: string): Promise<BridgeCommand | null> {
-    const state = await this.readState();
-    return clone(state.commands.find((command) => command.id === commandId) ?? null);
+    return this.transaction((state) => {
+      const command = state.commands.find((candidate) => candidate.id === commandId);
+      if (!command) return null;
+      if (
+        (command.status === "pending" || command.status === "leased")
+        && new Date(command.expiresAt) <= this.now()
+      ) {
+        command.status = "expired";
+        command.leaseExpiresAt = null;
+        command.leaseId = null;
+      }
+      return clone(command);
+    });
   }
 }
 
 export class MemoryBridgeStore extends BaseBridgeStore {
   private state: BridgeState = clone(EMPTY_STATE);
+
+  constructor(now?: () => Date) {
+    super(now);
+  }
 
   protected async readState(): Promise<BridgeState> {
     return clone(this.state);
@@ -169,13 +259,15 @@ export class MemoryBridgeStore extends BaseBridgeStore {
 }
 
 export class JsonFileBridgeStore extends BaseBridgeStore {
-  constructor(private readonly path: string) {
-    super();
+  constructor(private readonly path: string, now?: () => Date) {
+    super(now);
   }
 
   protected async readState(): Promise<BridgeState> {
     try {
-      return JSON.parse(await readFile(this.path, "utf8")) as BridgeState;
+      const state = JSON.parse(await readFile(this.path, "utf8")) as BridgeState;
+      for (const command of state.commands) command.leaseId ??= null;
+      return state;
     } catch (error) {
       if (error && typeof error === "object" && "code" in error && error.code === "ENOENT") {
         return clone(EMPTY_STATE);

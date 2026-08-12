@@ -47,6 +47,7 @@ export interface BridgeCommand {
   createdAt: string;
   expiresAt: string;
   leaseExpiresAt: string | null;
+  leaseId: string | null;
   result: unknown | null;
   error: string | null;
 }
@@ -64,9 +65,23 @@ export interface BridgeStore {
   revokeDevice(deviceId: string, at: string): Promise<boolean>;
   enqueue(deviceId: string, operation: BridgeOperation, ttlSeconds: number): Promise<BridgeCommand>;
   leaseNext(deviceId: string, leaseSeconds: number): Promise<BridgeCommand | null>;
-  complete(commandId: string, deviceId: string, result: unknown): Promise<BridgeCommand | null>;
-  fail(commandId: string, deviceId: string, error: string): Promise<BridgeCommand | null>;
+  complete(commandId: string, deviceId: string, leaseId: string, result: unknown): Promise<BridgeCommand | null>;
+  fail(commandId: string, deviceId: string, leaseId: string, error: string): Promise<BridgeCommand | null>;
   getCommand(commandId: string): Promise<BridgeCommand | null>;
+}
+
+export class BridgeDeviceUnavailableError extends Error {
+  constructor() {
+    super("The bridge device is not available.");
+    this.name = "BridgeDeviceUnavailableError";
+  }
+}
+
+export class BridgeRequestConflictError extends Error {
+  constructor() {
+    super("The request ID is already associated with a different operation.");
+    this.name = "BridgeRequestConflictError";
+  }
 }
 
 export function hashToken(token: string): string {
@@ -82,4 +97,12 @@ export function newDeviceIdentity() {
 
 export function newCommandId(): string {
   return `bridge_${randomUUID()}`;
+}
+
+export function newLeaseId(): string {
+  return `lease_${randomUUID()}`;
+}
+
+export function operationRequestId(operation: BridgeOperation): string | null {
+  return "requestId" in operation ? operation.requestId : null;
 }

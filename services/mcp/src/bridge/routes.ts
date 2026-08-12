@@ -2,7 +2,11 @@ import type { Request, RequestHandler, Response, Router } from "express";
 import express from "express";
 import * as z from "zod/v4";
 import type { BridgeStore } from "./types.js";
-import { bridgeOperationSchema } from "./types.js";
+import {
+  BridgeDeviceUnavailableError,
+  BridgeRequestConflictError,
+  bridgeOperationSchema,
+} from "./types.js";
 
 const enrollmentSchema = z.object({ display_name: z.string().min(1).max(80) });
 const commandSchema = z.object({
@@ -12,6 +16,7 @@ const commandSchema = z.object({
 });
 const resultSchema = z.object({
   status: z.enum(["succeeded", "failed"]),
+  lease_id: z.string().min(1).max(128),
   result: z.unknown().optional(),
   error: z.string().max(500).optional(),
 });
@@ -76,8 +81,20 @@ export function createBridgeRouter(store: BridgeStore, adminAuth: RequestHandler
       response.status(404).json({ error: "device_not_available" });
       return;
     }
-    const command = await store.enqueue(input.data.device_id, input.data.operation, input.data.ttl_seconds);
-    response.status(202).json({ command });
+    try {
+      const command = await store.enqueue(input.data.device_id, input.data.operation, input.data.ttl_seconds);
+      response.status(202).json({ command });
+    } catch (error) {
+      if (error instanceof BridgeDeviceUnavailableError) {
+        response.status(404).json({ error: "device_not_available" });
+        return;
+      }
+      if (error instanceof BridgeRequestConflictError) {
+        response.status(409).json({ error: "request_id_conflict" });
+        return;
+      }
+      throw error;
+    }
   });
 
   router.get("/admin/commands/:commandId", adminAuth, async (request, response) => {
@@ -108,8 +125,13 @@ export function createBridgeRouter(store: BridgeStore, adminAuth: RequestHandler
     const deviceId = response.locals.deviceId as string;
     const commandId = String(request.params.commandId);
     const command = input.data.status === "succeeded"
-      ? await store.complete(commandId, deviceId, input.data.result ?? null)
-      : await store.fail(commandId, deviceId, input.data.error ?? "Device command failed.");
+      ? await store.complete(commandId, deviceId, input.data.lease_id, input.data.result ?? null)
+      : await store.fail(
+        commandId,
+        deviceId,
+        input.data.lease_id,
+        input.data.error ?? "Device command failed.",
+      );
     if (!command) {
       response.status(409).json({ error: "command_not_leased_to_device" });
       return;
