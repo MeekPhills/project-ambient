@@ -166,7 +166,7 @@ test("raw status manifest endpoint exposes the canonical machine-readable source
 });
 
 test("status API avoids recursive worker probes and unauthenticated GitHub API exhaustion", () => {
-  assert.match(statusRouteSource, /project-ambient\.meekphillies\.chatgpt\.site\/favicon\.svg/);
+  assert.match(statusRouteSource, /project-ambient\.meekphillies\.chatgpt\.site\/cdn-cgi\/trace/);
   assert.match(statusRouteSource, /img\.shields\.io\/github\/actions\/workflow\/status/);
   assert.doesNotMatch(statusRouteSource, /probeUrl:\s*"https:\/\/project-ambient\.meekphillies\.chatgpt\.site"\s*,/);
   assert.doesNotMatch(statusRouteSource, /probeUrl:\s*"https:\/\/api\.github\.com/);

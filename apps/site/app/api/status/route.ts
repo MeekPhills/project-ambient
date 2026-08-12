@@ -21,11 +21,11 @@ const probes: Probe[] = [
     label: "Public site",
     publicUrl: "https://project-ambient.meekphillies.chatgpt.site",
     phaseId: phaseFor("site"),
-    probeUrl: "https://project-ambient.meekphillies.chatgpt.site/favicon.svg",
-    accept: "image/svg+xml",
-    inspect: (body) => body.includes("#D9FF6C")
-      ? { state: "operational", detail: "Production site assets are serving the current brand" }
-      : { state: "degraded", detail: "Site responded without the current brand marker" },
+    probeUrl: "https://project-ambient.meekphillies.chatgpt.site/cdn-cgi/trace",
+    accept: "text/plain",
+    inspect: (body) => body.includes("h=project-ambient.meekphillies.chatgpt.site") && body.includes("visit_scheme=https")
+      ? { state: "operational", detail: "Production domain is reachable at the public edge" }
+      : { state: "degraded", detail: "Public edge did not report the expected production domain" },
   },
   {
     id: "repository",
