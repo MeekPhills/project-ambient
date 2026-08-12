@@ -504,7 +504,7 @@ export function StatusDashboard() {
             {statusManifest.phases.map((phase, index) => {
               const completion = phaseCompletion(phase);
               return (
-                <span aria-label={`${phase.name}: ${formatPercent(completion)}`} title={phase.name} key={phase.id}>
+                <span data-status-dock-phase aria-label={`${phase.name}: ${formatPercent(completion)}`} title={phase.name} key={phase.id}>
                   <small>0{index + 1}</small><i aria-hidden="true"><b style={{ width: `${completion}%` }} /></i><strong>{formatPercent(completion)}</strong>
                 </span>
               );
@@ -514,7 +514,7 @@ export function StatusDashboard() {
             {statusManifest.deliveryWorkstreams.map((workstream) => {
               const completion = workstreamCompletion(workstream);
               const owner = workstream.owner.split("·").at(-1)?.trim() ?? workstream.owner;
-              return <span aria-label={`${workstream.name}, ${owner}: ${formatPercent(completion)}`} title={workstream.name} key={workstream.id}><i aria-hidden="true"><b style={{ width: `${completion}%` }} /></i><strong>{owner}</strong><small>{formatPercent(completion)}</small></span>;
+              return <span data-status-dock-agent aria-label={`${workstream.name}, ${owner}: ${formatPercent(completion)}`} title={workstream.name} key={workstream.id}><i aria-hidden="true"><b style={{ width: `${completion}%` }} /></i><strong>{owner}</strong><small>{formatPercent(completion)}</small></span>;
             })}
           </div>
           <a href="#phases-title">Tasks <span aria-hidden="true">↑</span></a>

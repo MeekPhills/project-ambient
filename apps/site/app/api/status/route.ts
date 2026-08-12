@@ -17,6 +17,17 @@ function phaseFor(checkId: string) {
 
 const probes: Probe[] = [
   {
+    id: "site",
+    label: "Public site",
+    publicUrl: "https://project-ambient.meekphillies.chatgpt.site",
+    phaseId: phaseFor("site"),
+    probeUrl: "https://project-ambient.meekphillies.chatgpt.site/favicon.svg",
+    accept: "image/svg+xml",
+    inspect: (body) => body.includes("#D9FF6C")
+      ? { state: "operational", detail: "Production site assets are serving the current brand" }
+      : { state: "degraded", detail: "Site responded without the current brand marker" },
+  },
+  {
     id: "repository",
     label: "GitHub repository",
     publicUrl: "https://github.com/MeekPhills/project-ambient",
@@ -163,21 +174,8 @@ async function runProbe(probe: Probe): Promise<LiveCheck> {
 }
 
 async function runAllChecks(): Promise<LiveCheckResponse> {
-  const siteCheckedAt = new Date().toISOString();
-  const siteCheck: LiveCheck = {
-    id: "site",
-    label: "Public site",
-    url: statusManifest.liveChecks.find((check) => check.id === "site")?.url
-      ?? "https://project-ambient.meekphillies.chatgpt.site",
-    state: "operational",
-    httpStatus: 200,
-    latencyMs: 0,
-    detail: "The production status service is responding",
-    checkedAt: siteCheckedAt,
-    phaseId: phaseFor("site"),
-  };
-  const externalChecks = await Promise.all(probes.map(runProbe));
-  return { checkedAt: new Date().toISOString(), checks: [siteCheck, ...externalChecks] };
+  const checks = await Promise.all(probes.map(runProbe));
+  return { checkedAt: new Date().toISOString(), checks };
 }
 
 export async function GET() {

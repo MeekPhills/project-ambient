@@ -39,6 +39,8 @@ export type DeliveryWorkstream = {
   id: string;
   owner: string;
   name: string;
+  state: TaskStatus;
+  completion: number;
   detail: string;
   chunks: DeliveryChunk[];
 };

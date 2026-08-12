@@ -101,6 +101,9 @@ test("status manifest is a fixed, conservative 100-point audit", () => {
   for (const workstream of statusManifest.deliveryWorkstreams) {
     assert.equal(workstream.chunks.reduce((sum, chunk) => sum + chunk.share, 0), 100);
     assert.ok(workstream.chunks.every((chunk) => chunk.earnedShare >= 0 && chunk.earnedShare <= chunk.share));
+    const derivedCompletion = workstream.chunks.reduce((sum, chunk) => sum + chunk.earnedShare, 0);
+    assert.equal(workstream.completion, derivedCompletion);
+    assert.equal(workstream.state, derivedCompletion === 100 ? "complete" : "in_progress");
   }
 
   const active = tasks.filter((task) => !task.deferred).reduce(
@@ -138,6 +141,8 @@ test("status page renders the exact score, ETA boundaries, filters, and methodol
   assert.match(cleanHtml, /Persistent Project Ambient delivery status/);
   assert.match(cleanHtml, /Status bot/);
   assert.match(cleanHtml, /Project Ambient Status Bot/);
+  assert.equal([...cleanHtml.matchAll(/data-status-dock-phase/g)].length, 3);
+  assert.equal([...cleanHtml.matchAll(/data-status-dock-agent/g)].length, 4);
   assert.match(cleanHtml, /macos_build.*Godel/is);
   assert.match(cleanHtml, /mcp_build.*Lovelace/is);
   assert.match(cleanHtml, /site_build.*Curie/is);
@@ -160,12 +165,9 @@ test("raw status manifest endpoint exposes the canonical machine-readable source
   assert.equal(manifest.deliveryWorkstreams.length, 4);
 });
 
-test("status API avoids recursive probes and unauthenticated GitHub API exhaustion", () => {
-  assert.match(statusRouteSource, /The production status service is responding/);
+test("status API avoids recursive worker probes and unauthenticated GitHub API exhaustion", () => {
+  assert.match(statusRouteSource, /project-ambient\.meekphillies\.chatgpt\.site\/favicon\.svg/);
   assert.match(statusRouteSource, /img\.shields\.io\/github\/actions\/workflow\/status/);
-  assert.doesNotMatch(
-    statusRouteSource,
-    /probeUrl:\s*"https:\/\/project-ambient\.meekphillies\.chatgpt\.site"/,
-  );
+  assert.doesNotMatch(statusRouteSource, /probeUrl:\s*"https:\/\/project-ambient\.meekphillies\.chatgpt\.site"\s*,/);
   assert.doesNotMatch(statusRouteSource, /probeUrl:\s*"https:\/\/api\.github\.com/);
 });
