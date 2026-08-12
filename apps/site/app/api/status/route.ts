@@ -21,44 +21,33 @@ const probes: Probe[] = [
     label: "GitHub repository",
     publicUrl: "https://github.com/MeekPhills/project-ambient",
     phaseId: phaseFor("repository"),
-    probeUrl: "https://api.github.com/repos/MeekPhills/project-ambient",
-    accept: "application/vnd.github+json",
-    inspect: (body) => {
-      const data = safelyParseJson(body) as { private?: boolean; default_branch?: string } | null;
-      return data && data.private === false
-        ? { state: "operational", detail: `Public repository · ${data.default_branch ?? "default"} branch` }
-        : { state: "degraded", detail: "Repository metadata was not publicly readable" };
-    },
+    probeUrl: "https://raw.githubusercontent.com/MeekPhills/project-ambient/main/README.md",
+    accept: "text/plain",
+    inspect: (body) => body.includes("# Project Ambient")
+      ? { state: "operational", detail: "Public repository · main branch" }
+      : { state: "degraded", detail: "Repository README was not publicly readable" },
   },
   {
     id: "release",
     label: "GitHub release",
     publicUrl: "https://github.com/MeekPhills/project-ambient/releases/tag/v0.1.0-alpha",
     phaseId: phaseFor("release"),
-    probeUrl: "https://api.github.com/repos/MeekPhills/project-ambient/releases/tags/v0.1.0-alpha",
-    accept: "application/vnd.github+json",
-    inspect: (body) => {
-      const data = safelyParseJson(body) as { draft?: boolean; prerelease?: boolean; assets?: unknown[] } | null;
-      const assetCount = data?.assets?.length ?? 0;
-      return data && data.draft === false && assetCount > 0
-        ? { state: "operational", detail: `${data.prerelease ? "Public prerelease" : "Public release"} · ${assetCount} assets` }
-        : { state: "degraded", detail: "Release exists but is draft or has no public assets" };
-    },
+    probeUrl: "https://img.shields.io/github/v/release/MeekPhills/project-ambient?include_prereleases",
+    accept: "image/svg+xml",
+    inspect: (body) => body.includes("release: v0.1.0-alpha")
+      ? { state: "operational", detail: "Public prerelease · v0.1.0-alpha" }
+      : { state: "degraded", detail: "Release badge did not report the expected version" },
   },
   {
     id: "actions",
     label: "GitHub Actions",
     publicUrl: "https://github.com/MeekPhills/project-ambient/actions",
     phaseId: phaseFor("actions"),
-    probeUrl: "https://api.github.com/repos/MeekPhills/project-ambient/actions/runs?branch=main&per_page=1",
-    accept: "application/vnd.github+json",
-    inspect: (body) => {
-      const data = safelyParseJson(body) as { workflow_runs?: Array<{ conclusion?: string; status?: string }> } | null;
-      const run = data?.workflow_runs?.[0];
-      if (run?.status !== "completed") return { state: "degraded", detail: "Latest main workflow has not completed" };
-      if (run.conclusion === "success") return { state: "operational", detail: "Latest main workflow passed" };
-      return { state: "degraded", detail: `Latest main workflow concluded ${run.conclusion ?? "without a result"}` };
-    },
+    probeUrl: "https://img.shields.io/github/actions/workflow/status/MeekPhills/project-ambient/ci.yml?branch=main",
+    accept: "image/svg+xml",
+    inspect: (body) => body.includes("build: passing")
+      ? { state: "operational", detail: "Latest main CI workflow passed" }
+      : { state: "degraded", detail: "Main CI badge is not passing" },
   },
   {
     id: "homebrew",
@@ -76,14 +65,11 @@ const probes: Probe[] = [
     label: "Launch discussion",
     publicUrl: "https://github.com/MeekPhills/project-ambient/discussions/1",
     phaseId: phaseFor("discussion"),
-    probeUrl: "https://api.github.com/repos/MeekPhills/project-ambient/discussions/1",
-    accept: "application/vnd.github+json",
-    inspect: (body) => {
-      const data = safelyParseJson(body) as { state?: string; number?: number; title?: string } | null;
-      return data?.state === "open" && data.number === 1
-        ? { state: "operational", detail: data.title ?? "Launch discussion is open" }
-        : { state: "degraded", detail: "Launch discussion is unavailable or closed" };
-    },
+    probeUrl: "https://img.shields.io/github/discussions/MeekPhills/project-ambient",
+    accept: "image/svg+xml",
+    inspect: (body) => /discussions: [1-9][0-9]* total/.test(body)
+      ? { state: "operational", detail: "Public launch discussion is available" }
+      : { state: "degraded", detail: "Discussion badge did not report a public thread" },
   },
   {
     id: "mcp",

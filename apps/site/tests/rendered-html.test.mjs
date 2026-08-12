@@ -160,10 +160,12 @@ test("raw status manifest endpoint exposes the canonical machine-readable source
   assert.equal(manifest.deliveryWorkstreams.length, 4);
 });
 
-test("status API does not recursively fetch its own production worker", () => {
+test("status API avoids recursive probes and unauthenticated GitHub API exhaustion", () => {
   assert.match(statusRouteSource, /The production status service is responding/);
+  assert.match(statusRouteSource, /img\.shields\.io\/github\/actions\/workflow\/status/);
   assert.doesNotMatch(
     statusRouteSource,
     /probeUrl:\s*"https:\/\/project-ambient\.meekphillies\.chatgpt\.site"/,
   );
+  assert.doesNotMatch(statusRouteSource, /probeUrl:\s*"https:\/\/api\.github\.com/);
 });
