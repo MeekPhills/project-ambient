@@ -10,13 +10,14 @@ export function Header() {
           <a href="/#how-it-works">How it works</a>
           <a href="/#power">Power</a>
           <a href="/#open-source">Open source</a>
+          <a href="/status">Status</a>
           <a href="/#faq">FAQ</a>
         </nav>
         <a className="header-download" href={DOWNLOAD_URL}>Download alpha <span aria-hidden="true">↓</span></a>
         <details className="mobile-menu">
           <summary aria-label="Open navigation"><span /><span /></summary>
           <nav aria-label="Mobile navigation">
-            <a href="/#how-it-works">How it works</a><a href="/#power">Power</a><a href="/#open-source">Open source</a><a href="/#faq">FAQ</a>
+            <a href="/#how-it-works">How it works</a><a href="/#power">Power</a><a href="/#open-source">Open source</a><a href="/status">Status</a><a href="/#faq">FAQ</a>
             <a href={DOWNLOAD_URL}>Download alpha ↓</a>
           </nav>
         </details>

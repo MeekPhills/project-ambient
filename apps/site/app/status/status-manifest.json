@@ -1,0 +1,189 @@
+{
+  "schemaVersion": 2,
+  "project": "Project Ambient",
+  "release": "0.1.0-alpha",
+  "totalWeight": 100,
+  "updatedAt": "2026-08-12T17:03:41Z",
+  "evidenceAsOf": "2026-08-12T17:03:41Z",
+  "lastVerifiedAt": "2026-08-12T17:03:41Z",
+  "refreshSeconds": 60,
+  "fieldDefaults": {
+    "deferred": false,
+    "externalWait": null
+  },
+  "automation": {
+    "skill": "project-ambient-status",
+    "weightedAuditCadence": "Every 6 hours and on demand",
+    "liveHealthCadence": "Every 60 seconds",
+    "publishRule": "Redeploy only when verified evidence changes"
+  },
+  "headline": {
+    "label": "Production readiness",
+    "alphaLaunchStatus": "complete"
+  },
+  "methodology": {
+    "formula": "Overall completion = the sum of earned task points divided by the 100-point total. The current audit is 20/45 native and distribution points plus 19/45 MCP and marketplace points plus 5.5/10 launch and traction points = 44.5/100, displayed as 45%.",
+    "statusCredit": {
+      "complete": "Earned points equal the task weight",
+      "in_progress": "Only the explicit earned points shown in this manifest",
+      "blocked": "0 points",
+      "not_started": "0 points"
+    },
+    "approvalRule": "Account-gated identity, submission, and review tasks stay at zero until that gate is actually cleared. Completed submission preparation is split into its own engineering task.",
+    "etaRule": "The headline hands-on range includes active, next, and account-unlockable work. It excludes Microsoft enterprise distribution and Google A2A because those are deferred product choices.",
+    "timeRule": "Hands-on effort, 48–72 hours of clean-machine and energy soak, recurring operations, and external approval waits are deliberately reported separately.",
+    "healthRule": "Public endpoint checks are guardrails only. Their results never change earned completion points."
+  },
+  "externalApproval": {
+    "timeEstimate": "Unknown",
+    "gates": [
+      "Apple Developer identity: 0–5+ business days after owner action",
+      "OpenAI publisher verification and directory review: unknown",
+      "Anthropic connector and MCPB directory review: unknown",
+      "npm namespace access: owner account unlock required",
+      "Microsoft publisher verification: unknown if enterprise distribution is activated"
+    ]
+  },
+  "evidenceSources": {
+    "site": "https://project-ambient.meekphillies.chatgpt.site",
+    "repository": "https://github.com/MeekPhills/project-ambient",
+    "release": "https://github.com/MeekPhills/project-ambient/releases/tag/v0.1.0-alpha",
+    "actions": "https://github.com/MeekPhills/project-ambient/actions",
+    "homebrew": "https://github.com/MeekPhills/homebrew-tap",
+    "discussion": "https://github.com/MeekPhills/project-ambient/discussions/1",
+    "mcpHealth": "https://project-ambient-control.vercel.app/health",
+    "openaiSubmission": "https://developers.openai.com/plugins/deploy/submission",
+    "mcpRegistry": "https://modelcontextprotocol.io/registry/quickstart",
+    "anthropicMcpb": "https://claude.com/docs/connectors/building/mcpb",
+    "anthropicSubmission": "https://claude.com/docs/connectors/building/submission"
+  },
+  "dependencies": {
+    "signing-notary": ["apple-identity"],
+    "homebrew": ["signing-notary"],
+    "clean-machine-qa": ["rotation-lifecycle", "native-hardening", "signing-notary"],
+    "production-bridge": ["oauth-provider", "durable-postgres"],
+    "openai-gate": ["production-bridge"],
+    "anthropic-local-gate": ["publisher-account"],
+    "anthropic-remote": ["production-bridge"],
+    "npm-publication": ["npm-owner-login"],
+    "registry-publication": ["npm-publication", "registry-manifest"],
+    "microsoft": ["enterprise-distribution-decision"],
+    "google-a2a": ["a2a-product-decision"],
+    "measurement-loop": ["privacy-metrics-design"]
+  },
+  "liveChecks": [
+    { "id": "site", "label": "Public site", "url": "https://project-ambient.meekphillies.chatgpt.site", "phaseId": "native-distribution" },
+    { "id": "repository", "label": "GitHub repository", "url": "https://github.com/MeekPhills/project-ambient", "phaseId": "native-distribution" },
+    { "id": "release", "label": "GitHub release", "url": "https://github.com/MeekPhills/project-ambient/releases/tag/v0.1.0-alpha", "phaseId": "native-distribution" },
+    { "id": "actions", "label": "GitHub Actions", "url": "https://github.com/MeekPhills/project-ambient/actions", "phaseId": "native-distribution" },
+    { "id": "homebrew", "label": "Homebrew tap", "url": "https://github.com/MeekPhills/homebrew-tap", "phaseId": "native-distribution" },
+    { "id": "discussion", "label": "Launch discussion", "url": "https://github.com/MeekPhills/project-ambient/discussions/1", "phaseId": "launch-traction" },
+    { "id": "mcp", "label": "MCP health", "url": "https://project-ambient-control.vercel.app/health", "phaseId": "mcp-marketplaces" }
+  ],
+  "deliveryWorkstreams": [
+    {
+      "id": "macos-audit",
+      "owner": "macos_build · Godel",
+      "name": "macOS readiness audit",
+      "detail": "Native scope, risk, evidence, weights, and critical path locked.",
+      "chunks": [
+        { "label": "Evidence inventory", "share": 35, "earnedShare": 35, "status": "complete" },
+        { "label": "Weights and ETA", "share": 35, "earnedShare": 35, "status": "complete" },
+        { "label": "Risk and critical path", "share": 30, "earnedShare": 30, "status": "complete" }
+      ]
+    },
+    {
+      "id": "mcp-audit",
+      "owner": "mcp_build · Lovelace",
+      "name": "MCP and marketplace audit",
+      "detail": "Control plane, directory gates, publication state, and launch evidence locked.",
+      "chunks": [
+        { "label": "Engineering evidence", "share": 35, "earnedShare": 35, "status": "complete" },
+        { "label": "Marketplace gates", "share": 35, "earnedShare": 35, "status": "complete" },
+        { "label": "Weights and ETA", "share": 30, "earnedShare": 30, "status": "complete" }
+      ]
+    },
+    {
+      "id": "status-experience",
+      "owner": "site_build · Curie",
+      "name": "Status experience",
+      "detail": "Evidence model, responsive visualization, route coverage, and live-check surface.",
+      "chunks": [
+        { "label": "Evidence model", "share": 25, "earnedShare": 25, "status": "complete" },
+        { "label": "Total and phase bars", "share": 30, "earnedShare": 30, "status": "complete" },
+        { "label": "Owner workstream bars", "share": 20, "earnedShare": 20, "status": "complete" },
+        { "label": "Build and route validation", "share": 25, "earnedShare": 25, "status": "complete" }
+      ]
+    },
+    {
+      "id": "production-handoff",
+      "owner": "primary · Codex",
+      "name": "Validate, publish, and monitor",
+      "detail": "Cross-track reconciliation, production publish, smoke checks, and recurring audit.",
+      "chunks": [
+        { "label": "Cross-track synthesis", "share": 25, "earnedShare": 25, "status": "complete" },
+        { "label": "Dedicated status skill", "share": 25, "earnedShare": 25, "status": "complete" },
+        { "label": "Production publish", "share": 30, "earnedShare": 0, "status": "in_progress" },
+        { "label": "Recurring monitor", "share": 20, "earnedShare": 20, "status": "complete" }
+      ]
+    }
+  ],
+  "phases": [
+    {
+      "id": "native-distribution",
+      "name": "Native product and distribution",
+      "summary": "Alpha functionality is public; lifecycle automation, hardening, signing, and production QA carry most of the remaining work.",
+      "weight": 45,
+      "handsOnRemaining": { "min": 106, "max": 183 },
+      "tasks": [
+        { "id": "core-app", "name": "Core macOS app and alpha workflows", "status": "in_progress", "weight": 8, "earnedWeight": 7.75, "hoursRemaining": { "min": 2, "max": 4 }, "evidence": "Folder import, on-device tagging, channels, static wallpaper application, exact restore, CLI control, and Aerial export ship; production polish remains." },
+        { "id": "rotation-lifecycle", "name": "Automatic rotation, lifecycle, and power scheduling", "status": "in_progress", "weight": 5, "earnedWeight": 0.5, "hoursRemaining": { "min": 18, "max": 30 }, "evidence": "Rules currently evaluate on user actions. A next-boundary timer, sleep/wake handling, and display reconnect handling remain." },
+        { "id": "native-hardening", "name": "Performance, persistence, diagnostics, and accessibility hardening", "status": "in_progress", "weight": 4, "earnedWeight": 1, "hoursRemaining": { "min": 24, "max": 40 }, "evidence": "The alpha baseline exists; production profiling, migration resilience, diagnostics, and deeper VoiceOver coverage remain." },
+        { "id": "apple-identity", "name": "Apple Developer identity", "status": "blocked", "weight": 3, "earnedWeight": 0, "hoursRemaining": { "min": 1, "max": 2 }, "externalApproval": true, "externalWait": "0–5+ business days", "blockedReason": "No Developer ID Application identity or notary profile is available.", "evidence": "Account enrollment is an owner gate and earns no engineering credit." },
+        { "id": "signing-notary", "name": "Signing, notarization, stapling, and Gatekeeper verification", "status": "in_progress", "weight": 5, "earnedWeight": 0.5, "hoursRemaining": { "min": 3, "max": 6 }, "evidence": "Automation is drafted, but no signed artifact receives completion credit before real credentials and independent assessment." },
+        { "id": "github-packaging", "name": "GitHub release packaging and integrity automation", "status": "in_progress", "weight": 4, "earnedWeight": 3.75, "hoursRemaining": { "min": 3, "max": 5 }, "evidence": "Public artifacts, source snapshot, dependency manifests, release notes, and checksums are live; immutable automation and polish remain." },
+        { "id": "homebrew", "name": "Homebrew distribution", "status": "in_progress", "weight": 4, "earnedWeight": 3, "hoursRemaining": { "min": 3, "max": 6 }, "evidence": "The first-party tap is live and hash-pinned; signed-artifact cutover and clean-machine install validation remain." },
+        { "id": "universal-updates", "name": "Universal binary, updater, and version automation", "status": "not_started", "weight": 3, "earnedWeight": 0, "hoursRemaining": { "min": 16, "max": 28 }, "evidence": "The current downloadable alpha is Apple-silicon-only and has no production updater." },
+        { "id": "supply-chain", "name": "QA and software supply-chain controls", "status": "in_progress", "weight": 3, "earnedWeight": 2, "hoursRemaining": { "min": 12, "max": 20 }, "evidence": "Unit, integration, CI, CodeQL, dependency manifests, hashes, and secret scanning exist; stronger provenance and release policy remain." },
+        { "id": "clean-machine-qa", "name": "Clean-machine, display, energy, and accessibility QA", "status": "in_progress", "weight": 4, "earnedWeight": 0.5, "hoursRemaining": { "min": 18, "max": 32 }, "soakHours": { "min": 48, "max": 72 }, "evidence": "Initial desktop and mobile site checks pass; hardware matrix, multi-display, sleep/wake, energy, and sustained accessibility verification remain." },
+        { "id": "support-monitoring", "name": "Support, trust, and operational monitoring", "status": "in_progress", "weight": 2, "earnedWeight": 1, "hoursRemaining": { "min": 6, "max": 10 }, "evidence": "Trust pages and intake paths are live; alert ownership, incident playbooks, and operating cadence remain." }
+      ]
+    },
+    {
+      "id": "mcp-marketplaces",
+      "name": "MCP and marketplaces",
+      "summary": "The local control plane is strong; production identity, remote control, publication, and directory approvals remain.",
+      "weight": 45,
+      "handsOnRemaining": { "min": 46, "max": 94 },
+      "tasks": [
+        { "id": "local-mcp", "name": "Local MCP control surface", "status": "complete", "weight": 6, "earnedWeight": 6, "hoursRemaining": { "min": 0, "max": 0 }, "evidence": "Ten narrow, permission-annotated tools, stdio transport, MCPB packaging, and contract tests are complete." },
+        { "id": "hosted-reviewer", "name": "Authenticated hosted reviewer service", "status": "complete", "weight": 3, "earnedWeight": 3, "hoursRemaining": { "min": 0, "max": 0 }, "evidence": "The deterministic demo adapter is live; health is public and MCP access requires a bearer token." },
+        { "id": "production-bridge", "name": "Production device bridge", "status": "in_progress", "weight": 4, "earnedWeight": 2, "hoursRemaining": { "min": 8, "max": 16 }, "evidence": "Enrollment and relay contracts exist; durable storage, recovery, and production enablement remain." },
+        { "id": "openai-engineering", "name": "OpenAI submission engineering package", "status": "complete", "weight": 2, "earnedWeight": 2, "hoursRemaining": { "min": 0, "max": 0 }, "evidence": "Metadata, policies, annotations, and positive and negative review fixtures are prepared." },
+        { "id": "openai-gate", "name": "OpenAI OAuth, publisher verification, and directory review", "status": "blocked", "weight": 6, "earnedWeight": 0, "hoursRemaining": { "min": 20, "max": 40 }, "externalApproval": true, "externalWait": "Unknown", "blockedReason": "Production OAuth, publisher-console access, verified identity, and external review are required.", "evidence": "Submission preparation is credited separately; account verification and review earn zero until complete." },
+        { "id": "anthropic-local", "name": "Anthropic local MCPB package", "status": "complete", "weight": 3, "earnedWeight": 3, "hoursRemaining": { "min": 0, "max": 0 }, "evidence": "The local Claude-compatible bundle and manifest are packaged with the release." },
+        { "id": "anthropic-local-gate", "name": "Anthropic local directory submission and review", "status": "blocked", "weight": 2, "earnedWeight": 0, "hoursRemaining": { "min": 3, "max": 6 }, "externalApproval": true, "externalWait": "Unknown", "blockedReason": "A qualifying publisher account and directory review are required.", "evidence": "Local installability does not count as directory acceptance." },
+        { "id": "anthropic-remote", "name": "Anthropic remote connector and plugin", "status": "in_progress", "weight": 3, "earnedWeight": 0.5, "hoursRemaining": { "min": 12, "max": 24 }, "evidence": "The MCP core is reusable; remote authorization, plugin packaging, and submission-specific validation remain." },
+        { "id": "npm-package", "name": "Publish-ready npm package artifact", "status": "complete", "weight": 1, "earnedWeight": 1, "hoursRemaining": { "min": 0, "max": 0 }, "evidence": "The portable tarball is built and attached to the GitHub release." },
+        { "id": "npm-publication", "name": "npm namespace publication", "status": "blocked", "weight": 3, "earnedWeight": 0, "hoursRemaining": { "min": 1, "max": 2 }, "externalApproval": true, "externalWait": "Unknown until owner login", "blockedReason": "An npm account with rights to the target namespace is required.", "evidence": "The package artifact is credited separately; registry publication is not." },
+        { "id": "registry-manifest", "name": "MCP Registry manifest", "status": "complete", "weight": 1, "earnedWeight": 1, "hoursRemaining": { "min": 0, "max": 0 }, "evidence": "The server manifest validates and names the public remote endpoint." },
+        { "id": "registry-publication", "name": "MCP Registry publication", "status": "not_started", "weight": 2, "earnedWeight": 0, "hoursRemaining": { "min": 1, "max": 3 }, "blockedReason": "Begins after npm namespace publication.", "evidence": "Registry metadata is immutable by version, so publication waits for the canonical package." },
+        { "id": "microsoft", "name": "Microsoft enterprise distribution", "status": "not_started", "weight": 5, "earnedWeight": 0, "hoursRemaining": { "min": 24, "max": 48 }, "deferred": true, "externalApproval": true, "externalWait": "Unknown", "blockedReason": "Deferred unless enterprise distribution is activated as a product choice.", "evidence": "Partner Center verification and a separate Microsoft submission shape would be required." },
+        { "id": "gemini-spark", "name": "Gemini Spark compatibility", "status": "in_progress", "weight": 2, "earnedWeight": 0.5, "hoursRemaining": { "min": 1, "max": 3 }, "evidence": "The portable MCP contract provides a base; compatibility validation and packaging remain." },
+        { "id": "google-a2a", "name": "Google A2A product path", "status": "not_started", "weight": 2, "earnedWeight": 0, "hoursRemaining": { "min": 60, "max": 120 }, "deferred": true, "blockedReason": "Deferred because it is a separate agent and commercial product decision.", "evidence": "A2A is not presented as a thin repackaging of the current MCP service." }
+      ]
+    },
+    {
+      "id": "launch-traction",
+      "name": "Launch and traction",
+      "summary": "The public alpha foundation is live; repeatable acquisition, activation measurement, and support cadence remain.",
+      "weight": 10,
+      "handsOnRemaining": { "min": 12, "max": 24 },
+      "tasks": [
+        { "id": "alpha-foundation", "name": "Public alpha distribution foundation", "status": "complete", "weight": 4, "earnedWeight": 4, "hoursRemaining": { "min": 0, "max": 0 }, "evidence": "The site, GitHub prerelease, Homebrew tap, policies, discussion, and public checks are live." },
+        { "id": "community-launch", "name": "Founder-led community launch", "status": "in_progress", "weight": 3, "earnedWeight": 1, "hoursRemaining": { "min": 4, "max": 8 }, "evidence": "GitHub launch communication is public; owner-controlled community, creator, and launch channels remain." },
+        { "id": "measurement-loop", "name": "Measurement and support loop", "status": "in_progress", "weight": 3, "earnedWeight": 0.5, "hoursRemaining": { "min": 8, "max": 16 }, "recurring": true, "evidence": "Issue and support intake exist; privacy-preserving activation metrics, review cadence, and recurring triage remain." }
+      ]
+    }
+  ]
+}
