@@ -63,7 +63,7 @@ if command -v syft >/dev/null 2>&1; then
   syft dir:"$ROOT_DIR" -o cyclonedx-json="$RELEASE_DIR/Project-Ambient-$VERSION-sbom.cdx.json"
 else
   npm --prefix "$ROOT_DIR/services/mcp" ls --all --json > "$RELEASE_DIR/Project-Ambient-$VERSION-node-dependencies.json" || true
-  swift package --package-path "$ROOT_DIR/apps/macos" show-dependencies --format json > "$RELEASE_DIR/Project-Ambient-$VERSION-swift-dependencies.json"
+  swift package "${SWIFT_FLAGS[@]}" show-dependencies --format json > "$RELEASE_DIR/Project-Ambient-$VERSION-swift-dependencies.json"
 fi
 
 (
