@@ -13,6 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://project-ambient.meekphillies.chatgpt.site"),
   title: {
     default: "Project Ambient — Your collection, alive at the right moment",
     template: "%s · Project Ambient",
@@ -29,6 +30,7 @@ export const metadata: Metadata = {
     title: "Project Ambient — Your collection, alive at the right moment",
     description: "A local-first, power-aware wallpaper system for the media you already love.",
     type: "website",
+    url: "https://project-ambient.meekphillies.chatgpt.site",
     siteName: "Project Ambient",
     images: [{ url: "/og-project-ambient.png", width: 1731, height: 909, alt: "Project Ambient — Your collection, alive at the right moment" }],
   },

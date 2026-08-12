@@ -34,7 +34,7 @@ for (const [pathname, expected] of routes) {
 test("homepage exposes launch and trust paths", async () => {
   const response = await render("/");
   const html = await response.text();
-  assert.match(html, /Project-Ambient-alpha\.zip/);
+  assert.match(html, /Project-Ambient-0\.1\.0-alpha\.zip/);
   assert.match(html, /Unsigned alpha/i);
   assert.match(html, /href="\/privacy"/);
   assert.match(html, /href="\/security"/);

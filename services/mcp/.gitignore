@@ -1,7 +1,7 @@
 node_modules/
 dist/
 .npm-cache/
+.vercel/
 .env
+.env.local
 *.log
-*.mcpb
-.mcpb-stage/

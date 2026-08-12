@@ -3,14 +3,14 @@
   "version": "0.1.0",
   "description": "Local-first MCP controls for the Project Ambient macOS wallpaper orchestrator.",
   "type": "module",
-  "private": true,
+  "private": false,
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/MeekPhills/project-ambient.git",
     "directory": "services/mcp"
   },
-  "homepage": "https://github.com/MeekPhills/project-ambient#readme",
+  "homepage": "https://project-ambient.meekphillies.chatgpt.site",
   "bugs": { "url": "https://github.com/MeekPhills/project-ambient/issues" },
   "engines": {
     "node": ">=20.11"

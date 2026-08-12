@@ -15,5 +15,6 @@ dist/
 *.mcpb
 coverage/
 work/
+test-results/
 apps/site/public/downloads/
 .openai/*.token

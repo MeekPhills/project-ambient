@@ -6,7 +6,11 @@ Project Ambient is an open-source, local-first wallpaper orchestrator for macOS.
 
 It is not another wallpaper marketplace. Your library remains on your Mac, no account is required for local use, and the app uses public macOS APIs. Still images are rendered natively; videos can be handed to [Aerial](https://aerialscreensaver.github.io/) through an explicit adapter.
 
-> **Alpha status:** The source build is usable today, but the downloadable alpha is not Apple-notarized until a maintainer supplies Apple Developer credentials. macOS may therefore block the artifact. Build from source for the cleanest early-access path.
+> **Alpha status:** The source build is usable today. The downloadable Apple-silicon alpha is not signed or Apple-notarized until a maintainer supplies Apple Developer credentials, so Gatekeeper may block it. Do not disable Gatekeeper; build from source for the cleanest early-access path.
+
+- [Launch site](https://project-ambient.meekphillies.chatgpt.site)
+- [Download v0.1.0-alpha](https://github.com/MeekPhills/project-ambient/releases/tag/v0.1.0-alpha)
+- [Authenticated MCP service status](https://project-ambient-control.vercel.app/health)
 
 ## What ships in the alpha
 
@@ -44,7 +48,7 @@ Requirements: macOS 14 or newer, Xcode 16 or newer, and Swift 6.
 ./script/build_and_run.sh
 ```
 
-The script builds a real `dist/Project Ambient.app` bundle and launches it. The Codex desktop app also exposes the same script as the project’s **Run** action.
+The script builds a real `apps/macos/dist/Ambient.app` bundle and launches it. The Codex desktop app also exposes the same script as the project’s **Run** action.
 
 Run verification and tests:
 
@@ -70,7 +74,7 @@ The local HTTP service exposes:
 - MCP: `http://127.0.0.1:8787/mcp`
 - Health: `http://127.0.0.1:8787/health`
 
-For Claude Desktop and other local clients, use the generated stdio configuration in `services/mcp/marketplace/`. For ChatGPT or Codex, deploy the HTTP service to stable HTTPS infrastructure and connect the production `/mcp` URL. A remote AI host cannot directly call a Mac’s `localhost`; hosted control requires an authenticated, outbound device bridge.
+For Claude Desktop and other local clients, use `services/mcp/claude-desktop.example.json` or the MCPB included with the GitHub release. The authenticated reviewer service is live at `https://project-ambient-control.vercel.app/mcp`. A remote AI host cannot directly call a Mac’s `localhost`; real hosted control requires the authenticated outbound device bridge plus durable PostgreSQL storage. Public AI-directory submission also requires OAuth 2.1 rather than the alpha bearer token.
 
 ## Release locally
 

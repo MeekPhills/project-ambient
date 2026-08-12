@@ -27,7 +27,7 @@
   "remotes": [
     {
       "transportType": "streamable-http",
-      "url": "https://ambient-api.example.com/mcp"
+      "url": "https://project-ambient-control.vercel.app/mcp"
     }
   ]
 }

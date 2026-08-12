@@ -40,21 +40,21 @@ Build once, then adapt `claude-desktop.example.json` with the absolute path to `
 npm run pack:mcpb
 ```
 
-The resulting `.mcpb` is intentionally not signed or published by this repo.
+The resulting `.mcpb` is not cryptographically signed. The alpha bundle is published with the GitHub release so local clients can install and inspect it.
 
 ## Hosted review and production
 
-The default HTTP adapter is `demo`, which returns deterministic synthetic wallpaper data and is safe for reviewer testing. Enable bearer authentication by setting `MCP_AUTH_TOKEN`. Set `MCP_ALLOWED_HOSTS` when binding to `0.0.0.0`.
+The default HTTP adapter is `demo`, which returns deterministic synthetic wallpaper data and is safe for reviewer testing. The authenticated alpha service is live at `https://project-ambient-control.vercel.app/mcp`. Enable bearer authentication by setting `MCP_AUTH_TOKEN`. Set `MCP_ALLOWED_HOSTS` when binding to `0.0.0.0`.
 
 ```sh
 docker build -t project-ambient-mcp .
 docker run --read-only --tmpfs /tmp -p 8787:8787 \
   -e MCP_AUTH_TOKEN='<random token>' \
-  -e MCP_ALLOWED_HOSTS='ambient-api.example.com' \
+  -e MCP_ALLOWED_HOSTS='project-ambient-control.vercel.app' \
   project-ambient-mcp
 ```
 
-For public OpenAI submission, replace bearer auth with OAuth 2.1 + PKCE, use a stable public HTTPS host, replace placeholder URLs, and complete `submission/checklist.md`.
+For public OpenAI submission, replace bearer auth with OAuth 2.1 + PKCE and complete `submission/checklist.md`. The stable HTTPS host and trust-policy URLs are already live.
 
 ### Deploy MCP and the remote bridge to Vercel
 
@@ -106,7 +106,7 @@ The JSON store writes atomically with restrictive permissions and is appropriate
 Call the admin-only enrollment endpoint once:
 
 ```sh
-curl -X POST https://ambient-api.example.com/bridge/v1/admin/devices/enroll \
+curl -X POST https://your-bridge.example/bridge/v1/admin/devices/enroll \
   -H 'Authorization: Bearer <admin token>' \
   -H 'Content-Type: application/json' \
   -d '{"display_name":"Luis’s Mac mini"}'
@@ -117,7 +117,7 @@ The response contains `device_id` and a one-time `device_token`. Store the token
 ### 3. Run the outbound Mac agent
 
 ```sh
-AMBIENT_BRIDGE_URL='https://ambient-api.example.com' \
+AMBIENT_BRIDGE_URL='https://your-bridge.example' \
 AMBIENT_DEVICE_ID='device_…' \
 AMBIENT_DEVICE_TOKEN='amb_dev_…' \
 AMBIENTCTL_PATH='/Applications/Project Ambient.app/Contents/Resources/ambientctl' \
@@ -133,7 +133,7 @@ Restart the hosted service with `AMBIENT_ADAPTER=remote` and the same durable st
 ### Revoke a Mac
 
 ```sh
-curl -X POST https://ambient-api.example.com/bridge/v1/admin/devices/device_…/revoke \
+curl -X POST https://your-bridge.example/bridge/v1/admin/devices/device_…/revoke \
   -H 'Authorization: Bearer <admin token>'
 ```
 

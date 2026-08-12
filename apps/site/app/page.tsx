@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Footer } from "./components/Footer";
 import { Header } from "./components/Header";
+import { DOWNLOAD_URL, SOURCE_URL } from "./lib/links";
 
 export const metadata: Metadata = {
   title: "Your collection, alive at the right moment",
@@ -21,10 +22,10 @@ export default function Home() {
               <h1 id="hero-title">Your collection, <em>alive</em> at the right moment.</h1>
               <p className="hero-lede">Project Ambient turns the photos and videos you already own into smart channels—then chooses what fits your time, energy state, and attention. Your media stays yours.</p>
               <div className="hero-actions">
-                <a className="button button-primary" href="/downloads/Project-Ambient-alpha.zip" download>Download source alpha <span aria-hidden="true">↓</span></a>
+                <a className="button button-primary" href={DOWNLOAD_URL}>Download unsigned alpha <span aria-hidden="true">↓</span></a>
                 <a className="button button-ghost" href="#how-it-works">See how it works <span aria-hidden="true">↘</span></a>
               </div>
-              <div className="hero-notes" aria-label="Product highlights"><span><i className="status-dot" /> macOS 14+</span><span>Local-first</span><span>Open source</span></div>
+              <div className="hero-notes" aria-label="Product highlights"><span><i className="status-dot" /> macOS 14+ · Apple silicon</span><span>Local-first</span><span>Open source</span></div>
               <p className="alpha-disclosure"><strong>Unsigned alpha.</strong> Apple credentials are pending, so Gatekeeper may block the app. Build from source for now.</p>
             </div>
 
@@ -86,17 +87,17 @@ export default function Home() {
           <article className="control-card api-card"><div className="card-label">OPEN BY DESIGN</div><div className="code-lines" aria-hidden="true"><span><i>01</i><b>ambient.activate_channel</b></span><span><i>02</i><b>ambient.explain_current</b></span><span><i>03</i><b>ambient.set_power_mode</b></span></div><h3>Public APIs. Portable state.</h3><p>Your rules and channel definitions live in readable files—not inside an account you can lose.</p></article>
         </div></div></section>
 
-        <section className="open-source-section section-pad" id="open-source" aria-labelledby="open-title"><div className="container open-grid"><div><p className="kicker">Built in the open</p><h2 id="open-title">Not another wallpaper store.</h2><p>Project Ambient is infrastructure for your collection. The core is auditable, forkable, and built around public platform APIs. Community adapters can add new organizers, renderers, and rules.</p><div className="open-actions"><a className="text-link" href="/downloads/Project-Ambient-alpha.zip" download>Get the source bundle <span>→</span></a><a className="text-link" href="/security">Read the security model <span>→</span></a></div></div><div className="principle-stack"><article><span>01</span><div><h3>Local by default</h3><p>Folders, labels, and decisions stay on your Mac.</p></div></article><article><span>02</span><div><h3>Permission-aware</h3><p>AI actions declare whether they read or change state.</p></div></article><article><span>03</span><div><h3>Renderer-neutral</h3><p>Use public macOS APIs, Aerial, or build an adapter.</p></div></article></div></div></section>
+        <section className="open-source-section section-pad" id="open-source" aria-labelledby="open-title"><div className="container open-grid"><div><p className="kicker">Built in the open</p><h2 id="open-title">Not another wallpaper store.</h2><p>Project Ambient is infrastructure for your collection. The core is auditable, forkable, and built around public platform APIs. Community adapters can add new organizers, renderers, and rules.</p><div className="open-actions"><a className="text-link" href={SOURCE_URL}>Get the source bundle <span>→</span></a><a className="text-link" href="/security">Read the security model <span>→</span></a></div></div><div className="principle-stack"><article><span>01</span><div><h3>Local by default</h3><p>Folders, labels, and decisions stay on your Mac.</p></div></article><article><span>02</span><div><h3>Permission-aware</h3><p>AI actions declare whether they read or change state.</p></div></article><article><span>03</span><div><h3>Renderer-neutral</h3><p>Use public macOS APIs, Aerial, or build an adapter.</p></div></article></div></div></section>
 
         <section className="faq-section section-pad" id="faq" aria-labelledby="faq-title"><div className="container faq-grid"><div><p className="kicker">Good questions</p><h2 id="faq-title">Before you install.</h2><p>Project Ambient is launching as an alpha. Expect a useful core and a fast-moving edge.</p></div><div className="faq-list">
           <details><summary>Does Ambient upload my photos or videos?<span>+</span></summary><p>No. Local organization and wallpaper decisions happen on your Mac. Optional remote features will always be off until you enable them.</p></details>
           <details><summary>Is it a replacement for Aerial?<span>+</span></summary><p>No. Ambient can render still wallpapers with public macOS APIs and treats Aerial as a first-class video playback adapter.</p></details>
           <details><summary>What does “power-aware” mean?<span>+</span></summary><p>The alpha applies static wallpapers without continuous media decoding and keeps automatic policy still during Low Power Mode. Aerial controls the power behavior of any video you explicitly export to it.</p></details>
           <details><summary>Can I use sports photos and personal media?<span>+</span></summary><p>Yes—use media you own or have permission to display. Ambient provides organization and playback; it does not bundle licensed team footage.</p></details>
-          <details><summary>Which Macs are supported?<span>+</span></summary><p>The alpha targets macOS 14 or later. Apple silicon is recommended for the best on-device classification performance.</p></details>
+          <details><summary>Which Macs are supported?<span>+</span></summary><p>The downloadable alpha targets Apple silicon Macs running macOS 14 or later. Intel owners can build from source; a universal signed build is planned.</p></details>
         </div></div></section>
 
-        <section className="final-cta section-pad" aria-labelledby="cta-title"><div className="container cta-inner"><div className="cta-orbit" aria-hidden="true"><i /><i /><i /></div><p className="kicker">The source alpha is ready</p><h2 id="cta-title">Let your desktop remember what you love.</h2><p>Bring your own collection. Keep it on your Mac. Change the atmosphere without changing your energy bill.</p><a className="button button-primary" href="/downloads/Project-Ambient-alpha.zip" download>Download source + unsigned alpha <span aria-hidden="true">↓</span></a><div className="signing-notice"><strong>Preview status</strong><span>Not signed or notarized yet. Gatekeeper may block the app; building from source is recommended until Apple credentials are connected.</span></div><small>Free · open source · macOS 14+</small></div></section>
+        <section className="final-cta section-pad" aria-labelledby="cta-title"><div className="container cta-inner"><div className="cta-orbit" aria-hidden="true"><i /><i /><i /></div><p className="kicker">The alpha is ready</p><h2 id="cta-title">Let your desktop remember what you love.</h2><p>Bring your own collection. Keep it on your Mac. Change the atmosphere without changing your energy bill.</p><a className="button button-primary" href={DOWNLOAD_URL}>Download unsigned alpha <span aria-hidden="true">↓</span></a><div className="signing-notice"><strong>Preview status</strong><span>Not signed or notarized yet. Gatekeeper may block the app; building from source is recommended until Apple credentials are connected.</span></div><small>Free · open source · Apple silicon · macOS 14+</small></div></section>
       </main>
       <Footer />
     </div>
