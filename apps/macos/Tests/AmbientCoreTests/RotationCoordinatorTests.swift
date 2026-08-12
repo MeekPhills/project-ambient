@@ -693,6 +693,51 @@ final class AmbientEngineRotationLifecycleTests: XCTestCase {
         XCTAssertEqual(restartedEngine.state.managedDisplayScope, .primary)
     }
 
+    func testDisplayReconnectPersistsAndRestoresNewDisplayWallpaper() throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ambient-display-restore-tests-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let assetURL = directory.appendingPathComponent("ambient.jpg")
+        try Data("ambient".utf8).write(to: assetURL)
+        let asset = AmbientAsset(
+            path: assetURL.path,
+            kind: .image,
+            fileName: assetURL.lastPathComponent
+        )
+        var state = AmbientState(assets: [asset], currentAssetID: asset.id)
+        state.previousWallpaperPaths = ["display-a": "/original-a.jpg"]
+        state.managedDisplayScope = .all
+
+        let store = AmbientStateStore(directoryURL: directory)
+        try store.save(state)
+        let wallpaper = RecordingWallpaperService()
+        wallpaper.capturedWallpapers = [
+            "display-a": "/ambient-current-a.jpg",
+            "display-b": "/original-b.jpg"
+        ]
+        let engine = try AmbientEngine(store: store, wallpaper: wallpaper)
+
+        try engine.reconcileRotation(
+            at: try date(hour: 9, minute: 2),
+            reason: .displayConfigurationChanged
+        )
+
+        let persisted = try store.load()
+        XCTAssertEqual(persisted.previousWallpaperPaths, [
+            "display-a": "/original-a.jpg",
+            "display-b": "/original-b.jpg"
+        ])
+        XCTAssertEqual(wallpaper.appliedAssets.map(\.id), [asset.id])
+
+        _ = try engine.restore(requestID: "restore-new-display-0001")
+        XCTAssertEqual(wallpaper.restoredPaths, [[
+            "display-a": "/original-a.jpg",
+            "display-b": "/original-b.jpg"
+        ]])
+    }
+
     func testRequestReplaySurvivesRestartAndConflictIsRejected() throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("ambient-idempotency-tests-\(UUID().uuidString)", isDirectory: true)
@@ -855,9 +900,11 @@ private final class TestRuntimeEvents: AmbientRuntimeEventObserving {
 private final class RecordingWallpaperService: AmbientWallpaperApplying {
     private(set) var appliedAssets: [AmbientAsset] = []
     private(set) var appliedScopes: [AmbientDisplayScope] = []
+    private(set) var restoredPaths: [[String: String]] = []
+    var capturedWallpapers = ["test-display": "/before.jpg"]
 
     func captureCurrentWallpapers() -> [String: String] {
-        ["test-display": "/before.jpg"]
+        capturedWallpapers
     }
 
     func apply(asset: AmbientAsset, scope: AmbientDisplayScope) throws {
@@ -865,5 +912,7 @@ private final class RecordingWallpaperService: AmbientWallpaperApplying {
         appliedScopes.append(scope)
     }
 
-    func restore(paths: [String: String]) throws {}
+    func restore(paths: [String: String]) throws {
+        restoredPaths.append(paths)
+    }
 }

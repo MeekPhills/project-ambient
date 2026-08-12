@@ -544,6 +544,16 @@ extension AmbientEngine: AmbientRotationDriving {
     @MainActor
     public func reconcileRotation(at date: Date, reason: AmbientRotationReconciliationReason) throws {
         _ = try serializedMutation(at: date) { [self] in
+            var capturedNewDisplayWallpaper = false
+            if reason == .displayConfigurationChanged {
+                let currentWallpapers = wallpaper.captureCurrentWallpapers()
+                for (displayKey, path) in currentWallpapers
+                    where state.previousWallpaperPaths[displayKey] == nil {
+                    state.previousWallpaperPaths[displayKey] = path
+                    capturedNewDisplayWallpaper = true
+                }
+            }
+
             let resolution = resolve(at: date)
             let eligible = desktopAssets(in: resolution.channel)
             let current = state.assets.first(where: { $0.id == state.currentAssetID })
@@ -552,7 +562,7 @@ extension AmbientEngine: AmbientRotationDriving {
             if state.playbackStatus == .playing,
                current == nil || !eligible.contains(where: { $0.id == current?.id }) {
                 let result = try advanceWallpaper(displayScope: scope, at: date, requestID: nil)
-                return ((), result.ok)
+                return ((), capturedNewDisplayWallpaper || result.ok)
             }
 
             let shouldReapplyCurrent: Bool
@@ -566,7 +576,7 @@ extension AmbientEngine: AmbientRotationDriving {
             if shouldReapplyCurrent, let current {
                 try wallpaper.apply(asset: current, scope: scope)
             }
-            return ((), false)
+            return ((), capturedNewDisplayWallpaper)
         }
     }
 }
