@@ -31,6 +31,7 @@
     "start": "node dist/src/http.js",
     "start:stdio": "node dist/src/stdio.js",
     "start:device": "node dist/src/device-agent.js",
+    "migrate:bridge": "node dist/src/migrate-bridge.js",
     "test": "node --import tsx --test test/**/*.test.ts",
     "test:coverage": "node --import tsx --test --experimental-test-coverage test/**/*.test.ts",
     "validate:registry": "node scripts/validate-registry.mjs",
@@ -39,6 +40,7 @@
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.30.0",
     "express": "5.2.1",
+    "express-rate-limit": "8.6.2",
     "pg": "^8.23.0",
     "zod": "4.4.3"
   },

@@ -11,7 +11,11 @@ import type {
 } from "../domain.js";
 import { AmbientAdapterError } from "../domain.js";
 import type { BridgeOperation, BridgeStore } from "./types.js";
-import { BridgeDeviceUnavailableError, BridgeRequestConflictError } from "./types.js";
+import {
+  BRIDGE_DEFAULT_COMMAND_TTL_SECONDS,
+  BridgeDeviceUnavailableError,
+  BridgeRequestConflictError,
+} from "./types.js";
 import {
   channelListSchema,
   channelSchema,
@@ -35,7 +39,7 @@ export class RemoteAmbientAdapter implements AmbientAdapter {
   private readonly pollIntervalMs: number;
 
   constructor(private readonly options: RemoteAmbientAdapterOptions) {
-    this.commandTtlSeconds = options.commandTtlSeconds ?? 60;
+    this.commandTtlSeconds = options.commandTtlSeconds ?? BRIDGE_DEFAULT_COMMAND_TTL_SECONDS;
     this.resultTimeoutMs = options.resultTimeoutMs ?? 25_000;
     this.pollIntervalMs = options.pollIntervalMs ?? 250;
   }
