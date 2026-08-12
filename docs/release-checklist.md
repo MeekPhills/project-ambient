@@ -17,6 +17,7 @@
 - [ ] Version-scoped `release-manifest.json`, dependency-lock digests (including the locked MCPB packer), deterministic CycloneDX SBOM, and SHA-256 checksums are generated.
 - [ ] A clean checkout is used for every package. CI candidates use `script/package_release.sh --candidate <version>`; a publishable artifact is rebuilt from the matching tag with `script/package_release.sh --tagged-release v<version> <version>`.
 - [ ] `script/verify_release_artifacts.sh dist/release/<version>` passes before signing, including the arm64 and x86_64 architecture checks.
+- [ ] `script/sign_and_notarize.sh` is invoked only with the manifest-named canonical archive; it re-verifies the entire unsigned artifact set and checksums before signing.
 - [ ] Release notes list known limitations and migration impact.
 - [ ] MCP package, registry metadata, MCP bundle, and release manifest use the same version; the app bundle short version matches that version's numeric SemVer core.
 
@@ -29,6 +30,7 @@
 - [ ] Notarization returns Accepted and the ticket is stapled.
 - [ ] `spctl --assess --type execute --verbose=4` accepts the staged app on a clean account.
 - [ ] Download checksum matches the immutable release asset.
+- [ ] `script/make_site_download.sh <version>` stages only the manifest-named canonical archive and atomically replaces the site download after verification.
 - [ ] `script/verify_release_artifacts.sh --require-homebrew dist/release/<version>` passes after notarization and cask update; this enforces the notarized, immutable tagged-release provenance.
 - [ ] Homebrew cask install, upgrade, uninstall, and zap are tested against the immutable notarized release asset.
 

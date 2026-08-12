@@ -54,6 +54,11 @@ tagged_revision="$(git -C "$ROOT_DIR" rev-parse --verify "refs/tags/$SOURCE_TAG^
   exit 1
 }
 
+# Verify every recorded input and checksum before a signing identity can bless
+# the archive. This binds the signed archive to the complete release candidate,
+# rather than trusting only the caller-provided ZIP path.
+"$ROOT_DIR/script/verify_release_artifacts.sh" "$RELEASE_DIR"
+
 WORK_DIR="$(mktemp -d)"
 cleanup() { rm -rf "$WORK_DIR"; }
 trap cleanup EXIT
