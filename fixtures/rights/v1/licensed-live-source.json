@@ -1,0 +1,76 @@
+{
+  "schemaVersion": "1.0.0",
+  "pack": {
+    "id": "org.projectambient.licensed-live-fixture",
+    "version": "1.0.0",
+    "title": "Licensed Live Source Fixture",
+    "creator": { "name": "Example provider" },
+    "commercialOffer": false,
+    "containsExecutablePayload": false
+  },
+  "deliveryClass": "remote_reference",
+  "provider": {
+    "name": "Example provider",
+    "canonicalURL": "https://example.org/live/fixture.m3u8",
+    "approvedOrigins": ["https://example.org"],
+    "termsURL": "https://example.org/terms/live-fixture",
+    "termsReviewedAt": "2026-08-13T20:00:00Z",
+    "termsExpireAt": "2099-08-13T20:00:00Z",
+    "termsEvidenceRef": "provider-terms",
+    "clientFetchOnly": true,
+    "cacheSeconds": 0,
+    "authentication": "user_supplied"
+  },
+  "review": {
+    "status": "verified",
+    "reviewedAt": "2026-08-13T20:00:00Z",
+    "reviewer": "fixture-reviewer",
+    "evidence": [
+      { "id": "provider-terms", "type": "provider_terms", "visibility": "public", "locator": "https://example.org/terms/live-fixture", "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc", "checkedAt": "2026-08-13T20:00:00Z" },
+      { "id": "rightsholder-statement", "type": "rightsholder_statement", "visibility": "public", "locator": "https://example.org/rights/live-fixture", "sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd", "checkedAt": "2026-08-13T20:00:00Z" }
+    ]
+  },
+  "assets": [
+    {
+      "id": "live-fixture-001",
+      "mediaType": "live_stream",
+      "canonicalSource": "https://example.org/live/fixture.m3u8",
+      "acquiredAt": "2026-08-13T20:00:00Z",
+      "sha256": "4b216c42429d4a1db4ae2d118c782bd7067b16075563b3d844e89a9353e9ff39",
+      "digestScope": "source_descriptor",
+      "sourceDescriptor": { "providerName": "Example provider", "canonicalURL": "https://example.org/live/fixture.m3u8", "transport": "hls", "termsEvidenceRef": "provider-terms" },
+      "evidenceRefs": ["provider-terms", "rightsholder-statement"],
+      "provenance": { "origin": "human_made", "declaration": "Synthetic contract fixture for a provider-authorized live source." },
+      "rightsholder": { "name": "Example provider", "url": "https://example.org" },
+      "license": {
+        "name": "Provider client-display fixture terms",
+        "identifier": "LicenseRef-Example-Live-Display",
+        "url": "https://example.org/terms/live-fixture",
+        "attribution": ["Example provider"],
+        "shareAlike": false,
+        "notice": "Client-side display only; no redistribution or cache."
+      },
+      "authorization": {
+        "grantor": { "name": "Example provider", "url": "https://example.org" },
+        "projectRights": {
+          "grantee": "project_ambient",
+          "rights": { "display": "prohibited", "reproduction": "prohibited", "redistribution": "prohibited", "commercialUse": "prohibited", "modification": "prohibited", "synchronization": "prohibited", "sublicensing": "prohibited" },
+          "conditions": { "territories": ["United States"], "audiences": ["personal"], "fieldOfUse": ["client adapter and source metadata"], "startsAt": "2026-08-13T20:00:00Z", "expiresAt": "2099-08-13T20:00:00Z" }
+        },
+        "endUserRights": {
+          "grantee": "personal_user",
+          "rights": { "display": "allowed", "reproduction": "prohibited", "redistribution": "prohibited", "commercialUse": "prohibited", "modification": "prohibited", "synchronization": "prohibited", "sublicensing": "prohibited" },
+          "conditions": { "territories": ["United States"], "audiences": ["personal"], "fieldOfUse": ["client-side wallpaper and screensaver display"], "startsAt": "2026-08-13T20:00:00Z", "expiresAt": "2099-08-13T20:00:00Z" }
+        }
+      },
+      "otherRights": {
+        "privacy": "cleared",
+        "publicity": "cleared",
+        "trademark": "cleared",
+        "property": "cleared",
+        "endorsement": "not_applicable"
+      }
+    }
+  ],
+  "takedown": { "contact": "rights@example.invalid", "reversibleDisable": true, "preserveEvidence": true }
+}

@@ -1,0 +1,218 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://project-ambient.meekphillies.chatgpt.site/schemas/rights/v1/rights-manifest.schema.json",
+  "title": "Project Ambient Rights Manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "pack", "deliveryClass", "review", "assets", "takedown"],
+  "properties": {
+    "schemaVersion": { "const": "1.0.0" },
+    "pack": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "version", "title", "creator", "commercialOffer", "containsExecutablePayload"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)+$" },
+        "version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?$" },
+        "title": { "type": "string", "minLength": 1, "maxLength": 160 },
+        "creator": { "$ref": "#/$defs/party" },
+        "commercialOffer": { "type": "boolean" },
+        "containsExecutablePayload": { "const": false }
+      }
+    },
+    "deliveryClass": { "enum": ["private_reference", "bundled_media", "remote_reference"] },
+    "provider": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "canonicalURL", "approvedOrigins", "termsURL", "termsReviewedAt", "termsExpireAt", "termsEvidenceRef", "clientFetchOnly", "cacheSeconds"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "canonicalURL": { "type": "string", "format": "uri" },
+        "approvedOrigins": { "type": "array", "minItems": 1, "items": { "type": "string", "format": "uri" } },
+        "termsURL": { "type": "string", "format": "uri" },
+        "termsReviewedAt": { "type": "string", "format": "date-time" },
+        "termsExpireAt": { "type": "string", "format": "date-time" },
+        "termsEvidenceRef": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]*$" },
+        "clientFetchOnly": { "type": "boolean" },
+        "cacheSeconds": { "type": "integer", "minimum": 0 },
+        "authentication": { "enum": ["none", "user_supplied", "managed"] }
+      }
+    },
+    "review": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "reviewedAt", "reviewer", "evidence"],
+      "properties": {
+        "status": { "enum": ["self_attested", "verified", "counsel_required", "rejected"] },
+        "reviewedAt": { "type": "string", "format": "date-time" },
+        "reviewer": { "type": "string", "minLength": 1 },
+        "evidence": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/evidence" }
+        }
+      }
+    },
+    "assets": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/asset" }
+    },
+    "takedown": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["contact", "reversibleDisable", "preserveEvidence"],
+      "properties": {
+        "contact": { "type": "string", "minLength": 3 },
+        "reversibleDisable": { "const": true },
+        "preserveEvidence": { "const": true }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "deliveryClass": { "const": "remote_reference" } }, "required": ["deliveryClass"] },
+      "then": { "required": ["provider"] },
+      "else": { "not": { "required": ["provider"] } }
+    }
+  ],
+  "$defs": {
+    "party": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "url": { "type": "string", "format": "uri" }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "type", "visibility", "locator", "sha256", "checkedAt"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]*$" },
+        "type": { "enum": ["license_text", "rightsholder_statement", "contract", "provider_terms", "public_domain_record", "user_attestation"] },
+        "visibility": { "enum": ["public", "private"] },
+        "locator": { "type": "string", "minLength": 1 },
+        "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "checkedAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "grant": {
+      "enum": ["allowed", "prohibited", "conditional", "unknown"]
+    },
+    "otherRight": {
+      "enum": ["cleared", "not_applicable", "counsel_required", "prohibited", "unknown"]
+    },
+    "asset": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "mediaType", "canonicalSource", "acquiredAt", "sha256", "digestScope", "provenance", "rightsholder", "license", "authorization", "otherRights", "evidenceRefs"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-zA-Z0-9._-]+$" },
+        "mediaType": { "enum": ["image", "video", "live_stream", "metadata"] },
+        "canonicalSource": { "type": "string", "format": "uri" },
+        "acquiredAt": { "type": "string", "format": "date-time" },
+        "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "digestScope": { "enum": ["asset_bytes", "source_descriptor"] },
+        "sourceDescriptor": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["providerName", "canonicalURL", "transport", "termsEvidenceRef"],
+          "properties": {
+            "providerName": { "type": "string", "minLength": 1 },
+            "canonicalURL": { "type": "string", "format": "uri" },
+            "transport": { "enum": ["https", "hls", "rtsp", "rtsps"] },
+            "termsEvidenceRef": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]*$" }
+          }
+        },
+        "evidenceRefs": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]*$" }
+        },
+        "provenance": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["origin"],
+          "properties": {
+            "origin": { "enum": ["human_made", "ai_generated", "mixed", "unknown"] },
+            "toolOrModel": { "type": "string", "minLength": 1 },
+            "declaration": { "type": "string", "minLength": 1 }
+          }
+        },
+        "rightsholder": { "$ref": "#/$defs/party" },
+        "license": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["name", "identifier", "url", "attribution", "shareAlike"],
+          "properties": {
+            "name": { "type": "string", "minLength": 1 },
+            "identifier": { "type": "string", "minLength": 1 },
+            "url": { "type": "string", "format": "uri" },
+            "attribution": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+            "shareAlike": { "type": "boolean" },
+            "notice": { "type": "string", "minLength": 1 }
+          }
+        },
+        "authorization": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["grantor", "projectRights", "endUserRights"],
+          "properties": {
+            "grantor": { "$ref": "#/$defs/party" },
+            "projectRights": { "$ref": "#/$defs/grantScope" },
+            "endUserRights": { "$ref": "#/$defs/grantScope" }
+          }
+        },
+        "otherRights": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["privacy", "publicity", "trademark", "property", "endorsement"],
+          "properties": {
+            "privacy": { "$ref": "#/$defs/otherRight" },
+            "publicity": { "$ref": "#/$defs/otherRight" },
+            "trademark": { "$ref": "#/$defs/otherRight" },
+            "property": { "$ref": "#/$defs/otherRight" },
+            "endorsement": { "$ref": "#/$defs/otherRight" }
+          }
+        }
+      }
+    },
+    "grantScope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["grantee", "rights", "conditions"],
+      "properties": {
+        "grantee": { "enum": ["project_ambient", "personal_user", "organization_user", "all_end_users"] },
+        "rights": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["display", "reproduction", "redistribution", "commercialUse", "modification", "synchronization", "sublicensing"],
+          "properties": {
+            "display": { "$ref": "#/$defs/grant" },
+            "reproduction": { "$ref": "#/$defs/grant" },
+            "redistribution": { "$ref": "#/$defs/grant" },
+            "commercialUse": { "$ref": "#/$defs/grant" },
+            "modification": { "$ref": "#/$defs/grant" },
+            "synchronization": { "$ref": "#/$defs/grant" },
+            "sublicensing": { "$ref": "#/$defs/grant" }
+          }
+        },
+        "conditions": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["territories", "audiences", "fieldOfUse"],
+          "properties": {
+            "territories": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
+            "audiences": { "type": "array", "minItems": 1, "items": { "enum": ["personal", "education", "nonprofit", "commercial", "enterprise"] } },
+            "fieldOfUse": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
+            "startsAt": { "type": "string", "format": "date-time" },
+            "expiresAt": { "type": "string", "format": "date-time" }
+          }
+        }
+      }
+    }
+  }
+}

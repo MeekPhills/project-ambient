@@ -18,6 +18,7 @@ cd apps/site && npm ci && npm run build
 ```
 
 Run `./script/verify_release.sh` before opening a release-related pull request.
+Run `node script/validate_rights.mjs` for media-pack, provider, rights, or commercial-boundary changes.
 
 ## Pull-request expectations
 
@@ -33,4 +34,18 @@ Run `./script/verify_release.sh` before opening a release-related pull request.
 
 Documentation and metadata changes are excellent first contributions. From there, contributors can own recipes, adapters, test matrices, or a subsystem. Maintainers are selected based on sustained, careful work and community conduct—not volume alone.
 
-By contributing, you agree that your contribution is licensed under the repository’s MIT License.
+## Developer Certificate of Origin
+
+Community contributions use inbound-equals-outbound MIT and must include a
+`Signed-off-by: Name <email>` trailer certifying the
+[Developer Certificate of Origin 1.1](DCO.txt). Sign off with `git commit -s`.
+This is not a copyright assignment
+and does not grant rights in third-party media.
+
+By contributing and signing off, you agree that MIT-covered code,
+documentation, schemas, and metadata in your contribution are licensed under
+the repository's MIT License and certify that you have the right to make the
+contribution. Accepted media bytes remain governed by their separate content
+license and rights manifest; DCO sign-off does not relicense them. Any future
+CLA or relicensing proposal requires a separate public decision and qualified
+legal review.

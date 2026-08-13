@@ -1,0 +1,35 @@
+{
+  "schemaVersion": "1.0.0",
+  "pack": { "id": "org.projectambient.private-enterprise", "version": "1.0.0", "title": "Private Enterprise Reference", "creator": { "name": "Example organization" }, "commercialOffer": false, "containsExecutablePayload": false },
+  "deliveryClass": "private_reference",
+  "review": {
+    "status": "verified", "reviewedAt": "2026-08-13T20:00:00Z", "reviewer": "organization-admin",
+    "evidence": [
+      { "id": "organization-license", "type": "contract", "visibility": "private", "locator": "evidence-record:organization-license-fixture", "sha256": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "checkedAt": "2026-08-13T20:00:00Z" }
+    ]
+  },
+  "assets": [
+    {
+      "id": "enterprise-asset-001", "mediaType": "image", "canonicalSource": "ambient-private://enterprise-asset-001", "acquiredAt": "2026-08-13T19:00:00Z",
+      "sha256": "5555555555555555555555555555555555555555555555555555555555555555", "digestScope": "asset_bytes", "evidenceRefs": ["organization-license"],
+      "provenance": { "origin": "human_made", "declaration": "Synthetic private organization fixture." },
+      "rightsholder": { "name": "Example organization" },
+      "license": { "name": "Internal enterprise display fixture", "identifier": "LicenseRef-Enterprise-Internal", "url": "https://example.org/licenses/enterprise-internal", "attribution": [], "shareAlike": false },
+      "authorization": {
+        "grantor": { "name": "Example organization" },
+        "projectRights": {
+          "grantee": "project_ambient",
+          "rights": { "display": "conditional", "reproduction": "conditional", "redistribution": "prohibited", "commercialUse": "allowed", "modification": "conditional", "synchronization": "prohibited", "sublicensing": "prohibited" },
+          "conditions": { "territories": ["organization-managed devices"], "audiences": ["enterprise"], "fieldOfUse": ["on-device indexing and managed display"] }
+        },
+        "endUserRights": {
+          "grantee": "organization_user",
+          "rights": { "display": "allowed", "reproduction": "prohibited", "redistribution": "prohibited", "commercialUse": "allowed", "modification": "prohibited", "synchronization": "prohibited", "sublicensing": "prohibited" },
+          "conditions": { "territories": ["organization-managed devices"], "audiences": ["enterprise"], "fieldOfUse": ["internal organization wallpaper and screensaver"] }
+        }
+      },
+      "otherRights": { "privacy": "cleared", "publicity": "cleared", "trademark": "cleared", "property": "cleared", "endorsement": "not_applicable" }
+    }
+  ],
+  "takedown": { "contact": "organization-admin", "reversibleDisable": true, "preserveEvidence": true }
+}

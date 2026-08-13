@@ -1,0 +1,61 @@
+{
+  "schemaVersion": "1.0.0",
+  "pack": {
+    "id": "org.projectambient.public-domain-city",
+    "version": "1.0.0",
+    "title": "Public Domain City Study",
+    "creator": { "name": "Project Ambient fixture authors", "url": "https://github.com/MeekPhills/project-ambient" },
+    "commercialOffer": false,
+    "containsExecutablePayload": false
+  },
+  "deliveryClass": "bundled_media",
+  "review": {
+    "status": "verified",
+    "reviewedAt": "2026-08-13T20:00:00Z",
+    "reviewer": "fixture-reviewer",
+    "evidence": [
+      { "id": "public-domain-record", "type": "public_domain_record", "visibility": "public", "locator": "https://example.org/public-domain-record/fixture-city", "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "checkedAt": "2026-08-13T20:00:00Z" }
+    ]
+  },
+  "assets": [
+    {
+      "id": "fixture-city-001",
+      "mediaType": "image",
+      "canonicalSource": "https://example.org/media/fixture-city-001.tif",
+      "acquiredAt": "2026-08-13T19:00:00Z",
+      "sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+      "digestScope": "asset_bytes",
+      "evidenceRefs": ["public-domain-record"],
+      "provenance": { "origin": "human_made", "declaration": "Synthetic contract fixture; not a shipped media claim." },
+      "rightsholder": { "name": "Public domain fixture" },
+      "license": {
+        "name": "Public Domain Mark 1.0 fixture",
+        "identifier": "PDM-1.0",
+        "url": "https://creativecommons.org/publicdomain/mark/1.0/",
+        "attribution": [],
+        "shareAlike": false
+      },
+      "authorization": {
+        "grantor": { "name": "Public domain fixture" },
+        "projectRights": {
+          "grantee": "project_ambient",
+          "rights": { "display": "allowed", "reproduction": "allowed", "redistribution": "allowed", "commercialUse": "allowed", "modification": "allowed", "synchronization": "allowed", "sublicensing": "allowed" },
+          "conditions": { "territories": ["worldwide"], "audiences": ["personal", "education", "nonprofit", "commercial", "enterprise"], "fieldOfUse": ["pack distribution", "wallpaper", "screensaver"] }
+        },
+        "endUserRights": {
+          "grantee": "all_end_users",
+          "rights": { "display": "allowed", "reproduction": "allowed", "redistribution": "allowed", "commercialUse": "allowed", "modification": "allowed", "synchronization": "allowed", "sublicensing": "allowed" },
+          "conditions": { "territories": ["worldwide"], "audiences": ["personal", "education", "nonprofit", "commercial", "enterprise"], "fieldOfUse": ["wallpaper", "screensaver", "redistribution"] }
+        }
+      },
+      "otherRights": {
+        "privacy": "not_applicable",
+        "publicity": "not_applicable",
+        "trademark": "not_applicable",
+        "property": "not_applicable",
+        "endorsement": "not_applicable"
+      }
+    }
+  ],
+  "takedown": { "contact": "rights@example.invalid", "reversibleDisable": true, "preserveEvidence": true }
+}
