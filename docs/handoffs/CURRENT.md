@@ -2,13 +2,13 @@
 
 **Updated:** 2026-08-13
 
-**Program state:** M0 launch boundaries are accepted. Issue #16 has a machine-valid dependency plan and a schema-v3 migration of the sole canonical tracker; review, full site verification, PR, and merge remain. Product implementation is still gated by the rest of M0.
+**Program state:** M0 launch boundaries are accepted. Issue #16 has a machine-valid dependency plan and a schema-v3 migration of the sole canonical tracker; non-author review is approved, exact-head verification and PR/merge remain. Product implementation is still gated by the rest of M0.
 
 **Repository:** https://github.com/MeekPhills/project-ambient
 
 **Base branch:** `main` at merge commit `e46979ec163239887c2eff04edbf7bb3109dbd4d`
 
-**Working branch:** `plan/m0-dependency-tracker` in its own clean worktree at `acf9053`; PR is pending final review corrections and validation
+**Working branch:** `plan/m0-dependency-tracker` in its own clean worktree; plan at `acf9053`, review corrections at `98957e7`, and this final checkpoint update pending commit
 
 **Completed planning pull request:** #22 — https://github.com/MeekPhills/project-ambient/pull/22
 
@@ -22,7 +22,7 @@ Issue #17 is a bounded parallel read/verification stream in a different worktree
 
 ## Next exact action
 
-Run the full site build/render suite for the schema-v3 tracker migration, obtain non-author review of the 41-task dependency plan and conservative 15/100 remap, correct findings, then push and open the issue #16 PR. Merge only after CI/CodeQL and the cold-start reconstruction smoke pass.
+Commit this final checkpoint, rerun the exact-head plan validator and full site build/render suite, then push and open the issue #16 PR. Merge only after CI/CodeQL and the cold-start reconstruction smoke pass; deploy the exact merged commit before treating schema v3's 15/100 as the public current score.
 
 After #16, make #20 the sole integration-active issue for the versioned capability contract. Accept issue #17 independently when its evidence report passes review. Product implementation remains blocked until #17, #21, #20, #18, and final M0 integration are accepted.
 
@@ -59,7 +59,8 @@ After #16, make #20 the sole integration-active issue for the versioned capabili
 - `git diff --check`: **passed** at the pre-review checkpoint.
 - `npm --prefix apps/site test`: **passed** — production build completed and all 12 server-render/status/API tests passed.
 - `npm --prefix apps/site run lint`: **failed on 14 inherited `@next/next/no-html-link-for-pages` errors in unchanged `Footer.tsx`, `Header.tsx`, and `not-found.tsx`; no changed file produced a lint finding.** The baseline issue owns recording/linking this existing gap; #16 does not mix an unrelated UI refactor into the tracker PR.
-- Non-author plan/tracker review: **pending**.
+- Non-author plan/tracker review: **approved** after corrections. The reviewer verified all 41 issue/worktree/escalation contracts, exact plan/manifest dependencies, 15-point evidence crosswalk, merge activation gate, and milestone-linked epic weights.
+- GitHub epic→milestone verification: **passed 9/9** — #10/#8/#14/#7/#11/#9/#12/#13/#15 are attached to M0–M8 respectively and record weights 8/14/12/20/14/12/7/6/7.
 - GitHub CI/CodeQL: **pending PR**.
 
 ## Protected state and ownership
