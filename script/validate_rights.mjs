@@ -100,6 +100,11 @@ function semanticErrors(manifest, now = new Date()) {
   const commercial = manifest.pack?.commercialOffer === true;
   const delivery = manifest.deliveryClass;
   const assets = manifest.assets ?? [];
+  const evidence = manifest.review?.evidence ?? [];
+
+  if (manifest.review?.status === "rejected") errors.push("rejected rights review cannot be used");
+  if (new Set(assets.map((asset) => asset.id)).size !== assets.length) errors.push("asset IDs must be unique");
+  if (new Set(evidence.map((entry) => entry.id)).size !== evidence.length) errors.push("evidence IDs must be unique");
 
   if (delivery === "private_reference") {
     if (commercial) errors.push("private_reference cannot be a commercial offer");
@@ -113,6 +118,7 @@ function semanticErrors(manifest, now = new Date()) {
   if (delivery === "bundled_media") {
     if (manifest.review?.status !== "verified") errors.push("bundled_media requires verified review");
     for (const asset of assets) {
+      if (asset.provenance?.origin === "unknown") errors.push(`${asset.id}: bundled provenance is unknown`);
       if (asset.grants?.display !== "allowed") errors.push(`${asset.id}: bundled display must be allowed`);
       if (asset.grants?.redistribution !== "allowed") errors.push(`${asset.id}: bundled redistribution must be allowed`);
       for (const [right, value] of Object.entries(asset.otherRights ?? {})) {
@@ -122,6 +128,7 @@ function semanticErrors(manifest, now = new Date()) {
   }
 
   if (delivery === "remote_reference") {
+    if (!manifest.provider?.termsURL?.startsWith("https://")) errors.push("remote provider terms must use HTTPS");
     if (!manifest.provider?.clientFetchOnly) errors.push("remote_reference must be clientFetchOnly");
     if (Date.parse(manifest.provider?.termsExpireAt) <= now.getTime()) errors.push("provider terms are expired");
     for (const asset of assets) if (asset.grants?.redistribution !== "prohibited") errors.push(`${asset.id}: remote redistribution must be prohibited`);
@@ -130,6 +137,7 @@ function semanticErrors(manifest, now = new Date()) {
   if (commercial) {
     if (manifest.review?.status !== "verified") errors.push("commercial offer requires verified review");
     for (const asset of assets) {
+      if (asset.provenance?.origin === "unknown") errors.push(`${asset.id}: commercial provenance is unknown`);
       if (asset.grants?.commercialUse !== "allowed") errors.push(`${asset.id}: commercial use is not allowed`);
       for (const [right, value] of Object.entries(asset.otherRights ?? {})) {
         if (!["cleared", "not_applicable"].includes(value)) errors.push(`${asset.id}: commercial ${right} is unresolved`);
@@ -138,7 +146,7 @@ function semanticErrors(manifest, now = new Date()) {
   }
 
   for (const asset of assets) {
-    const evidenceIds = new Set((manifest.review?.evidence ?? []).map((entry) => entry.id));
+    const evidenceIds = new Set(evidence.map((entry) => entry.id));
     for (const reference of asset.evidenceRefs ?? []) if (!evidenceIds.has(reference)) errors.push(`${asset.id}: unknown evidence reference ${reference}`);
     if (new Set(asset.evidenceRefs ?? []).size !== (asset.evidenceRefs ?? []).length) errors.push(`${asset.id}: duplicate evidence reference`);
     if (asset.mediaType === "live_stream" && asset.digestScope !== "source_descriptor") errors.push(`${asset.id}: live stream digest must bind its source descriptor`);
@@ -210,8 +218,16 @@ const missingEvidence = clone(fixtures.get("public-domain-pack.json"));
 missingEvidence.assets[0].evidenceRefs = ["missing-record"];
 expectInvalid("evidence binding", missingEvidence, schema, "unknown evidence reference");
 
+const rejectedReview = clone(fixtures.get("private-reference.json"));
+rejectedReview.review.status = "rejected";
+expectInvalid("rejected review", rejectedReview, schema, "rejected rights review");
+
+const duplicateAsset = clone(fixtures.get("public-domain-pack.json"));
+duplicateAsset.assets.push(clone(duplicateAsset.assets[0]));
+expectInvalid("duplicate asset IDs", duplicateAsset, schema, "asset IDs must be unique");
+
 const unsupportedSchema = clone(schema);
 unsupportedSchema.properties.pack.maxProperties = 5;
 assert.ok(auditSchema(unsupportedSchema).some((error) => error.includes("unsupported keyword maxProperties")), "schema audit must fail closed on unsupported constraints");
 
-console.log(`Rights validation passed: schema 1.0.0, ${fixtureNames.length} fixtures, 11 negative/fail-closed checks.`);
+console.log(`Rights validation passed: schema 1.0.0, ${fixtureNames.length} fixtures, 13 negative/fail-closed checks.`);

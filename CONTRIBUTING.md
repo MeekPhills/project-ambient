@@ -37,8 +37,9 @@ Documentation and metadata changes are excellent first contributions. From there
 ## Developer Certificate of Origin
 
 Community contributions use inbound-equals-outbound MIT and must include a
-`Signed-off-by: Name <email>` trailer certifying the Developer Certificate of
-Origin 1.1. Sign off with `git commit -s`. This is not a copyright assignment
+`Signed-off-by: Name <email>` trailer certifying the
+[Developer Certificate of Origin 1.1](DCO.txt). Sign off with `git commit -s`.
+This is not a copyright assignment
 and does not grant rights in third-party media.
 
 By contributing and signing off, you agree that your contribution is licensed

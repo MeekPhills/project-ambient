@@ -69,7 +69,7 @@ Complete the versioned rights manifest, commercial/open-source boundary ADR, pol
 
 ## Current #21 verification
 
-- `node script/validate_rights.mjs`: passed — schema 1.0.0, three delivery-class fixtures, and 11 negative/fail-closed checks.
+- `node script/validate_rights.mjs`: passed — schema 1.0.0, three delivery-class fixtures, and 13 negative/fail-closed checks.
 - Rights schema and all fixture JSON parsing: passed.
 - Relative Markdown links in the seven changed policy/handoff/schema documents: passed.
 - Focused `git diff --check`: passed.
