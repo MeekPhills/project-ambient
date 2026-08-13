@@ -77,11 +77,26 @@ Any failed transition restores last-known-good media or a safe static fallback. 
 
 Run the commands that exist on the branch. If a command is unavailable, record that exact fact in the issue and handoff.
 
+For a clean full baseline, install the locked JavaScript dependencies and run the repository aggregate verifier:
+
 ```bash
-swift test
-swift build
-./scripts/verify-release-integrity.sh
+npm --prefix services/mcp ci
+npm --prefix apps/site ci
+./script/verify_release.sh
 ```
+
+Use these focused commands while working in one subsystem:
+
+```bash
+swift build --package-path apps/macos
+swift test --package-path apps/macos
+npm --prefix services/mcp run check
+npm --prefix services/mcp test
+npm --prefix apps/site run build
+npm --prefix apps/site test
+```
+
+`./script/build_and_run.sh --stage` builds the macOS app bundle without launching it. `./script/build_and_run.sh --verify` launches the app and verifies its process, so reserve that command for an authorized GUI smoke test.
 
 Also run the smallest relevant platform/UI/performance checks specified by the issue. Performance-sensitive work must report a before/after measurement on the same hardware and content. Rendering claims require verification on every affected display orientation and scale.
 

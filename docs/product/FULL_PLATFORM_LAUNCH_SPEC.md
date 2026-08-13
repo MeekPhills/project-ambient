@@ -1,10 +1,13 @@
 # Full Platform Launch Design
 
-**Status:** Proposed for review  
-**Date:** 2026-08-12  
+**Status:** Accepted for M0 planning; product implementation remains gated
+
+**Date:** 2026-08-13
 **Decision owner:** Project Ambient maintainers  
 **Tracking:** GitHub milestones and issues  
 **Reference platform:** macOS
+
+The six launch-boundary decisions were accepted on 2026-08-13 in [decision record 0001](../decisions/0001-m0-launch-boundaries.md). This approval authorizes task decomposition and validation, not unrestricted implementation.
 
 ## 1. Outcome
 
@@ -124,11 +127,13 @@ Solar scenes calculate sunrise/sunset from user-approved location or a named cit
 
 The shared core owns catalog, scenes, rules, decision logs, energy policy, sync protocol, manifests, and diagnostics. Platform adapters own wallpaper APIs, screen-saver/lock integration, display topology, media decode, secure storage, startup, notifications, and package/update behavior.
 
+Swift remains the macOS reference implementation. Language-neutral schemas and behavioral fixtures define portable contracts. A bounded Rust feasibility spike occurs before M5; no rewrite proceeds without measured benefit and an incremental migration path.
+
 | Platform | Launch contract |
 |---|---|
 | macOS | Reference desktop; full parity matrix; native Swift/SwiftUI adapter; supported macOS wallpaper/screen-saver APIs |
 | Windows | Static/live desktop adapter, multi-monitor topology, startup, power/session events, package and signed updates |
-| Linux | Capability manifest by desktop environment/session; begin with supported Wayland/X11 targets rather than claiming universal behavior |
+| Linux | GNOME Wayland and KDE Plasma Wayland first; X11 best-effort legacy unless evidence promotes it; exact capability manifest by desktop environment/session |
 | iOS/iPadOS | Library curation, scene/rule editing, sync/remote control, widgets/Shortcuts/App Intents and OS-permitted wallpaper actions |
 | Android | Companion plus OS-permitted live wallpaper service where viable, power-aware defaults, device capability checks |
 
@@ -145,9 +150,15 @@ Shared business logic may be portable, but native integration is not forced into
 
 ## 8. Managed and commercial direction
 
-The open-source core includes local Static and Hybrid foundations, policy visibility, diagnostics, and documented extension points. Commercial value can live in hosted sync, team libraries, licensed content delivery, approvals, fleet policy, SSO/SCIM, audit retention, compliance controls, SLA support, and managed update rings.
+The MIT-licensed community core includes local Static and Hybrid foundations, policy visibility, local diagnostics, and documented extension points. It remains useful and account-free. Commercial value can live in hosted sync, team libraries, licensed content delivery, approvals, fleet policy, SSO/SCIM, audit retention, compliance controls, SLA support, and managed update rings.
+
+Community GA may launch with a separately gated Managed Preview. That preview is not represented as enterprise GA; enterprise claims require preview evidence and the applicable identity, isolation, support, and compliance gates.
 
 Media and software licenses are separate. Every pack/scene manifest carries provenance, attribution, permitted use, territory/term where applicable, and redistribution rules. Enterprise policy can prohibit unapproved domains or unlicensed media.
+
+Creator pack manifests, local validation, installation, update, attribution, and removal ship in M2. Hosted transactions, payouts, and marketplace economics wait until the local library and M4 resilience contracts are stable.
+
+Diagnostics are off by default, locally redacted, allowlisted, inspectable, and purpose-bound. They never include media, thumbnails, filenames, local paths, prompts, credentials, precise location, or unrelated application data. Hosted diagnostics default to 30-day retention with export and deletion.
 
 ## 9. Program milestones
 
@@ -205,9 +216,13 @@ Each milestone has one epic issue. Feature issues sit beneath an epic through li
 
 Progress is recorded in issue comments with branch, commit, tests, blockers, and next action. PRs close implementation issues; milestone epics close only when every launch gate has evidence.
 
-## 11. Key decisions and open questions
+### 10.1 Canonical progress model
 
-Decided:
+`apps/site/app/status/status-manifest.json` is the only weighted completion tracker. The current 45/45/10 phase model and its historical 49.75/100 audit are preserved while M0 planning completes.
+
+The provisional M0–M8 allocation of `8/14/12/20/14/12/7/6/7` is capacity guidance only and must not produce a second progress percentage. Issue #16 maps milestone gates to canonical task IDs and proposes a single versioned scope migration for expanded Windows, Linux, mobile, and Managed work. The migration must retain total weight 100, preserve historical evidence, give blocked and not-started work zero credit, and pass independent status/site validation.
+
+## 11. Key decisions
 
 - one product with progressive modes;
 - capability-based cross-platform parity;
@@ -215,22 +230,21 @@ Decided:
 - static-first and local-first;
 - mobile claims follow OS capabilities;
 - evidence-based legacy support;
-- GitHub is the program source of truth.
+- GitHub is the program source of truth;
+- Swift reference core plus language-neutral contracts and a pre-M5 Rust feasibility spike;
+- MIT community core with separate hosted/managed commercial value and independent media rights;
+- GNOME Wayland and KDE Plasma Wayland first, with X11 best-effort legacy;
+- community GA with a separately gated Managed Preview;
+- creator pack infrastructure in M2, hosted marketplace transactions after local and M4 reliability;
+- opt-in, locally redacted diagnostics with prohibited sensitive fields and 30-day hosted retention.
 
-Open for maintainer review:
-
-- exact shared-core language/runtime after a prototype comparison;
-- software license strategy (retain MIT, dual-license, or another model);
-- which Linux desktop environments form the first supported set;
-- whether Managed ships at public GA or as a separately gated commercial preview;
-- content marketplace timing and transaction model;
-- opt-in diagnostic schema and retention.
+The full rationale, consequences, and review triggers are in [decision record 0001](../decisions/0001-m0-launch-boundaries.md).
 
 ## 12. Approval gate
 
-This design authorizes planning and issue decomposition, not unrestricted implementation. After maintainer review:
+The maintainer accepted the six design decisions on 2026-08-13. This authorizes M0 planning and issue decomposition, not unrestricted product implementation.
 
-1. resolve the open decisions required for M0;
-2. create the task-level implementation plan;
-3. prioritize the first vertical slice: install → import photo folder → map displays → static lock/unlock rotation → verify/restore;
-4. implement issue by issue behind tested capability flags.
+1. #16 creates and validates the task-level dependency plan and canonical tracker migration.
+2. #17 records the verified clean baseline and exact build/test/release commands.
+3. The first vertical slice remains: install → import photo folder → map displays → static lock/unlock rotation → verify/restore.
+4. Product implementation begins issue by issue only after the task plan is accepted, dependencies are satisfied, and capability flags/tests exist.
