@@ -333,6 +333,18 @@ test("migration and runtime SQL are private-qualified and preserve delivery inva
       && scopeLockIndex > concurrentRecheckIndex,
     "a same-key first-hit race must be rechecked under a per-key lock before taking the scope-capacity lock",
   );
+  assert.equal(
+    incrementSql.match(/\bawait client\.query/g)?.length,
+    4,
+    "a new-key increment must collapse scope locking, expiry reconciliation, capacity reservation, and insertion into one database round trip",
+  );
+  assert.match(incrementSql, /target AS MATERIALIZED[\s\S]*FOR UPDATE OF rate_limit/i);
+  assert.match(incrementSql, /rate_limit\.key_hash <> \$3/i);
+  assert.match(
+    incrementSql,
+    /ON CONFLICT \(scope, key_hash\) DO UPDATE[\s\S]*WHERE target_rate_limit\.reset_at <= clock_timestamp\(\)/i,
+    "the exact expired target must be reset once rather than deleted and reinserted in one data-modifying statement",
+  );
   assert.match(incrementSql, /JSON\.stringify\(\[scope, keyHash\]\)/);
   assert.match(runtime, /expires_at > clock_timestamp\(\) \+ \(\$2 \* INTERVAL '1 second'\)/i);
   const unqualified = /\b(?:FROM|JOIN|UPDATE|INTO|TABLE|REFERENCES)\s+(?!"ambient_private"\."|\(|candidate\b|classified\b|ranked\b|resolved\b|pg_catalog\.)ambient_bridge_/gi;
