@@ -17,4 +17,4 @@ Optional paid products may fund hosted encrypted sync, managed fleets, SSO/SCIM,
 
 Software licensing never overrides media, model, provider, trademark, privacy, or publicity rights. Creator content keeps its own license and economics. Contributions to MIT components use inbound-equals-outbound MIT with DCO sign-off; any future CLA, dual-license, or relicensing proposal requires a separate public decision and qualified legal review.
 
-See `docs/decisions/0002-commercial-rights.md` for the enforceable boundary.
+See `docs/decisions/0002-commercial-rights.md` for the proposed governing product boundary.

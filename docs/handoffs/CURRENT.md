@@ -20,7 +20,7 @@ Issue #17 remains an independent draft evidence stream in its own worktree and o
 
 ## Next exact action
 
-Complete the versioned rights manifest, commercial/open-source boundary ADR, policy updates, legal-risk register, fixtures, and validator for #21. Run focused validation and link checks, obtain non-author licensing/privacy review, then open a draft PR. Do not award the M0 point until review, merge, tracker activation, and public verification pass.
+Address the non-author findings on draft PR #30, rerun focused validation and link/diff checks, then obtain final re-review. Do not mark the PR ready or award the M0 point until approval, green final-head CI, merge, tracker activation, and public verification pass.
 
 ## Read in this order
 
@@ -69,13 +69,13 @@ Complete the versioned rights manifest, commercial/open-source boundary ADR, pol
 
 ## Current #21 verification
 
-- `node script/validate_rights.mjs`: passed — schema 1.0.0, three delivery-class fixtures, and 13 negative/fail-closed checks.
+- `node script/validate_rights.mjs`: correction target — schema 1.0.0, five fixtures, and 25 negative/fail-closed checks; rerun before checkpoint.
 - Rights schema and all fixture JSON parsing: passed.
 - Relative Markdown links in the seven changed policy/handoff/schema documents: passed.
-- Focused `git diff --check`: passed.
+- `git diff --check main...HEAD`: must pass after correction; the first reviewed head had trailing-whitespace findings and its prior PASS claim is withdrawn.
 - `script/verify_release.sh` and release-integrity CI invoke the rights validator; full aggregate execution remains a clean-runner gate.
 - Legal-risk assessment uses a severity × likelihood register and explicitly requires qualified review; it is not legal advice.
-- Non-author licensing/privacy/product-boundary review: pending; no merge or tracker credit before approval.
+- Non-author review at `8854cf2`: **changes required**; remote authorization, actor-scoped grants, contradiction checks, evidence privacy, strict time validation, contribution wording, and handoff accuracy are being corrected. No merge or tracker credit before final approval.
 
 ## M0 remaining order
 

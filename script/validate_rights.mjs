@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -18,7 +19,7 @@ const supportedKeywords = new Set([
 function clone(value) { return structuredClone(value); }
 function object(value) { return value !== null && typeof value === "object" && !Array.isArray(value); }
 function equal(left, right) { return JSON.stringify(left) === JSON.stringify(right); }
-function dateTime(value) { return typeof value === "string" && /^\d{4}-\d{2}-\d{2}T/.test(value) && !Number.isNaN(Date.parse(value)); }
+function dateTime(value) { return typeof value === "string" && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/.test(value) && !Number.isNaN(Date.parse(value)); }
 function uri(value) {
   if (typeof value !== "string") return false;
   try { new URL(value); return true; } catch { return false; }
@@ -101,17 +102,28 @@ function semanticErrors(manifest, now = new Date()) {
   const delivery = manifest.deliveryClass;
   const assets = manifest.assets ?? [];
   const evidence = manifest.review?.evidence ?? [];
+  const evidenceById = new Map(evidence.map((entry) => [entry.id, entry]));
 
   if (manifest.review?.status === "rejected") errors.push("rejected rights review cannot be used");
+  if (Date.parse(manifest.review?.reviewedAt) > now.getTime()) errors.push("rights review is in the future");
   if (new Set(assets.map((asset) => asset.id)).size !== assets.length) errors.push("asset IDs must be unique");
   if (new Set(evidence.map((entry) => entry.id)).size !== evidence.length) errors.push("evidence IDs must be unique");
+  for (const entry of evidence) {
+    if (Date.parse(entry.checkedAt) > now.getTime()) errors.push(`${entry.id}: evidence check is in the future`);
+    if (entry.visibility === "public") {
+      if (!entry.locator?.startsWith("https://")) errors.push(`${entry.id}: public evidence must use HTTPS`);
+      try { if (new URL(entry.locator).username || new URL(entry.locator).password) errors.push(`${entry.id}: evidence URL must not contain credentials`); } catch {}
+    } else if (!/^evidence-record:[a-zA-Z0-9._-]+$/.test(entry.locator ?? "")) {
+      errors.push(`${entry.id}: private evidence must use an opaque evidence-record identifier`);
+    }
+  }
 
   if (delivery === "private_reference") {
     if (commercial) errors.push("private_reference cannot be a commercial offer");
     for (const asset of assets) {
       if (asset.canonicalSource?.startsWith("file:")) errors.push(`${asset.id}: private canonical source must not expose a file path`);
-      if (asset.grants?.redistribution !== "prohibited") errors.push(`${asset.id}: private redistribution must be prohibited`);
-      if (asset.grants?.commercialUse !== "prohibited") errors.push(`${asset.id}: private commercial use must be prohibited`);
+      if (asset.authorization?.projectRights?.rights?.redistribution !== "prohibited") errors.push(`${asset.id}: private Project redistribution must be prohibited`);
+      if (asset.authorization?.endUserRights?.rights?.redistribution !== "prohibited") errors.push(`${asset.id}: private end-user redistribution must be prohibited`);
     }
   }
 
@@ -119,8 +131,10 @@ function semanticErrors(manifest, now = new Date()) {
     if (manifest.review?.status !== "verified") errors.push("bundled_media requires verified review");
     for (const asset of assets) {
       if (asset.provenance?.origin === "unknown") errors.push(`${asset.id}: bundled provenance is unknown`);
-      if (asset.grants?.display !== "allowed") errors.push(`${asset.id}: bundled display must be allowed`);
-      if (asset.grants?.redistribution !== "allowed") errors.push(`${asset.id}: bundled redistribution must be allowed`);
+      if (asset.authorization?.projectRights?.rights?.reproduction !== "allowed") errors.push(`${asset.id}: bundled Project reproduction must be allowed`);
+      if (asset.authorization?.projectRights?.rights?.redistribution !== "allowed") errors.push(`${asset.id}: bundled Project distribution must be allowed`);
+      if (asset.authorization?.endUserRights?.rights?.display !== "allowed") errors.push(`${asset.id}: bundled end-user display must be allowed`);
+      if (!["license_text", "rightsholder_statement", "contract", "public_domain_record"].some((type) => (asset.evidenceRefs ?? []).some((id) => evidenceById.get(id)?.type === type))) errors.push(`${asset.id}: bundled media lacks qualifying rights evidence`);
       for (const [right, value] of Object.entries(asset.otherRights ?? {})) {
         if (["unknown", "prohibited", "counsel_required"].includes(value)) errors.push(`${asset.id}: bundled ${right} is unresolved`);
       }
@@ -128,17 +142,29 @@ function semanticErrors(manifest, now = new Date()) {
   }
 
   if (delivery === "remote_reference") {
+    if (manifest.review?.status !== "verified") errors.push("remote_reference requires verified review");
     if (!manifest.provider?.termsURL?.startsWith("https://")) errors.push("remote provider terms must use HTTPS");
     if (!manifest.provider?.clientFetchOnly) errors.push("remote_reference must be clientFetchOnly");
+    if (Date.parse(manifest.provider?.termsReviewedAt) >= Date.parse(manifest.provider?.termsExpireAt)) errors.push("provider terms review must precede expiry");
     if (Date.parse(manifest.provider?.termsExpireAt) <= now.getTime()) errors.push("provider terms are expired");
-    for (const asset of assets) if (asset.grants?.redistribution !== "prohibited") errors.push(`${asset.id}: remote redistribution must be prohibited`);
+    const termsEvidence = evidenceById.get(manifest.provider?.termsEvidenceRef);
+    if (termsEvidence?.type !== "provider_terms") errors.push("remote_reference requires referenced provider_terms evidence");
+    const origins = new Set((manifest.provider?.approvedOrigins ?? []).map((value) => { try { return new URL(value).origin; } catch { return "invalid"; } }));
+    try { if (!origins.has(new URL(manifest.provider.canonicalURL).origin)) errors.push("provider canonical URL origin is not approved"); } catch {}
+    for (const asset of assets) {
+      let sourceOrigin = "invalid";
+      try { const parsed = new URL(asset.canonicalSource); sourceOrigin = parsed.origin; if (!["https:", "rtsp:", "rtsps:"].includes(parsed.protocol)) errors.push(`${asset.id}: remote source scheme is not approved`); } catch {}
+      if (!origins.has(sourceOrigin)) errors.push(`${asset.id}: remote source origin is not provider-approved`);
+      if (!(asset.evidenceRefs ?? []).includes(manifest.provider?.termsEvidenceRef)) errors.push(`${asset.id}: remote asset must reference provider terms evidence`);
+      if (asset.authorization?.projectRights?.rights?.redistribution !== "prohibited" || asset.authorization?.endUserRights?.rights?.redistribution !== "prohibited") errors.push(`${asset.id}: remote redistribution must be prohibited`);
+    }
   }
 
   if (commercial) {
     if (manifest.review?.status !== "verified") errors.push("commercial offer requires verified review");
     for (const asset of assets) {
       if (asset.provenance?.origin === "unknown") errors.push(`${asset.id}: commercial provenance is unknown`);
-      if (asset.grants?.commercialUse !== "allowed") errors.push(`${asset.id}: commercial use is not allowed`);
+      if (asset.authorization?.projectRights?.rights?.commercialUse !== "allowed") errors.push(`${asset.id}: Project commercialization is not allowed`);
       for (const [right, value] of Object.entries(asset.otherRights ?? {})) {
         if (!["cleared", "not_applicable"].includes(value)) errors.push(`${asset.id}: commercial ${right} is unresolved`);
       }
@@ -151,9 +177,23 @@ function semanticErrors(manifest, now = new Date()) {
     if (new Set(asset.evidenceRefs ?? []).size !== (asset.evidenceRefs ?? []).length) errors.push(`${asset.id}: duplicate evidence reference`);
     if (asset.mediaType === "live_stream" && asset.digestScope !== "source_descriptor") errors.push(`${asset.id}: live stream digest must bind its source descriptor`);
     if (asset.mediaType !== "live_stream" && asset.digestScope !== "asset_bytes") errors.push(`${asset.id}: static media digest must bind asset bytes`);
-    const conditional = Object.values(asset.grants ?? {}).includes("conditional");
-    if (conditional && !asset.conditions) errors.push(`${asset.id}: conditional grant requires conditions`);
-    if (asset.conditions?.expiresAt && Date.parse(asset.conditions.expiresAt) <= now.getTime()) errors.push(`${asset.id}: rights term is expired`);
+    if (asset.mediaType === "live_stream") {
+      if (!asset.sourceDescriptor) errors.push(`${asset.id}: live stream requires sourceDescriptor`);
+      else {
+        const descriptorDigest = createHash("sha256").update(JSON.stringify(asset.sourceDescriptor)).digest("hex");
+        if (descriptorDigest !== asset.sha256) errors.push(`${asset.id}: source descriptor digest does not match`);
+        if (asset.sourceDescriptor.canonicalURL !== asset.canonicalSource || asset.sourceDescriptor.providerName !== manifest.provider?.name || asset.sourceDescriptor.termsEvidenceRef !== manifest.provider?.termsEvidenceRef) errors.push(`${asset.id}: source descriptor does not match provider binding`);
+      }
+    } else if (asset.sourceDescriptor !== undefined) errors.push(`${asset.id}: non-live asset must not declare sourceDescriptor`);
+    for (const scopeName of ["projectRights", "endUserRights"]) {
+      const scope = asset.authorization?.[scopeName];
+      if (Object.values(scope?.rights ?? {}).includes("conditional") && !scope?.conditions) errors.push(`${asset.id}.${scopeName}: conditional grant requires conditions`);
+      if (scope?.conditions?.startsAt && scope?.conditions?.expiresAt && Date.parse(scope.conditions.startsAt) >= Date.parse(scope.conditions.expiresAt)) errors.push(`${asset.id}.${scopeName}: rights start must precede expiry`);
+      if (scope?.conditions?.expiresAt && Date.parse(scope.conditions.expiresAt) <= now.getTime()) errors.push(`${asset.id}.${scopeName}: rights term is expired`);
+      if (scope?.rights?.redistribution === "allowed" && scope?.rights?.reproduction === "prohibited") errors.push(`${asset.id}.${scopeName}: distribution cannot be allowed while reproduction is prohibited`);
+      if (scope?.grantee === "organization_user" && !(scope.conditions?.audiences ?? []).includes("enterprise")) errors.push(`${asset.id}.${scopeName}: organization user requires enterprise audience`);
+      if (scope?.grantee === "personal_user" && !(scope.conditions?.audiences ?? []).includes("personal")) errors.push(`${asset.id}.${scopeName}: personal user requires personal audience`);
+    }
     if (asset.provenance?.origin === "ai_generated" && !asset.provenance.toolOrModel) errors.push(`${asset.id}: AI provenance requires toolOrModel`);
   }
   return errors;
@@ -169,7 +209,7 @@ const schema = JSON.parse(await readFile(schemaPath, "utf8"));
 assert.deepEqual(auditSchema(schema), [], "published schema must use only evaluated keywords");
 
 const fixtureNames = (await readdir(fixtureDirectory)).filter((name) => name.endsWith(".json")).sort();
-assert.deepEqual(fixtureNames, ["licensed-live-source.json", "private-reference.json", "public-domain-pack.json"]);
+assert.deepEqual(fixtureNames, ["licensed-live-source.json", "paid-creator-pack.json", "private-enterprise-reference.json", "private-reference.json", "public-domain-pack.json"]);
 const fixtures = new Map();
 for (const name of fixtureNames) {
   const value = JSON.parse(await readFile(path.join(fixtureDirectory, name), "utf8"));
@@ -178,8 +218,8 @@ for (const name of fixtureNames) {
 }
 
 const privateRedistribution = clone(fixtures.get("private-reference.json"));
-privateRedistribution.assets[0].grants.redistribution = "allowed";
-expectInvalid("private redistribution", privateRedistribution, schema, "private redistribution");
+privateRedistribution.assets[0].authorization.endUserRights.rights.redistribution = "allowed";
+expectInvalid("private redistribution", privateRedistribution, schema, "private end-user redistribution");
 
 const unverifiedBundle = clone(fixtures.get("public-domain-pack.json"));
 unverifiedBundle.review.status = "self_attested";
@@ -197,10 +237,30 @@ const expiredProvider = clone(fixtures.get("licensed-live-source.json"));
 expiredProvider.provider.termsExpireAt = "2026-08-12T00:00:00Z";
 expectInvalid("expired provider", expiredProvider, schema, "expired");
 
+const selfAttestedRemote = clone(fixtures.get("licensed-live-source.json"));
+selfAttestedRemote.review.status = "self_attested";
+expectInvalid("remote review", selfAttestedRemote, schema, "requires verified review");
+
+const remoteWithoutTermsEvidence = clone(fixtures.get("licensed-live-source.json"));
+remoteWithoutTermsEvidence.review.evidence[0].type = "user_attestation";
+expectInvalid("remote terms evidence", remoteWithoutTermsEvidence, schema, "provider_terms evidence");
+
+const unrelatedRemoteOrigin = clone(fixtures.get("licensed-live-source.json"));
+unrelatedRemoteOrigin.assets[0].canonicalSource = "https://unrelated.example/live.m3u8";
+expectInvalid("remote origin binding", unrelatedRemoteOrigin, schema, "provider-approved");
+
+const tamperedDescriptor = clone(fixtures.get("licensed-live-source.json"));
+tamperedDescriptor.assets[0].sourceDescriptor.transport = "https";
+expectInvalid("descriptor digest binding", tamperedDescriptor, schema, "source descriptor digest does not match");
+
+const unsafeRemoteScheme = clone(fixtures.get("licensed-live-source.json"));
+unsafeRemoteScheme.assets[0].canonicalSource = "file:///tmp/live.m3u8";
+expectInvalid("remote scheme allowlist", unsafeRemoteScheme, schema, "source scheme is not approved");
+
 const commercialWithoutGrant = clone(fixtures.get("public-domain-pack.json"));
 commercialWithoutGrant.pack.commercialOffer = true;
-commercialWithoutGrant.assets[0].grants.commercialUse = "prohibited";
-expectInvalid("commercial grant", commercialWithoutGrant, schema, "commercial use");
+commercialWithoutGrant.assets[0].authorization.projectRights.rights.commercialUse = "prohibited";
+expectInvalid("commercial grant", commercialWithoutGrant, schema, "Project commercialization");
 
 const unknownProperty = clone(fixtures.get("public-domain-pack.json"));
 unknownProperty.assets[0].license.surprise = true;
@@ -226,8 +286,36 @@ const duplicateAsset = clone(fixtures.get("public-domain-pack.json"));
 duplicateAsset.assets.push(clone(duplicateAsset.assets[0]));
 expectInvalid("duplicate asset IDs", duplicateAsset, schema, "asset IDs must be unique");
 
+const contradictoryDistribution = clone(fixtures.get("public-domain-pack.json"));
+contradictoryDistribution.assets[0].authorization.endUserRights.rights.reproduction = "prohibited";
+expectInvalid("distribution requires reproduction", contradictoryDistribution, schema, "distribution cannot be allowed");
+
+const reversedTerm = clone(fixtures.get("paid-creator-pack.json"));
+reversedTerm.assets[0].authorization.endUserRights.conditions.expiresAt = "2026-08-12T00:00:00Z";
+expectInvalid("term ordering", reversedTerm, schema, "rights start must precede expiry");
+
+const invalidProviderOrder = clone(fixtures.get("licensed-live-source.json"));
+invalidProviderOrder.provider.termsReviewedAt = "2099-08-14T00:00:00Z";
+expectInvalid("provider term ordering", invalidProviderOrder, schema, "review must precede expiry");
+
+const timezoneMissing = clone(fixtures.get("public-domain-pack.json"));
+timezoneMissing.review.reviewedAt = "2026-08-13T20:00:00";
+expectInvalid("timezone required", timezoneMissing, schema, "invalid date-time");
+
+const exposedPrivateEvidence = clone(fixtures.get("private-reference.json"));
+exposedPrivateEvidence.review.evidence[0].locator = "/Users/example/private-contract.pdf";
+expectInvalid("private evidence locator", exposedPrivateEvidence, schema, "opaque evidence-record");
+
+const credentialEvidence = clone(fixtures.get("public-domain-pack.json"));
+credentialEvidence.review.evidence[0].locator = "https://user:password@example.org/evidence";
+expectInvalid("credential evidence", credentialEvidence, schema, "must not contain credentials");
+
+const futureReview = clone(fixtures.get("private-reference.json"));
+futureReview.review.reviewedAt = "2099-08-13T20:00:00Z";
+expectInvalid("future review", futureReview, schema, "rights review is in the future");
+
 const unsupportedSchema = clone(schema);
 unsupportedSchema.properties.pack.maxProperties = 5;
 assert.ok(auditSchema(unsupportedSchema).some((error) => error.includes("unsupported keyword maxProperties")), "schema audit must fail closed on unsupported constraints");
 
-console.log(`Rights validation passed: schema 1.0.0, ${fixtureNames.length} fixtures, 13 negative/fail-closed checks.`);
+console.log(`Rights validation passed: schema 1.0.0, ${fixtureNames.length} fixtures, 25 negative/fail-closed checks.`);

@@ -14,7 +14,7 @@
     "reviewedAt": "2026-08-13T20:00:00Z",
     "reviewer": "local-user",
     "evidence": [
-      { "id": "local-attestation", "type": "user_attestation", "reference": "local-consent-record:fixture", "checkedAt": "2026-08-13T20:00:00Z" }
+      { "id": "local-attestation", "type": "user_attestation", "visibility": "private", "locator": "evidence-record:local-consent-fixture", "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", "checkedAt": "2026-08-13T20:00:00Z" }
     ]
   },
   "assets": [
@@ -35,19 +35,18 @@
         "attribution": [],
         "shareAlike": false
       },
-      "grants": {
-        "display": "conditional",
-        "reproduction": "conditional",
-        "redistribution": "prohibited",
-        "commercialUse": "prohibited",
-        "modification": "conditional",
-        "synchronization": "prohibited",
-        "sublicensing": "prohibited"
-      },
-      "conditions": {
-        "territories": ["user-controlled"],
-        "audiences": ["personal"],
-        "fieldOfUse": ["local display", "local display-sized derivative", "user-requested backup or export"]
+      "authorization": {
+        "grantor": { "name": "Local user" },
+        "projectRights": {
+          "grantee": "project_ambient",
+          "rights": { "display": "conditional", "reproduction": "conditional", "redistribution": "prohibited", "commercialUse": "prohibited", "modification": "conditional", "synchronization": "prohibited", "sublicensing": "prohibited" },
+          "conditions": { "territories": ["user-controlled"], "audiences": ["personal"], "fieldOfUse": ["on-device indexing", "display-sized derivative", "user-requested backup or export"] }
+        },
+        "endUserRights": {
+          "grantee": "personal_user",
+          "rights": { "display": "conditional", "reproduction": "conditional", "redistribution": "prohibited", "commercialUse": "prohibited", "modification": "conditional", "synchronization": "prohibited", "sublicensing": "prohibited" },
+          "conditions": { "territories": ["user-controlled"], "audiences": ["personal"], "fieldOfUse": ["local wallpaper", "local screensaver"] }
+        }
       },
       "otherRights": {
         "privacy": "unknown",

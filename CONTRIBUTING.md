@@ -42,7 +42,10 @@ Community contributions use inbound-equals-outbound MIT and must include a
 This is not a copyright assignment
 and does not grant rights in third-party media.
 
-By contributing and signing off, you agree that your contribution is licensed
-under the repository's MIT License and certify that you have the right to make
-the contribution. Any future CLA or relicensing proposal requires a separate
-public decision and qualified legal review.
+By contributing and signing off, you agree that MIT-covered code,
+documentation, schemas, and metadata in your contribution are licensed under
+the repository's MIT License and certify that you have the right to make the
+contribution. Accepted media bytes remain governed by their separate content
+license and rights manifest; DCO sign-off does not relicense them. Any future
+CLA or relicensing proposal requires a separate public decision and qualified
+legal review.

@@ -1,0 +1,35 @@
+{
+  "schemaVersion": "1.0.0",
+  "pack": { "id": "org.projectambient.paid-creator-fixture", "version": "1.0.0", "title": "Paid Creator Fixture", "creator": { "name": "Example creator" }, "commercialOffer": true, "containsExecutablePayload": false },
+  "deliveryClass": "bundled_media",
+  "review": {
+    "status": "verified", "reviewedAt": "2026-08-13T20:00:00Z", "reviewer": "fixture-reviewer",
+    "evidence": [
+      { "id": "creator-contract", "type": "contract", "visibility": "private", "locator": "evidence-record:creator-contract-fixture", "sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee", "checkedAt": "2026-08-13T20:00:00Z" }
+    ]
+  },
+  "assets": [
+    {
+      "id": "creator-photo-001", "mediaType": "image", "canonicalSource": "https://example.org/creator/photo-001.jpg", "acquiredAt": "2026-08-13T19:00:00Z",
+      "sha256": "4444444444444444444444444444444444444444444444444444444444444444", "digestScope": "asset_bytes", "evidenceRefs": ["creator-contract"],
+      "provenance": { "origin": "human_made", "declaration": "Synthetic creator contract fixture." },
+      "rightsholder": { "name": "Example creator" },
+      "license": { "name": "Personal display license fixture", "identifier": "LicenseRef-Paid-Personal-Display", "url": "https://example.org/licenses/paid-personal-display", "attribution": ["Example creator"], "shareAlike": false },
+      "authorization": {
+        "grantor": { "name": "Example creator" },
+        "projectRights": {
+          "grantee": "project_ambient",
+          "rights": { "display": "allowed", "reproduction": "allowed", "redistribution": "allowed", "commercialUse": "allowed", "modification": "prohibited", "synchronization": "prohibited", "sublicensing": "conditional" },
+          "conditions": { "territories": ["worldwide"], "audiences": ["personal"], "fieldOfUse": ["sell and deliver encrypted creator pack"], "startsAt": "2026-08-13T20:00:00Z", "expiresAt": "2099-08-13T20:00:00Z" }
+        },
+        "endUserRights": {
+          "grantee": "personal_user",
+          "rights": { "display": "allowed", "reproduction": "conditional", "redistribution": "prohibited", "commercialUse": "prohibited", "modification": "prohibited", "synchronization": "prohibited", "sublicensing": "prohibited" },
+          "conditions": { "territories": ["worldwide"], "audiences": ["personal"], "fieldOfUse": ["personal wallpaper and screensaver display"], "startsAt": "2026-08-13T20:00:00Z", "expiresAt": "2099-08-13T20:00:00Z" }
+        }
+      },
+      "otherRights": { "privacy": "cleared", "publicity": "cleared", "trademark": "not_applicable", "property": "cleared", "endorsement": "not_applicable" }
+    }
+  ],
+  "takedown": { "contact": "rights@example.invalid", "reversibleDisable": true, "preserveEvidence": true }
+}

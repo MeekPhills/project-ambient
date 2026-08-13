@@ -1,7 +1,7 @@
 # Rights and Commercial Legal-Risk Register
 
-**Date:** 2026-08-13  
-**Status:** Product risk assessment for counsel review; not legal advice  
+**Date:** 2026-08-13
+**Status:** Product risk assessment for counsel review; not legal advice
 **Method:** Severity (1–5) × likelihood (1–5). Scores 1–4 low, 5–9 medium, 10–15 high, 16–25 critical.
 
 | ID | Risk | Severity | Likelihood | Score | Level | Owner | Required mitigation and evidence | Escalation gate |
