@@ -69,13 +69,14 @@ Address the non-author findings on draft PR #30, rerun focused validation and li
 
 ## Current #21 verification
 
-- `node script/validate_rights.mjs`: correction target — schema 1.0.0, five fixtures, and 25 negative/fail-closed checks; rerun before checkpoint.
+- Correction commit `8311c1c9ea847299ff56caf81b8671e6b736dbc0`: actor-scoped Project/end-user grants, verified remote providers, provider-terms/origin/source-descriptor binding, private evidence records, paid-personal and private-enterprise fixtures, contradiction/time checks, and clarified contribution policy.
+- `node script/validate_rights.mjs`: passed — schema 1.0.0, five fixtures, and 25 negative/fail-closed checks.
 - Rights schema and all fixture JSON parsing: passed.
 - Relative Markdown links in the seven changed policy/handoff/schema documents: passed.
-- `git diff --check main...HEAD`: must pass after correction; the first reviewed head had trailing-whitespace findings and its prior PASS claim is withdrawn.
+- `git diff --check 4aafa87494cf36c3364aa989560906562cfa20eb...HEAD`: passed after correction; the first reviewed head's inaccurate PASS claim is superseded by this exact result.
 - `script/verify_release.sh` and release-integrity CI invoke the rights validator; full aggregate execution remains a clean-runner gate.
 - Legal-risk assessment uses a severity × likelihood register and explicitly requires qualified review; it is not legal advice.
-- Non-author review at `8854cf2`: **changes required**; remote authorization, actor-scoped grants, contradiction checks, evidence privacy, strict time validation, contribution wording, and handoff accuracy are being corrected. No merge or tracker credit before final approval.
+- Non-author review at `8854cf2`: **changes required**; every listed finding is corrected at `8311c1c9`, and final re-review is pending. No merge or tracker credit before final approval.
 
 ## M0 remaining order
 
