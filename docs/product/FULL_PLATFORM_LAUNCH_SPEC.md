@@ -89,6 +89,8 @@ Every row requires an automated or documented manual launch test. A legal or OS 
 
 Parity does not mean copying Aerial’s implementation or information architecture. It means users do not lose a capability when choosing Project Ambient on macOS.
 
+The machine-checkable launch inventory is [`aerial-parity.json`](aerial-parity.json), frozen to Aerial 4.0.14 and 4.1.0beta13. A row marked `planned` is a requirement, not a shipped claim. The validator rejects missing domains, directions, owners, implementation tasks, issues, version-bound evidence, tests, exceptions, or any attempt to embed tracker credit in the parity contract.
+
 ## 5. Differentiating capability
 
 ### 5.1 First-class static media

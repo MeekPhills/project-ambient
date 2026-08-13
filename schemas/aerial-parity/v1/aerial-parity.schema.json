@@ -1,0 +1,144 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://project-ambient.dev/schemas/aerial-parity/v1/aerial-parity.schema.json",
+  "title": "Project Ambient Aerial semantic-parity launch matrix",
+  "description": "A versioned, evidence-bound coverage contract. It records requirements and tests; it does not award implementation or tracker credit.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "matrixVersion", "retrievedAt", "launchGate", "baselines", "requiredDomains", "requiredProductDirections", "crossCuttingConformance", "evidenceCatalog", "rows"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "matrixVersion": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+    "retrievedAt": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$" },
+    "launchGate": { "const": true },
+    "baselines": {
+      "type": "array", "minItems": 2, "maxItems": 2, "uniqueItems": true,
+      "items": { "$ref": "#/$defs/baseline" }
+    },
+    "requiredDomains": {
+      "type": "array", "minItems": 19, "uniqueItems": true,
+      "items": { "enum": ["install-update", "screensaver-lock", "wallpaper", "fullscreen", "apple-content", "personal-media", "playlists-channels", "filters", "live-feeds", "content-packs", "displays", "time-solar", "energy-lifecycle", "transitions", "overlays", "cache", "privacy", "diagnostics", "playback-details"] }
+    },
+    "requiredProductDirections": {
+      "type": "array", "minItems": 3, "uniqueItems": true,
+      "items": { "enum": ["static", "hybrid", "advanced-live"] }
+    },
+    "crossCuttingConformance": {
+      "type": "object", "additionalProperties": false,
+      "required": ["resourceBudget", "chatControl"],
+      "properties": {
+        "resourceBudget": {
+          "type": "object", "additionalProperties": false,
+          "required": ["requirementRef", "applicability", "referenceTier", "measures", "conformanceTest"],
+          "properties": {
+            "requirementRef": { "const": "https://github.com/MeekPhills/project-ambient/issues/28" },
+            "applicability": { "const": "every-row" },
+            "referenceTier": { "const": "base-2024-m4-mac-mini-16gb-256gb" },
+            "measures": { "type": "array", "minItems": 8, "uniqueItems": true, "items": { "enum": ["cpu", "memory", "wakeups", "gpu", "decoder", "network", "storage-churn", "frame-pacing"] } },
+            "conformanceTest": { "$ref": "#/$defs/crossCuttingTest" }
+          }
+        },
+        "chatControl": {
+          "type": "object", "additionalProperties": false,
+          "required": ["requirementRef", "applicability", "directMode", "deterministicChatMode", "nonActionBehavior", "conformanceTest"],
+          "properties": {
+            "requirementRef": { "const": "https://github.com/MeekPhills/project-ambient/issues/29" },
+            "applicability": { "const": "every-row" },
+            "directMode": { "const": "required-for-setting-or-action" },
+            "deterministicChatMode": { "const": "same-typed-command-required" },
+            "nonActionBehavior": { "const": "explain-read-only-or-unsupported" },
+            "conformanceTest": { "$ref": "#/$defs/crossCuttingTest" }
+          }
+        }
+      }
+    },
+    "evidenceCatalog": {
+      "type": "array", "minItems": 1,
+      "items": { "$ref": "#/$defs/evidence" }
+    },
+    "rows": {
+      "type": "array", "minItems": 100,
+      "items": { "$ref": "#/$defs/row" }
+    }
+  },
+  "$defs": {
+    "baseline": {
+      "type": "object", "additionalProperties": false,
+      "required": ["label", "tag", "commit", "minimumOS", "sourceURL"],
+      "properties": {
+        "label": { "enum": ["stable", "beta"] },
+        "tag": { "type": "string", "minLength": 1 },
+        "commit": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
+        "minimumOS": { "type": "string", "minLength": 1 },
+        "sourceURL": { "type": "string", "pattern": "^https://github\\.com/AerialScreensaver/Aerial/tree/[A-Za-z0-9._-]+$" }
+      }
+    },
+    "evidence": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "kind", "sourceVersion", "sourceCommit", "retrievedAt", "uri", "summary"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]+$" },
+        "kind": { "enum": ["source", "official-documentation"] },
+        "sourceVersion": { "type": "string", "minLength": 1 },
+        "sourceCommit": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
+        "retrievedAt": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$" },
+        "uri": { "type": "string", "pattern": "^https://" },
+        "summary": { "type": "string", "minLength": 20 }
+      }
+    },
+    "test": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "type", "status", "smoke"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^PAR-[A-Z0-9-]+$" },
+        "type": { "enum": ["automated", "manual", "mixed"] },
+        "status": { "enum": ["planned", "implemented", "passed"] },
+        "smoke": { "type": "string", "minLength": 20 }
+      }
+    },
+    "crossCuttingTest": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "status", "evidenceRefs", "smoke"],
+      "properties": {
+        "id": { "enum": ["PAR-XCUT-M4", "PAR-XCUT-CHAT"] },
+        "status": { "enum": ["planned", "implemented", "passed"] },
+        "evidenceRefs": { "type": "array", "uniqueItems": true, "items": { "type": "string", "pattern": "^https://github\\.com/MeekPhills/project-ambient/(issues|pull)/[0-9]+" } },
+        "smoke": { "type": "string", "minLength": 30 }
+      }
+    },
+    "exception": {
+      "type": "object", "additionalProperties": false,
+      "required": ["kind", "rationale", "userFacingAlternative", "approvalOwner", "approvalStatus", "approvalEvidence", "issueRef"],
+      "properties": {
+        "kind": { "enum": ["security", "legal", "os"] },
+        "rationale": { "type": "string", "minLength": 30 },
+        "userFacingAlternative": { "type": "string", "minLength": 20 },
+        "approvalOwner": { "enum": ["Sol", "Luna", "Terra", "Owner", "Security reviewer"] },
+        "approvalStatus": { "enum": ["pending", "approved"] },
+        "approvalEvidence": { "oneOf": [{ "type": "null" }, { "type": "string", "pattern": "^https://github\\.com/MeekPhills/project-ambient/(issues|pull)/[0-9]+" }] },
+        "issueRef": { "type": "string", "pattern": "^(create-before-start:)?https://github\\.com/MeekPhills/project-ambient/issues/[0-9]+$" }
+      }
+    },
+    "row": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "domain", "capability", "aerialBehavior", "ambientBehavior", "productDirections", "owner", "milestone", "implementationTaskId", "issueRef", "launchDisposition", "implementationStatus", "evidenceRefs", "test", "exception"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9.-]+$" },
+        "domain": { "type": "string", "minLength": 1 },
+        "capability": { "type": "string", "minLength": 8 },
+        "aerialBehavior": { "type": "string", "minLength": 15 },
+        "ambientBehavior": { "type": "string", "minLength": 15 },
+        "productDirections": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "enum": ["static", "hybrid", "advanced-live"] } },
+        "owner": { "enum": ["Sol", "Luna", "Terra"] },
+        "milestone": { "type": "string", "pattern": "^M[1-8]$" },
+        "implementationTaskId": { "type": "string", "pattern": "^m[1-8]-[a-z0-9-]+$" },
+        "issueRef": { "type": "string", "pattern": "^(create-before-start:)?https://github\\.com/MeekPhills/project-ambient/issues/[0-9]+$" },
+        "launchDisposition": { "enum": ["implement", "improve", "exception"] },
+        "implementationStatus": { "enum": ["planned", "partial", "implemented", "verified"] },
+        "evidenceRefs": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]+$" } },
+        "test": { "$ref": "#/$defs/test" },
+        "exception": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/exception" }] }
+      }
+    }
+  }
+}

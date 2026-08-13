@@ -9,6 +9,9 @@ on:
       - "docs/launch-day-runbook.md"
       - "script/**"
       - "schemas/rights/**"
+      - "schemas/aerial-parity/**"
+      - "docs/product/aerial-parity.json"
+      - "docs/product/FULL_PLATFORM_LAUNCH_SPEC.md"
       - "fixtures/rights/**"
       - "CONTENT_RIGHTS.md"
       - "OPEN_SOURCE_PROMISE.md"
@@ -55,6 +58,11 @@ jobs:
         run: node script/validate_capabilities.mjs
       - name: Validate media-rights and commercial-boundary contracts
         run: node script/validate_rights.mjs
+      - name: Validate the exhaustive Aerial semantic-parity launch matrix
+        run: node script/validate_aerial_parity.mjs
+      - name: Enforce verified Aerial parity for GA tags
+        if: startsWith(github.ref, 'refs/tags/v') && !contains(github.ref_name, '-')
+        run: node script/validate_aerial_parity.mjs --ga
 
   package-candidate:
     name: Build and verify universal release candidate
