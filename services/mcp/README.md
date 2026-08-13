@@ -67,13 +67,14 @@ For public OpenAI submission, replace bearer auth with OAuth 2.1 + PKCE and comp
 
 `api/index.ts` and `vercel.json` are ready for a Vercel deployment from this directory. The function keeps each MCP request within the 30-second function window. With `AMBIENT_ADAPTER=demo`, it exposes deterministic synthetic reviewer data. With `AMBIENT_ADAPTER=remote`, it routes tools to an enrolled Mac through a shared PostgreSQL command queue.
 
-Before deploying any Vercel environment, provision PostgreSQL for the distributed request counters, then generate and add an MCP bearer token; never commit it:
+Before deploying any Vercel environment, provision PostgreSQL for the distributed request counters, then generate and add an MCP bearer token; never commit it. `POSTGRES_URL` is installed only by the fixed interactive bootstrap described below—not by a manual CLI upload:
 
 ```sh
 openssl rand -base64 48
 vercel env add MCP_AUTH_TOKEN production
-vercel env add POSTGRES_URL production
-vercel --prod
+# Run the credential-safe Supabase bootstrap below before building a deployment.
+# Then deploy an unpromoted production-target artifact and smoke-test it first.
+vercel --prod --skip-domain
 ```
 
 For live device control on Vercel, add these additional production secrets/settings:
@@ -81,7 +82,7 @@ For live device control on Vercel, add these additional production secrets/setti
 ```text
 AMBIENT_ADAPTER=remote
 AMBIENT_DEVICE_ID=device_…
-POSTGRES_URL=postgresql://…?sslmode=require
+POSTGRES_URL=<installed only by the fixed bootstrap with sslmode=verify-full>
 BRIDGE_ADMIN_TOKEN=<a second independently generated 48-byte secret>
 ```
 
@@ -91,12 +92,42 @@ The production service applies PostgreSQL-backed fixed-window limits before requ
 
 On Vercel, ingress identity comes only from a validated first IP in Vercel's platform-overwritten `x-vercel-forwarded-for`. A non-Vercel public/container deployment must set a narrow proxy IP/CIDR allowlist, for example `BRIDGE_TRUSTED_PROXIES=10.20.0.0/16,2001:db8:1234::/48`; catch-all `/0` ranges are rejected. The named proxy must overwrite, rather than append to, client-supplied `X-Forwarded-For`. Set `MCP_ALLOWED_HOSTS` to the exact public hostname(s); omitting it fails startup so the SDK Host/DNS-rebinding boundary cannot disappear accidentally. Local loopback development may omit these settings and ignores spoofed forwarding headers. JSON and memory profiles retain instance-local limiting only for loopback development; a public or remote service fails startup without PostgreSQL, minimum-length independent credentials, explicit proxy provenance, and allowed hosts. Provider/edge rate limiting remains defense in depth.
 
+#### Credential-safe Supabase bootstrap library
+
+`bootstrap:supabase` is dry-run by default. Without `--execute` it accepts no secrets, performs no network or database mutation, and prints only the fixed redacted topology:
+
+```sh
+npm run build
+npm run bootstrap:supabase -- \
+  --pooler-host aws-0-us-east-1.pooler.supabase.com
+```
+
+The live owner runner is explicitly interactive and fixed-target:
+
+```sh
+npm run bootstrap:supabase -- \
+  --pooler-host aws-0-us-east-1.pooler.supabase.com \
+  --credential jit \
+  --execute
+```
+
+Before starting, the owner must create a dedicated, short-lived Vercel token using a trusted owner workflow and revoke it immediately after the ceremony. Code cannot prove the token's provenance, lifetime, or scope; preflight proves only that the presented token can access fixed project `prj_npI783AvPfO2DIuZEbwhL2CYt5Vn` in fixed team `team_m0flpJNmh3CYcXQcI82bKdsO`. The runner accepts neither token nor database credential through argv, environment variables, stdin pipes, Vercel CLI state, SDKs, curl, or a child process. It reads both secrets from a controlling TTY. It first proves that a complete environment listing contains no `POSTGRES_URL`. Only then does it display the target and require the exact visible phrase `project-ambient-control production POSTGRES_URL`; mismatch or cancellation stops before the database credential prompt, password generation, connection, or SQL.
+
+The Supabase target is hardcoded to project `mbcxfyekqyexpqshamwq` in `us-east-1`; it accepts neither a project override nor another region. The library connects as `postgres.mbcxfyekqyexpqshamwq` through the TLS session pooler on port `5432` with JIT enabled when selected, generates 48 random bytes locally, derives a PostgreSQL `SCRAM-SHA-256` verifier, and creates the fixed `ambient_runtime` role with `LOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS`. It rejects an existing role instead of rotating it.
+
+After the in-process migration, the library makes **three total** shared-pooler connection attempts: the initial attempt and at most two retries, each separated by 30 seconds. Only bounded connection/authentication errors that can represent post-create pooler propagation are retry candidates; some may also be permanent, so exhaustion stops without changing the role. It logs in as `ambient_runtime.mbcxfyekqyexpqshamwq` on port `6543`, verifies the exact identity and read-only schema initialization, and exercises bridge plus rate-limit privileges inside an always-rolled-back transaction. Identity, schema, and rollback-DML failures are never retried.
+
+Only then is the generated canonical URL passed in memory to the fixed in-process HTTPS sink. The sink validates the exact role, host, port `6543`, database, 64-character base64url password, and sole `sslmode=verify-full` parameter. It performs a create-only Vercel API request for sensitive production `POSTGRES_URL`; it never uses `upsert`, so a collision between preflight and creation fails instead of overwriting. GET/preflight requests may retry bounded transient failures. Once the create request begins it is never replayed: a timeout or connection loss is ambiguous because Vercel may have committed it, and the runtime role is contained with `NOLOGIN`. Confirmation requires the documented HTTP `201` wrapper followed by an exact, complete metadata GET. The API never returns the sensitive value for comparison, so metadata confirms key/type/target, not value equality. There is intentionally no Vercel CLI/SDK/curl/child-process upload path.
+
+If migration has committed or the sink has started, an error is an incident state: the library preserves `ambient_runtime` and attempts `ALTER ROLE ambient_runtime NOLOGIN`. A transport-ambiguous role creation or migration completion discards the failed session, acquires a fresh privileged client, verifies the exact `postgres` identity, and attempts only `NOLOGIN`; it never drops a role whose ownership is uncertain. Before migration starts, a definitely acknowledged newly-created role may be dropped; if that drop fails, `NOLOGIN` is attempted. Definite duplicate-role failures do not mutate the preexisting or concurrent role. JavaScript and network-buffer clearing is best effort.
+
+**Post-commit recovery runbook (owner action):** do not rerun bootstrap or implicitly rotate/drop `ambient_runtime`. Keep bridge traffic disabled; determine whether the sink received the generated runtime URL; and inspect the role's flags/memberships, `ambient_private` grants, migration ledger, and any partial sink/deployment change. If the credential did not reach a sink, manually contain the role with `NOLOGIN` while preserving it for forensics. If it may have reached a sink, rotate the credential through a separately audited recovery procedure and update the confirmed sink before restoring login. In either case, repeat the exact port-6543 identity, store-readiness, and rollback-only smoke gates before re-enabling traffic. After every live JIT attempt: remove the `postgres` role mapping, disable Temporary Access when unused, and revoke the PAT.
+
 #### Production bridge upgrade runbook
 
 This is a server-first, maintenance-window rollout. Protocol-v1 agents must not be used after the migration; the server requires protocol v2 and the `lease_id` capability, and returns HTTP `426` before leasing any command to an incompatible agent.
 
-1. Stop command producers and device agents. Take a database backup or provider snapshot and record its identifier. Create a dedicated login role, for example `ambient_runtime`, with `LOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS`, no role memberships, and a password set without placing it in shell history or checked-in SQL. Do not use `anon`, `authenticated`, `service_role`, `postgres`, or a `pg_*`/`supabase_*` role.
-2. Check for unexpected duplicate request IDs:
+1. Stop command producers and device agents. Take a database backup or provider snapshot and record its identifier. Before any migration, check the existing private layout for unexpected duplicate request IDs:
 
    ```sql
    SELECT device_id, COALESCE(request_id, operation ->> 'requestId') AS request_id, count(*)
@@ -105,18 +136,20 @@ This is a server-first, maintenance-window rollout. Protocol-v1 agents must not 
    GROUP BY 1, 2 HAVING count(*) > 1;
    ```
 
-   The query above is for an existing private layout. For an alpha database that still has a complete legacy public layout, run the same read-only query against `"public"."ambient_bridge_commands"`; do not create or rename anything by hand.
+   For an alpha database that still has a complete legacy public layout, run the same read-only query against `"public"."ambient_bridge_commands"`. On a fresh database with neither relation, record that result and continue; do not create or rename anything by hand.
 
-3. Build the release and run the one-shot migrator first against staging, then production, while bridge traffic remains blocked by maintenance mode or a network rule:
+2. Build the release, then run the fixed interactive owner bootstrap above using short-lived Supabase Temporary Access and a dedicated short-lived Vercel token. Do not use the older manual password/SQL, standalone migrator, or CLI-upload path for this fixed Supabase production target:
 
    ```sh
    npm run build
-   # Load MIGRATION_DATABASE_URL from an encrypted secret manager without printing it.
-   AMBIENT_RUNTIME_DB_ROLE='ambient_runtime' npm run migrate:bridge
+   npm run bootstrap:supabase -- \
+     --pooler-host aws-0-us-east-1.pooler.supabase.com \
+     --credential jit \
+     --execute
    ```
 
-   Use a direct or session-mode TLS connection (normally port `5432`); the CLI rejects transaction-pooler port `6543`. With Supabase's shared Supavisor pooler, the connection-string username must be `<database-role>.<project-ref>` even though the PostgreSQL role and `AMBIENT_RUNTIME_DB_ROLE` remain the bare role name. Percent-encode the password when placing it in a URI. Keep `MIGRATION_DATABASE_URL` out of Vercel/runtime secrets, terminal output, and shell history. The migrator holds a transaction-level lock, applies versions 1–4 atomically in `ambient_private`, revokes access from `PUBLIC` and Supabase exposed roles when present, and grants the configured pre-existing runtime role only its exact runtime rights. It refuses newer/inconsistent ledgers and ambiguous public/private layouts. A complete legacy `public` layout is moved transactionally. It deletes no command rows. It terminally fails legacy leased commands rather than replaying ambiguous work, clears request identity from noncanonical duplicates, fails active rows whose stored request identifiers disagree or are invalid, and creates the distributed rate-counter table.
-4. Verify the catalog and cleanup results before admitting traffic:
+   The helper creates only the fixed `ambient_runtime` database-role identity while its in-process migrator creates the fixed `ambient_private` schema objects. It rejects `anon`, `authenticated`, `service_role`, `postgres`, and `pg_*`/`supabase_*` runtime identities through its topology and identity gates. The migrator holds a transaction-level lock, applies versions 1–4 atomically, revokes access from `PUBLIC` and Supabase exposed roles when present, and grants only exact runtime rights. It refuses newer/inconsistent ledgers and ambiguous public/private layouts. A complete legacy `public` layout is moved transactionally. It deletes no command rows; it terminally fails legacy leased commands rather than replaying ambiguous work, clears request identity from noncanonical duplicates, fails active rows whose stored request identifiers disagree or are invalid, and creates the distributed rate-counter table.
+3. Verify the catalog and cleanup results before admitting traffic:
 
    ```sql
    SELECT version, name, applied_at FROM "ambient_private"."ambient_bridge_schema_migrations" ORDER BY version;
@@ -126,8 +159,8 @@ This is a server-first, maintenance-window rollout. Protocol-v1 agents must not 
    WHERE error LIKE '%during%upgrade%' ORDER BY created_at;
    ```
 
-5. Set runtime `POSTGRES_URL` to the `ambient_runtime` credential through the provider's transaction pooler (Supabase/Supavisor port `6543`) with TLS—never the migration owner—and deploy/restart the service. For shared Supavisor, use `ambient_runtime.<project-ref>` as the connection-string username; the actual database role remains `ambient_runtime`. Percent-encode its generated password in the URI. The Node client uses unnamed statements compatible with transaction pooling. Runtime verification requires: database `CONNECT`; schema `USAGE`; ledger `SELECT`; devices/commands `SELECT, INSERT, UPDATE`; rate-limit counters `SELECT, INSERT, UPDATE, DELETE`; rate-limit state `SELECT, UPDATE`. It rejects ownership, schema/database `CREATE`, excess table privileges, elevated role flags, inheritance, and memberships. Before promotion, connect through the exact port-`6543` runtime URI and verify `current_user = session_user = 'ambient_runtime'`, then run the store readiness check and bridge transaction smoke suite; stop rather than relaxing the role policy if this gate fails.
-6. Deploy or restart the protocol-v2 Mac agent, confirm one lease/result round trip, then enable command producers and remote MCP traffic. Monitor `426`, migration, retry-exhaustion, and command-failure events.
+4. The bootstrap writes the confirmed `ambient_runtime` transaction-pooler URL to Vercel Production as sensitive `POSTGRES_URL`; it never installs the migration owner. Build a new production-target deployment without moving the canonical domain, then run the exact port-`6543` identity, store-readiness, and rollback-only transaction smoke gates against that deployment. Vercel environment changes affect only new deployments. Do not revoke Temporary Access or close the migration ceremony until the secret metadata is confirmed and the unpromoted deployment is healthy; immediately afterward remove the `postgres` mapping, disable Temporary Access, and revoke both short-lived tokens.
+5. Promote that same verified deployment without rebuilding it. Deploy or restart the protocol-v2 Mac agent, confirm one lease/result round trip, then enable command producers and remote MCP traffic. Monitor `426`, migration, retry-exhaustion, and command-failure events.
 
 Do not roll the server back to protocol v1 after the database migration. If validation fails, keep bridge traffic disabled, preserve the failed startup evidence, and restore the snapshot into a new database rather than editing the migration ledger by hand.
 

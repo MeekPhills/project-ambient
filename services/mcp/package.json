@@ -32,6 +32,7 @@
     "start:stdio": "node dist/src/stdio.js",
     "start:device": "node dist/src/device-agent.js",
     "migrate:bridge": "node dist/src/migrate-bridge.js",
+    "bootstrap:supabase": "node dist/src/supabase-bootstrap.js",
     "test": "node --import tsx --test test/**/*.test.ts",
     "test:coverage": "node --import tsx --test --experimental-test-coverage test/**/*.test.ts",
     "validate:registry": "node scripts/validate-registry.mjs",
