@@ -8,7 +8,7 @@ node script/validate_rights.mjs
 
 Validation is fail-closed:
 
-- `private_reference` prohibits redistribution and commercial use and represents user-controlled media rather than a distributable media grant;
+- `private_reference` prohibits Project/end-user redistribution and represents user-controlled media; its separate scopes can express personal-only or private-enterprise display authority without granting public distribution;
 - `bundled_media` separately records Project Ambient's authority to reproduce/distribute and the end user's display/redistribution entitlement;
 - `remote_reference` requires verified current provider terms, asset-linked provider evidence, approved origins, client-side retrieval, and a digest-bound source descriptor;
 - commercial offers require verified review and Project Ambient commercialization authority while permitting personal-only end-user packs;

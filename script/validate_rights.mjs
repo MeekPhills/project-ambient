@@ -146,9 +146,11 @@ function semanticErrors(manifest, now = new Date()) {
     if (!manifest.provider?.termsURL?.startsWith("https://")) errors.push("remote provider terms must use HTTPS");
     if (!manifest.provider?.clientFetchOnly) errors.push("remote_reference must be clientFetchOnly");
     if (Date.parse(manifest.provider?.termsReviewedAt) >= Date.parse(manifest.provider?.termsExpireAt)) errors.push("provider terms review must precede expiry");
+    if (Date.parse(manifest.provider?.termsReviewedAt) > now.getTime()) errors.push("provider terms review is in the future");
     if (Date.parse(manifest.provider?.termsExpireAt) <= now.getTime()) errors.push("provider terms are expired");
     const termsEvidence = evidenceById.get(manifest.provider?.termsEvidenceRef);
     if (termsEvidence?.type !== "provider_terms") errors.push("remote_reference requires referenced provider_terms evidence");
+    if (termsEvidence?.visibility !== "public" || termsEvidence?.locator !== manifest.provider?.termsURL) errors.push("provider terms evidence must bind the declared terms URL");
     const origins = new Set((manifest.provider?.approvedOrigins ?? []).map((value) => { try { return new URL(value).origin; } catch { return "invalid"; } }));
     try { if (!origins.has(new URL(manifest.provider.canonicalURL).origin)) errors.push("provider canonical URL origin is not approved"); } catch {}
     for (const asset of assets) {
@@ -183,6 +185,11 @@ function semanticErrors(manifest, now = new Date()) {
         const descriptorDigest = createHash("sha256").update(JSON.stringify(asset.sourceDescriptor)).digest("hex");
         if (descriptorDigest !== asset.sha256) errors.push(`${asset.id}: source descriptor digest does not match`);
         if (asset.sourceDescriptor.canonicalURL !== asset.canonicalSource || asset.sourceDescriptor.providerName !== manifest.provider?.name || asset.sourceDescriptor.termsEvidenceRef !== manifest.provider?.termsEvidenceRef) errors.push(`${asset.id}: source descriptor does not match provider binding`);
+        try {
+          const source = new URL(asset.sourceDescriptor.canonicalURL);
+          const expectedTransport = source.protocol === "rtsp:" ? "rtsp" : source.protocol === "rtsps:" ? "rtsps" : source.pathname.toLowerCase().endsWith(".m3u8") ? "hls" : "https";
+          if (asset.sourceDescriptor.transport !== expectedTransport) errors.push(`${asset.id}: descriptor transport does not match source URL`);
+        } catch {}
       }
     } else if (asset.sourceDescriptor !== undefined) errors.push(`${asset.id}: non-live asset must not declare sourceDescriptor`);
     for (const scopeName of ["projectRights", "endUserRights"]) {
@@ -194,6 +201,8 @@ function semanticErrors(manifest, now = new Date()) {
       if (scope?.grantee === "organization_user" && !(scope.conditions?.audiences ?? []).includes("enterprise")) errors.push(`${asset.id}.${scopeName}: organization user requires enterprise audience`);
       if (scope?.grantee === "personal_user" && !(scope.conditions?.audiences ?? []).includes("personal")) errors.push(`${asset.id}.${scopeName}: personal user requires personal audience`);
     }
+    if (asset.authorization?.projectRights?.grantee !== "project_ambient") errors.push(`${asset.id}: projectRights grantee must be project_ambient`);
+    if (!["personal_user", "organization_user", "all_end_users"].includes(asset.authorization?.endUserRights?.grantee)) errors.push(`${asset.id}: endUserRights grantee must be an end-user class`);
     if (asset.provenance?.origin === "ai_generated" && !asset.provenance.toolOrModel) errors.push(`${asset.id}: AI provenance requires toolOrModel`);
   }
   return errors;
@@ -298,6 +307,14 @@ const invalidProviderOrder = clone(fixtures.get("licensed-live-source.json"));
 invalidProviderOrder.provider.termsReviewedAt = "2099-08-14T00:00:00Z";
 expectInvalid("provider term ordering", invalidProviderOrder, schema, "review must precede expiry");
 
+const futureProviderReview = clone(fixtures.get("licensed-live-source.json"));
+futureProviderReview.provider.termsReviewedAt = "2098-08-13T20:00:00Z";
+expectInvalid("future provider review", futureProviderReview, schema, "provider terms review is in the future");
+
+const unrelatedTermsEvidence = clone(fixtures.get("licensed-live-source.json"));
+unrelatedTermsEvidence.review.evidence[0].locator = "https://example.org/different-terms";
+expectInvalid("provider terms URL binding", unrelatedTermsEvidence, schema, "bind the declared terms URL");
+
 const timezoneMissing = clone(fixtures.get("public-domain-pack.json"));
 timezoneMissing.review.reviewedAt = "2026-08-13T20:00:00";
 expectInvalid("timezone required", timezoneMissing, schema, "invalid date-time");
@@ -314,8 +331,18 @@ const futureReview = clone(fixtures.get("private-reference.json"));
 futureReview.review.reviewedAt = "2099-08-13T20:00:00Z";
 expectInvalid("future review", futureReview, schema, "rights review is in the future");
 
+const swappedGrantees = clone(fixtures.get("paid-creator-pack.json"));
+swappedGrantees.assets[0].authorization.projectRights.grantee = "personal_user";
+swappedGrantees.assets[0].authorization.endUserRights.grantee = "project_ambient";
+expectInvalid("actor scope binding", swappedGrantees, schema, "projectRights grantee");
+
+const mismatchedTransport = clone(fixtures.get("licensed-live-source.json"));
+mismatchedTransport.assets[0].sourceDescriptor.transport = "rtsp";
+mismatchedTransport.assets[0].sha256 = createHash("sha256").update(JSON.stringify(mismatchedTransport.assets[0].sourceDescriptor)).digest("hex");
+expectInvalid("transport binding", mismatchedTransport, schema, "transport does not match");
+
 const unsupportedSchema = clone(schema);
 unsupportedSchema.properties.pack.maxProperties = 5;
 assert.ok(auditSchema(unsupportedSchema).some((error) => error.includes("unsupported keyword maxProperties")), "schema audit must fail closed on unsupported constraints");
 
-console.log(`Rights validation passed: schema 1.0.0, ${fixtureNames.length} fixtures, 25 negative/fail-closed checks.`);
+console.log(`Rights validation passed: schema 1.0.0, ${fixtureNames.length} fixtures, 29 negative/fail-closed checks.`);

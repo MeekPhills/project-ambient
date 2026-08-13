@@ -19,7 +19,7 @@ Versioned manifests under `schemas/rights/` record:
 - creator, rightsholder, canonical source, acquisition date, and content checksum;
 - human-made, AI-generated, mixed, or unknown provenance and any relevant tool/model identifier;
 - license name, identifier, URL, evidence references, and review status;
-- display, reproduction, redistribution, commercial use, modification/derivatives, synchronization, and sublicensing grants;
+- separately scoped grants from the rightsholder to Project Ambient and from the rightsholder to the end user, covering display, reproduction, redistribution, commercial use, modification/derivatives, synchronization, and sublicensing;
 - required attribution, notices, share-alike terms, territory, term/expiry, audience, and field-of-use restrictions;
 - copyright, privacy, publicity, trademark, and other-rights review states;
 - takedown contact and a reversible disable path.
