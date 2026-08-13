@@ -6,7 +6,7 @@
 
 **Repository:** https://github.com/MeekPhills/project-ambient
 
-**Base branch:** `main` at `846cef807eceaaa11926bae290021c26475c49fd`
+**Parent baseline for this handoff:** `846cef807eceaaa11926bae290021c26475c49fd`. After PR #32 merges, resolve and branch from the then-current `main`; never assume this parent remains the head.
 
 **Working branch:** create an isolated `codex/18-aerial-parity-matrix` branch/worktree from current `main` before editing
 
@@ -29,7 +29,7 @@ Start #18 in a new isolated worktree: inventory the accepted Aerial feature univ
 3. `docs/decisions/0001-m0-launch-boundaries.md`
 4. `docs/product/FULL_PLATFORM_LAUNCH_SPEC.md`
 5. `docs/product/implementation-plan.json` task `m0-aerial-parity`
-6. the existing product brief/Aerial research artifacts referenced by issue #18
+6. Aerial's versioned primary evidence: [4.0.14 source](https://github.com/AerialScreensaver/Aerial/tree/v4.0.14), [4.1.0beta13 source](https://github.com/AerialScreensaver/Aerial/tree/v4.1.0beta13), [official features](https://aerialscreensaver.github.io/features/), [official FAQ](https://aerialscreensaver.github.io/faq/), [release notes](https://aerialscreensaver.github.io/release-notes/), and [expansions](https://aerialscreensaver.github.io/expansions/). Freeze the exact tag/commit and retrieval date in every matrix evidence row; use repository source over remembered chat claims.
 7. `schemas/capabilities/` and `apps/site/app/status/status-manifest.json`
 
 ## Accepted evidence
