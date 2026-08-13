@@ -1,0 +1,62 @@
+{
+  "schemaVersion": "1.0.0",
+  "pack": {
+    "id": "org.projectambient.private-reference",
+    "version": "1.0.0",
+    "title": "Private User Reference",
+    "creator": { "name": "Local user" },
+    "commercialOffer": false,
+    "containsExecutablePayload": false
+  },
+  "deliveryClass": "private_reference",
+  "review": {
+    "status": "self_attested",
+    "reviewedAt": "2026-08-13T20:00:00Z",
+    "reviewer": "local-user",
+    "evidence": [
+      { "id": "local-attestation", "type": "user_attestation", "reference": "local-consent-record:fixture", "checkedAt": "2026-08-13T20:00:00Z" }
+    ]
+  },
+  "assets": [
+    {
+      "id": "local-asset-001",
+      "mediaType": "image",
+      "canonicalSource": "ambient-private://local-asset-001",
+      "acquiredAt": "2026-08-13T19:00:00Z",
+      "sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+      "digestScope": "asset_bytes",
+      "evidenceRefs": ["local-attestation"],
+      "provenance": { "origin": "unknown", "declaration": "User-selected local media; no redistribution claim." },
+      "rightsholder": { "name": "Unknown or user-controlled" },
+      "license": {
+        "name": "Private local display only",
+        "identifier": "LicenseRef-Private-Local-Display",
+        "url": "https://project-ambient.meekphillies.chatgpt.site/rights/private-reference",
+        "attribution": [],
+        "shareAlike": false
+      },
+      "grants": {
+        "display": "conditional",
+        "reproduction": "conditional",
+        "redistribution": "prohibited",
+        "commercialUse": "prohibited",
+        "modification": "conditional",
+        "synchronization": "prohibited",
+        "sublicensing": "prohibited"
+      },
+      "conditions": {
+        "territories": ["user-controlled"],
+        "audiences": ["personal"],
+        "fieldOfUse": ["local display", "local display-sized derivative", "user-requested backup or export"]
+      },
+      "otherRights": {
+        "privacy": "unknown",
+        "publicity": "unknown",
+        "trademark": "unknown",
+        "property": "unknown",
+        "endorsement": "unknown"
+      }
+    }
+  ],
+  "takedown": { "contact": "local-user", "reversibleDisable": true, "preserveEvidence": true }
+}
