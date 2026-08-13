@@ -20,7 +20,7 @@ Issue #17 remains an independent draft evidence stream in its own worktree and o
 
 ## Next exact action
 
-Commit and push the non-author-approved 145-row parity contract, open the #18 draft PR, and require clean-runner CI at the exact head. Do not award the M0 point until CI, merge, deployment where applicable, and the normal tracker activation gate pass.
+Require and verify clean-runner CI on PR #33 at the exact current head, then confirm required review against that same head. After green CI and review, merge and run the normal tracker activation gate. Do not award the M0 point before those gates pass.
 
 ## Read in this order
 
