@@ -3,8 +3,9 @@
 **Status:** Accepted for M0 planning; product implementation remains gated
 
 **Date:** 2026-08-13
-**Decision owner:** Project Ambient maintainers  
-**Tracking:** GitHub milestones and issues  
+**Decision owner:** Project Ambient maintainers
+
+**Tracking:** GitHub milestones and issues
 **Reference platform:** macOS
 
 The six launch-boundary decisions were accepted on 2026-08-13 in [decision record 0001](../decisions/0001-m0-launch-boundaries.md). This approval authorizes task decomposition and validation, not unrestricted implementation.
