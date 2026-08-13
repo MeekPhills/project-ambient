@@ -2,13 +2,13 @@
 
 **Updated:** 2026-08-13
 
-**Program state:** Six launch-boundary decisions are recorded; independent review is pending and product implementation remains gated
+**Program state:** Six launch-boundary decisions are recorded; non-author review is complete, both findings are corrected, and product implementation remains gated until issue #19 is accepted and PR #22 is merged
 
 **Repository:** https://github.com/MeekPhills/project-ambient
 
 **Base branch:** current `main` at `e40cf5aa62f9f30180ff743023ceadbf1ca3df9e`, integrated by merge commit `f791e41fdac02ba4c4b73ba3d3fad560a970d099`
 
-**Planning branch:** `plan/full-platform-launch`; accepted decision content at `03a0e37` before this handoff update
+**Planning branch:** `plan/full-platform-launch`; accepted decision content at `03a0e37`, review corrections complete through `17764ccc211c`, with this file serving as the final local checkpoint before push
 
 **Active pull request:** #22 — https://github.com/MeekPhills/project-ambient/pull/22
 
@@ -20,9 +20,20 @@
 
 ## Next exact action
 
-Review commit `03a0e37` as a non-author against issue #19 and [decision record 0001](../decisions/0001-m0-launch-boundaries.md). Confirm the six decisions, canonical-tracker boundary, corrected commands, privacy constraints, and implementation gate. Fix any findings, push the planning branch, update PR #22 validation evidence, and record the accepted decision list on #19.
+Push the clean planning branch, update PR #22 with the accepted decisions and validation evidence, record the accepted decision list on #19, and mark the PR ready for review. Merge and close #19 only after GitHub checks pass and the evidence is visible on both the PR and issue.
 
-Do not begin product implementation until #19 passes independent review. After #19, make #16 the sole active issue for task-level planning and canonical tracker scope migration. #17 may establish the clean baseline only when file ownership and dependencies are explicitly non-overlapping.
+Do not begin product implementation until #19 is accepted and PR #22 is merged. After #19, make #16 the sole active issue for task-level planning and canonical tracker scope migration. #17 may establish the clean baseline only when file ownership and dependencies are explicitly non-overlapping.
+
+## M0 decision checkpoint evidence
+
+- Non-author review: changes required for two medium documentation defects; both are corrected. No decision contradiction, scope creep, dangerous command, legal overclaim, or competing tracker was found.
+- `node --test --test-name-pattern='status manifest is a fixed, conservative 100-point audit' apps/site/tests/rendered-html.test.mjs`: 1 test passed, 0 failed.
+- `ruby -e 'require "yaml"; YAML.load_file(".github/ISSUE_TEMPLATE/implementation.yml"); puts "implementation.yml: valid"'`: parsed successfully.
+- `bash -n script/verify_release.sh` and `bash -n script/build_and_run.sh`: both passed with no syntax errors.
+- `git diff --check origin/main...HEAD`: passed with no whitespace errors.
+- Bounded relative-link review: 35 Markdown files passed with no missing repository-relative targets.
+- Product build/release baseline: not claimed by this documentation-only issue; issue #17 owns clean execution of the aggregate and component commands.
+- Blockers: none locally. GitHub push, evidence update, CI, and merge remain the next gated actions.
 
 ## Read in this order
 
@@ -78,7 +89,7 @@ M0 execution issues:
 - `.github/ISSUE_TEMPLATE/implementation.yml`: agent-ready task contract.
 - `.github/pull_request_template.md`: evidence, energy, privacy, licensing, recovery, and handoff requirements.
 
-No product code was changed by PR #22.
+The PR diff against current `main` contains planning and template files only; it does not add product implementation.
 
 ## Repository facts to verify in #17
 
