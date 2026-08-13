@@ -58,7 +58,7 @@ for (const task of plan.tasks) {
 }
 assert.equal(statusManifest.scoreHistory.at(-1).score, 49.75);
 assert.match(statusManifest.scoreHistory.at(-1).reason, /not a second current score/i);
-assert.match(statusManifest.migration.activationGate, /merge-conditional/i);
+assert.match(statusManifest.migration.activationGate, /activated/i);
 assert.match(statusManifest.migration.priorManifest, /e40cf5aa62f9f30180ff743023ceadbf1ca3df9e/);
 assert.equal(statusManifest.migration.creditMappings.reduce((sum, mapping) => sum + mapping.earnedWeight, 0), 15);
 for (const mapping of statusManifest.migration.creditMappings) {

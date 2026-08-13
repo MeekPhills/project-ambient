@@ -2,15 +2,17 @@
 
 **Updated:** 2026-08-13
 
-**Program state:** M0 launch boundaries and the dependency/tracker migration are accepted. The sole canonical tracker is schema v3 and is live at 15/100. Product implementation remains gated until the remaining M0 contracts and final integration gate are accepted.
+**Program state:** M0 launch boundaries, dependency/tracker migration, and versioned platform capability contract are accepted. The tracker activation for merged PR #26 is the sole current integration action; after deployment the canonical score is 16/100. Product implementation remains gated by the remaining M0 contracts and final integration gate.
 
 **Repository:** https://github.com/MeekPhills/project-ambient
 
-**Base branch:** `main` at `a5b3f41b4155f8bfe8bf859934314746c943cfea`
+**Base branch:** `main` at `af600850b7ce3c3804161a5c0666af47b2c8e87c`
 
-**Working branch:** `feat/20-capability-contract`
+**Working branch:** `status/20-capability-credit`
 
-**Active pull request:** draft PR #26 — https://github.com/MeekPhills/project-ambient/pull/26
+**Completed capability pull request:** #26 — https://github.com/MeekPhills/project-ambient/pull/26
+
+**Active tracker pull request:** pending
 
 **Current milestone:** M0 — Governance and architecture
 
@@ -22,7 +24,7 @@ Issue #17 remains an independent draft evidence stream in its own worktree and o
 
 ## Next exact action
 
-Non-author review approved the contract at `88411aec574b65020d61875e13e3b4dc111e8f80`; this final checkpoint follows it. Await final-head GitHub gates, then mark PR #26 ready and merge. After merge, update and deploy the canonical tracker before closing #20 or awarding its M0 point.
+Validate this focused tracker/handoff update, obtain non-author status review, merge and deploy it, then verify `/status`, `/status/manifest`, and `/api/status`. Only then close #20 and make #21 the sole integration-active issue.
 
 ## Read in this order
 
@@ -39,7 +41,8 @@ Non-author review approved the contract at `88411aec574b65020d61875e13e3b4dc111e
 - PR #22 / issue #19: six M0 launch decisions accepted and merged.
 - PR #25 / issue #16: 41-task dependency plan, M0–M8 roadmap, and schema-v3 canonical tracker accepted and merged.
 - Production status deployment: https://project-ambient.meekphillies.chatgpt.site/status
-- Current canonical readiness: 15/100 — M0 3/8, M1 5/14, M2 1/12, M3 0.5/20, M4 3/14, M5 0/12, M6 0/7, M7 0.5/6, M8 2/7.
+- Current public readiness before this activation deploy: 15/100.
+- Merge-final tracker content after reviewed deployment: 16/100 — M0 4/8, M1 5/14, M2 1/12, M3 0.5/20, M4 3/14, M5 0/12, M6 0/7, M7 0.5/6, M8 2/7.
 - The historical 49.75/100 schema-v2 audit remains evidence history, not a second current score.
 
 ## Issue #20 definition of done
@@ -71,6 +74,7 @@ Non-author review approved the contract at `88411aec574b65020d61875e13e3b4dc111e
 - Re-review at `9004b26`: release-binding, evidence, release-hook, and worktree findings resolved; final approval remains pending a fail-closed schema-keyword audit and this current checkpoint.
 - Final correction commit `88411aec574b65020d61875e13e3b4dc111e8f80`: fail-closed schema-keyword audit, unsupported-keyword negative, linked-claim identity check, wrong-platform negative, and refreshed checkpoint pass locally; final re-review is pending.
 - Non-author final review: **approved** at `88411aec574b65020d61875e13e3b4dc111e8f80`; all original and residual findings are closed.
+- PR #26 final head `010d79745c01b293b323c9e3bfaa61544547b5da`: CI, CodeQL, static release contracts, and universal release candidate all passed; squash-merged as `af600850b7ce3c3804161a5c0666af47b2c8e87c`.
 - Required corrected smoke: `node script/validate_capabilities.mjs`
 - Required hygiene: `git diff --check`
 - Release-link behavior must be tested without publishing a release; `script/verify_release.sh` and release-integrity CI must invoke the focused preflight.
