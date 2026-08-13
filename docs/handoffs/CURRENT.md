@@ -2,7 +2,7 @@
 
 **Updated:** 2026-08-13
 
-**Program state:** M0 launch boundaries, dependency/tracker migration, and the versioned capability contract are accepted. The canonical public tracker is live at 16/100. Product implementation remains gated by the remaining M0 contracts and final integration gate.
+**Program state:** M0 launch boundaries, dependency/tracker migration, the versioned capability contract, and the rights/commercial boundary are accepted. The merge-final tracker target is 17/100; production remains 16/100 until the exact activation merge is deployed and verified. Product implementation remains gated by the remaining M0 contracts and final integration gate.
 
 **Repository:** https://github.com/MeekPhills/project-ambient
 
@@ -20,7 +20,7 @@ Issue #17 remains an independent draft evidence stream in its own worktree and o
 
 ## Next exact action
 
-Obtain non-author re-review of correction commit `85dabbbe932850fdb75afc7b7a7383510dd7b762`. Do not mark draft PR #30 ready or award the M0 point until approval, green final-head CI, merge, tracker activation, and public verification pass.
+Review and merge the isolated #21 tracker activation, deploy its exact site subtree, verify `/status`, `/status/manifest`, and `/api/status`, then close #21 and promote #18 as the sole integration-active issue. Do not expose 17/100 as canonical before exact-merge deployment and public verification pass.
 
 ## Read in this order
 
@@ -38,9 +38,10 @@ Obtain non-author re-review of correction commit `85dabbbe932850fdb75afc7b7a7383
 - PR #25 / issue #16: 41-task dependency plan, M0–M8 roadmap, and schema-v3 canonical tracker accepted and merged.
 - PR #26 / issue #20: capability schema v1, five platform fixtures, fail-closed validation, and release binding accepted and merged.
 - PR #27 merged as `4aafa87494cf36c3364aa989560906562cfa20eb`; its exact site subtree was deployed as Sites version 16.
+- PR #30 merged as `d958be915648e7b5586b882f9c9e6694610a01dc` after non-author approval and green CI, CodeQL, release integrity, and rights-contract validation.
 - Production tracker: https://project-ambient.meekphillies.chatgpt.site/status
-- Current readiness: 16/100 — M0 4/8, M1 5/14, M2 1/12, M3 0.5/20, M4 3/14, M5 0/12, M6 0/7, M7 0.5/6, M8 2/7.
-- Public smoke: `/status` renders 16/100 and 134–252 active hours; `/status/manifest` returns schema v3 and preserves the historical 49.75 audit; `/api/status?deployment=16` returns seven operational checks.
+- Merge-final readiness target: 17/100 — M0 5/8, M1 5/14, M2 1/12, M3 0.5/20, M4 3/14, M5 0/12, M6 0/7, M7 0.5/6, M8 2/7.
+- Required activation smoke: `/status` renders 17/100 and 131–247 active hours; `/status/manifest` returns schema v3, 17/100, and the immutable historical 49.75 audit; `/api/status` returns the seven operational checks for the new deployment.
 
 ## Issue #21 definition of done
 
@@ -67,7 +68,7 @@ Obtain non-author re-review of correction commit `85dabbbe932850fdb75afc7b7a7383
 - No user media, secrets, credentials, stores, submissions, payments, production deletion, or public announcement is in scope.
 - Do not silently change the canonical tracker or award #21 credit on a draft branch.
 
-## Current #21 verification
+## Accepted #21 contract and activation verification
 
 - Correction commits `8311c1c9ea847299ff56caf81b8671e6b736dbc0` and `85dabbbe932850fdb75afc7b7a7383510dd7b762`: actor-scoped Project/end-user grants, enforced grantee roles, verified remote providers, exact provider-terms/origin/source-descriptor/transport binding, private evidence records, paid-personal and private-enterprise fixtures, contradiction/time checks, and clarified contribution policy.
 - `node script/validate_rights.mjs`: passed — schema 1.0.0, five fixtures, and 29 negative/fail-closed checks.
@@ -76,11 +77,13 @@ Obtain non-author re-review of correction commit `85dabbbe932850fdb75afc7b7a7383
 - `git diff --check 4aafa87494cf36c3364aa989560906562cfa20eb...HEAD`: passed after correction; the first reviewed head's inaccurate PASS claim is superseded by this exact result.
 - `script/verify_release.sh` and release-integrity CI invoke the rights validator; full aggregate execution remains a clean-runner gate.
 - Legal-risk assessment uses a severity × likelihood register and explicitly requires qualified review; it is not legal advice.
-- Non-author reviews at `8854cf2` and `da8cbe1`: **changes required**; the second review narrowed the remaining gaps to actor-field enforcement, exact provider-terms binding, future provider review, and transport/source consistency. These are corrected at `85dabbbe`; final-head re-review is pending. No merge or tracker credit before final approval.
+- Final non-author review at `331bdc56c7bd4486d5430c31b0bce3a4038bb5cd`: **approved**; all residual actor, provider-evidence, time, transport, and documentation findings are closed.
+- Final-head CI, CodeQL, release integrity, macOS/site/MCP tests, secret scan, rights validation, and universal release-candidate packaging: passed.
+- PR #30 is merged; the 1-point tracker activation remains merge-and-deploy conditional in the current branch. No public 17/100 claim before exact activation deployment.
 
 ## M0 remaining order
 
-1. #21 — software, media-rights, model/provider, and commercial boundaries (**current**)
+1. #21 — tracker activation, exact deployment, public verification, and closure (**current; contract merged**)
 2. #17 — repository/release baseline (**independent draft; review pending**)
 3. #18 — owned Aerial parity matrix
 4. #10 integration — validators, cold-start reconstruction, tracker/handoff reconciliation, and M1 entry gate

@@ -88,14 +88,14 @@ test("status manifest is a fixed, conservative 100-point audit", () => {
     [...statuses].sort(),
     ["blocked", "complete", "in_progress", "not_started"].sort(),
   );
-  assert.equal(earned, 16);
-  assert.equal(Math.round(earned), 16);
+  assert.equal(earned, 17);
+  assert.equal(Math.round(earned), 17);
   assert.deepEqual(
     statusManifest.phases.map((phase) => phase.tasks.reduce(
       (sum, task) => sum + (task.status === "complete" || task.status === "in_progress" ? task.earnedWeight : 0),
       0,
     )),
-    [4, 5, 1, 0.5, 3, 0, 0, 0.5, 2],
+    [5, 5, 1, 0.5, 3, 0, 0, 0.5, 2],
   );
 
   for (const workstream of statusManifest.deliveryWorkstreams) {
@@ -105,7 +105,7 @@ test("status manifest is a fixed, conservative 100-point audit", () => {
     assert.equal(workstream.completion, derivedCompletion);
     assert.equal(workstream.state, derivedCompletion === 100 ? "complete" : "in_progress");
   }
-  assert.deepEqual(statusManifest.deliveryWorkstreams.map((workstream) => workstream.completion), [62.5, 0, 66, 20]);
+  assert.deepEqual(statusManifest.deliveryWorkstreams.map((workstream) => workstream.completion), [75, 0, 66, 60]);
   assert.match(statusManifest.deliveryWorkstreams[0].detail, /tracker migration/);
   assert.match(statusManifest.deliveryWorkstreams[2].detail, /Six of nine/);
 
@@ -121,7 +121,7 @@ test("status manifest is a fixed, conservative 100-point audit", () => {
     (sum, task) => ({ min: sum.min + (task.soakHours?.min ?? 0), max: sum.max + (task.soakHours?.max ?? 0) }),
     { min: 0, max: 0 },
   );
-  assert.deepEqual(active, { min: 134, max: 252 });
+  assert.deepEqual(active, { min: 131, max: 247 });
   assert.deepEqual(deferred, { min: 84, max: 168 });
   assert.deepEqual(soak, { min: 48, max: 72 });
   assert.ok(Object.values(statusManifest.evidenceSources).every((url) => url.startsWith("https://")));
@@ -144,9 +144,9 @@ test("status page renders the exact score, ETA boundaries, filters, and methodol
   const response = await render("/status");
   const html = await response.text();
   const cleanHtml = html.replaceAll("<!-- -->", "");
-  assert.match(cleanHtml, /16%/);
-  assert.match(cleanHtml, /16\s*\/\s*100/);
-  assert.match(cleanHtml, /134[–-]252/);
+  assert.match(cleanHtml, /17%/);
+  assert.match(cleanHtml, /17\s*\/\s*100/);
+  assert.match(cleanHtml, /131[–-]247/);
   assert.match(cleanHtml, /External wait/);
   assert.match(cleanHtml, /Deferred/);
   assert.match(cleanHtml, /Every 6 hours and on demand/);
