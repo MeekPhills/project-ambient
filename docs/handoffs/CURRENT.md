@@ -22,7 +22,7 @@ Issue #17 remains an independent draft evidence stream in its own worktree and o
 
 ## Next exact action
 
-Finish the re-review correction at commit `9004b26736479aae6aee44d20aa72799fecc177d`: make the in-repo JSON Schema evaluator fail closed on unsupported schema keywords, prove that behavior with a negative test, refresh this checkpoint, then request final non-author approval before making PR #26 ready.
+Await final non-author approval of commit `88411aec574b65020d61875e13e3b4dc111e8f80` and final-head GitHub gates. If both pass, mark PR #26 ready, merge, then update and deploy the canonical tracker before closing #20 or awarding its M0 point.
 
 ## Read in this order
 
@@ -69,6 +69,7 @@ Finish the re-review correction at commit `9004b26736479aae6aee44d20aa72799fecc1
 - Non-author review at `17ac6b7`: **changes required**; corrections are in progress and no credit is claimed.
 - Correction commit `9004b26736479aae6aee44d20aa72799fecc177d`: published-schema evaluation, 5 fixtures × 20 capabilities, 7 negative/compatibility cases, 3 embedded/linked/digest checks, conservative macOS claim states, release preflight/CI hook, and the declared worktree path all pass.
 - Re-review at `9004b26`: release-binding, evidence, release-hook, and worktree findings resolved; final approval remains pending a fail-closed schema-keyword audit and this current checkpoint.
+- Final correction commit `88411aec574b65020d61875e13e3b4dc111e8f80`: fail-closed schema-keyword audit, unsupported-keyword negative, linked-claim identity check, wrong-platform negative, and refreshed checkpoint pass locally; final re-review is pending.
 - Required corrected smoke: `node script/validate_capabilities.mjs`
 - Required hygiene: `git diff --check`
 - Release-link behavior must be tested without publishing a release; `script/verify_release.sh` and release-integrity CI must invoke the focused preflight.
