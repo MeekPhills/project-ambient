@@ -6,58 +6,53 @@
 
 **Branch:** `verify/m0-repository-baseline`
 
-**Verified commit:** `e46979ec163239887c2eff04edbf7bb3109dbd4d`
+**Verified product source:** PR [#34](https://github.com/MeekPhills/project-ambient/pull/34) head `a62b5d41820cecb8047abfa21aee8422adf04c09`, merged as `2f0b925c950db9d145a3949b3fbd53761ab21f88`
 
 **Issue:** [#17 — Verify repository baseline and release-integrity commands](https://github.com/MeekPhills/project-ambient/issues/17)
 
 ## Result
 
-The locked JavaScript installs and focused MCP and site checks are reproducible on this machine. The documented native and aggregate release baselines are **not yet green**: SwiftPM repeatedly stalled before compilation with its default shared manifest/cache behavior, and the bounded local-cache diagnostic reached compilation but stopped after Swift reported that `AmbientEngine.swift` had changed during the build. Git showed a clean worktree and the file modification time predated the build, so this run does not establish a product-source regression.
+The repository baseline is reproducible on clean hosted runners. The exact documented Swift build and test commands pass, the MCP service passes with a disposable PostgreSQL service, the site builds and passes every rendered-route test, and the aggregate verifier completes on macOS with the built `ambientctl` contract. The universal unsigned release candidate, checksums, dependency locks, SBOM, source archive, native app archive, MCP archives, capability contract, rights contract, Aerial parity contract, Homebrew contract, secret scan, and CodeQL gates pass.
 
-No completion or production-readiness credit should be awarded from this report. Issue #17 remains a release-integrity gate until the Swift build and aggregate verifier pass on a machine with adequate free space and a stable SwiftPM environment.
+The earlier local failure is retained below as environmental evidence, not rewritten as a product failure. That run began with about 1.8 GiB free, reached about 352 MiB, and showed unstable SwiftPM cache behavior. No second heavy local build was launched on the still-constrained Mac. Fresh hosted macOS and Linux runs closed the unproven native, PostgreSQL, and aggregate-command gaps.
 
-## Environment
+This report does not claim signing, notarization, store acceptance, a GA tag, strict Aerial GA parity, or the M4 energy soak. The 20 site dependency advisories and npm install-script policy are explicitly owned by [#36](https://github.com/MeekPhills/project-ambient/issues/36); they remain release-security work and receive no hidden completion credit.
 
-| Component | Observed value |
-| --- | --- |
-| Host | Apple silicon (`arm64`) |
-| macOS | 26.5.2 (25F84) |
-| Xcode | 26.6 (17F113) |
-| Swift | 6.3.3 (`swiftlang-6.3.3.1.3`) |
-| Node.js | 24.18.0 |
-| npm | 11.16.0 |
-| Git | 2.50.1 (Apple Git-155) |
-| Initial free space before installs | about 1.8 GiB |
-| Lowest observed free space | about 352 MiB |
+## Clean-runner evidence
 
-The host satisfies the documented minimum versions, but the run began under severe disk pressure. Generated dependency/build directories were left in place; no cleanup or destructive operation was performed.
-
-## Command evidence
-
-| Command | Result | Evidence / qualification |
+| Gate | Exact evidence | Result |
 | --- | --- | --- |
-| `npm --prefix services/mcp ci` | PASS | Installed 124 packages; npm reported 0 vulnerabilities. npm 11 warned that install scripts for `esbuild@0.28.2` and `fsevents@2.3.3` were not covered by `allowScripts`. |
-| `npm --prefix services/mcp run check` | PASS | TypeScript no-emit check exited 0. |
-| `npm --prefix services/mcp test` | PASS with expected skips | The restricted run failed ten loopback-listener tests with `listen EPERM 127.0.0.1`. Re-running the exact test command with local-loopback permission passed 94, failed 0, skipped 2. The skips are the built-native `ambientctl` contract smoke and live PostgreSQL suite without `TEST_POSTGRES_URL`. |
-| `npm --prefix apps/site ci` | PASS with security gap | Installed 471 packages. npm reported 20 known dependency vulnerabilities: 1 low, 4 moderate, and 15 high. No automatic or forced dependency mutation was attempted. npm 11 also reported seven packages with unapproved install scripts. |
-| `npm --prefix apps/site run build` | PASS | Vinext built all five environments and listed the expected routes. It classified several routes as unknown because its static analysis cannot detect all dynamic API usage; this was emitted as an informational limitation. |
-| `npm --prefix apps/site test` | PASS | The script rebuilt the site, then passed 12 of 12 rendered-route/status tests with 0 skips. |
-| `swift build --package-path apps/macos` | BLOCKED | In the restricted environment it failed because SwiftPM/Clang could not write user cache paths. With normal cache access, the exact command remained idle for more than four minutes before compilation and was interrupted. |
-| `./script/verify_release.sh` | BLOCKED | The verifier reached its first Swift build command and then remained idle before compilation. A second run with normal macOS process/cache access behaved the same and was interrupted. MCP, site, and secret-scan stages therefore did not execute inside the aggregate script. |
-| bounded Swift diagnostic | FAIL, environment suspected | `swift build --package-path apps/macos --disable-sandbox --manifest-cache local --disable-dependency-cache --cache-path apps/macos/.build/codex-cache --config-path apps/macos/.build/codex-config --security-path apps/macos/.build/codex-security --jobs 2` bypassed the shared-cache stall and reached steps 15/21, then failed twice with `AmbientEngine.swift was modified during the build`. `git status` remained clean and the file timestamp predated the build. |
+| macOS build | `swift build --package-path apps/macos` in [CI run 31753645599](https://github.com/MeekPhills/project-ambient/actions/runs/31753645599), job `macOS companion` | PASS; build completed on `macos-15`. |
+| macOS tests | `swift test --package-path apps/macos` in the same job | PASS; 34 tests, 0 failures. |
+| MCP install/check/test | `npm ci`, `npm run check`, and `npm test` in the same CI run, job `MCP service`, with pinned PostgreSQL 17.6 | PASS; 100 tests, 99 passed, 0 failed, 1 expected skip because `ambientctl` is a macOS binary. The disposable PostgreSQL integration suite ran. |
+| Site install/build/render | `npm ci` and `npm test` in the same CI run, job `Launch site` | PASS; production build plus 12 of 12 rendered-route/status tests. |
+| Aggregate release verifier | `./script/verify_release.sh` inside the package-candidate path in [Release integrity run 31753645580](https://github.com/MeekPhills/project-ambient/actions/runs/31753645580) | PASS; printed `Project Ambient release verification passed.` |
+| Native MCP envelope | MCP tests inside the aggregate macOS verifier | PASS; built `ambientctl` exercised all ten adapter operations. |
+| Aggregate MCP suite | MCP tests inside the aggregate macOS verifier | PASS; 96 tests, 95 passed, 0 failed, 1 expected PostgreSQL skip because that job has no database service. PostgreSQL coverage is supplied by the separate pinned Linux CI service above. |
+| Static contracts | Release-integrity static job | PASS; shell syntax, Homebrew, lockfile plans, SBOM generator syntax, capabilities, rights, and the 145-row Aerial parity contract. Strict Aerial `--ga` is intentionally tag-gated and remains closed. |
+| Universal candidate | Release-integrity package job | PASS; unsigned candidate plus release-manifest, dependency locks, SBOM, checksums, source/native/MCP/marketplace archives. Candidate mode was correctly ineligible for signing or publication. |
+| Security automation | `Secret scan` and [CodeQL run 31753645600](https://github.com/MeekPhills/project-ambient/actions/runs/31753645600) | PASS. |
 
-## Release-integrity gaps and risks
+The two MCP jobs deliberately provide complementary platform evidence: the Linux job supplies a real disposable PostgreSQL service and skips the macOS-only executable; the aggregate macOS job builds and exercises `ambientctl` and skips the unavailable PostgreSQL service. Together they cover both formerly skipped integration paths without introducing production credentials.
 
-1. **High — native/aggregate baseline is unproven.** The release verifier cannot earn a green result until Swift build and test complete. Owner: native/release integrator. Mitigation: repeat on a clean machine or stable CI runner with sufficient disk, using the exact documented command first; preserve logs and process samples if it stalls.
-2. **High — website dependency audit is not release-clean.** A locked clean install reports 15 high-severity advisories. Owner: site dependency maintainer plus security reviewer. Mitigation: triage the audit tree in a separate issue, update dependencies through reviewed changes, and rerun build/tests and `npm audit`. Do not use `npm audit fix --force` as an unattended release step.
-3. **Medium — npm install-script policy is unresolved.** npm 11 withheld or flagged install scripts in both workspaces. Owner: release/security maintainer. Mitigation: inspect the exact transitive packages and record a reviewed `allowScripts` policy or prove the packages function without those scripts.
-4. **Medium — two MCP integration suites remain external gates.** The native envelope smoke awaits a built `ambientctl`, and the real PostgreSQL suite requires a disposable `TEST_POSTGRES_URL` credential with documented test-only privileges. Owner: native/MCP QA. Mitigation: run both only in an isolated test environment; never substitute production credentials.
-5. **Medium — severe disk pressure can invalidate build evidence.** The host reached about 352 MiB free during the Swift attempts. Owner: QA/operator. Mitigation: require and record a conservative free-space preflight on the next clean run before dependency installation or compilation.
-6. **Low — sandbox-only failures can look like product regressions.** Loopback tests and default Swift caches require capabilities denied by the restricted runner. Owner: QA. Mitigation: retain the restricted failure as diagnostic evidence, then rerun the exact command with only the required permission and report both outcomes as done here.
+## Local diagnostic retained for provenance
+
+The first local attempt used macOS 26.5.2, Xcode 26.6, Swift 6.3.3, Node 24.18, and npm 11.16. Its JavaScript results were valid: MCP installed 124 packages with 0 reported vulnerabilities; TypeScript passed; 94 MCP tests passed with 2 environment-dependent skips; the site built and passed 12 of 12 tests. The site install reported 20 advisories: 1 low, 4 moderate, and 15 high.
+
+The exact local Swift command first stalled before compilation. A bounded local-cache diagnostic reached compile step 15/21, then Swift reported `AmbientEngine.swift was modified during the build` while Git remained clean and the file timestamp predated the run. The original linked worktree is preserved read-only as an evidence snapshot. Its Git index later became unresponsive, so the report resumed in the clean declared replacement clone `../project-ambient-m0-baseline-integrity`; neither checkout was reset or cleaned, and the protected iCloud checkout was untouched.
+
+## Risk disposition
+
+1. **Native and aggregate baseline — closed for M0.** Fresh macOS runners passed the exact native commands and aggregate verifier. Owner: Sol integrator. Evidence: PR #34 CI and Release integrity runs above.
+2. **Site dependency advisories — open, no hidden credit.** A clean install reports 15 high, 4 moderate, and 1 low advisories. Owner: site dependency maintainer; security reviewer approves disposition. Follow-up: [#36](https://github.com/MeekPhills/project-ambient/issues/36).
+3. **npm install-script policy — open, no hidden credit.** npm 11 identified packages without an explicit script policy. Owner and acceptance test: [#36](https://github.com/MeekPhills/project-ambient/issues/36). No unattended `npm audit fix --force` is authorized.
+4. **Native/PostgreSQL combined coverage — closed with split-runner evidence.** The pinned Linux service passes PostgreSQL tests; the macOS aggregate passes the built-native adapter. Owner: MCP/native QA. Neither requires a production credential.
+5. **Local disk pressure — mitigated operationally.** The failed local attempt remains non-authoritative. Owner: QA/operator. Heavy native builds require a free-space preflight and only one heavy workload at a time.
+6. **Signing, publication, strict parity, and soak — out of this task.** These remain explicit M3/M4/M8 gates and receive zero #17 credit.
 
 ## Reproduction smoke test
 
-From a clean checkout of the verified commit on macOS with Xcode/Swift and Node/npm versions satisfying the repository requirements:
+From a clean checkout on macOS with the repository-supported Xcode/Swift and Node/npm versions:
 
 ```bash
 git status --short
@@ -68,15 +63,20 @@ npm --prefix apps/site test
 git status --short
 ```
 
-Expected success evidence:
+Expected evidence:
 
-- both `git status --short` calls are empty;
-- the aggregate verifier completes Swift build/test, MCP check/test/build, site build, and secret scan, then prints `Project Ambient release verification passed.`;
-- MCP loopback tests run with local bind permission;
-- the native contract test runs after `ambientctl` is built;
+- both Git status checks are empty;
+- the aggregate verifier completes Swift build/test, capability/rights/parity validation, MCP check/test/build, site build, and secret scan, then prints `Project Ambient release verification passed.`;
+- the built native adapter test passes on macOS;
 - the site reports 12 passing rendered/status tests;
-- npm audit findings and install-script policy are separately dispositioned rather than hidden by passing builds.
+- the companion Linux CI job passes the disposable PostgreSQL suite;
+- locked release artifacts pass checksum, SBOM, source-identity, and manifest verification;
+- dependency advisories and install-script policy remain visible through #36 rather than being hidden by passing builds.
+
+## Definition-of-done decision
+
+The #17 baseline artifact and command evidence are complete, subject to non-author review and same-head PR CI. The earlier machine-capacity failure is resolved by clean-runner evidence. Merge this report only after review confirms every claim and all PR checks pass; only then may the canonical tracker award the one M0 baseline point. Final #10 integration, M4/chat implementation, strict parity, signing, publishing, and the 48–72 hour soak remain separate zero-credit gates.
 
 ## Exact next action
 
-Run the reproduction smoke test on a clean machine or CI runner with ample free space. If the exact Swift command stalls again, capture a process sample and SwiftPM diagnostic log, then open a dedicated toolchain/build-system issue without changing product code. If it passes, attach the full aggregate output to #17 and route the site audit and npm install-script findings to owned security/dependency issues before asking for #17 acceptance.
+Obtain a non-author review of this report and its linked run evidence. Push the rebased report, require same-head CI and CodeQL on PR #24, and merge only if the review and checks pass. Then activate exactly the one #17 M0 point through #10, run the complete M0 validator/risk/cold-start gate, and keep every downstream product requirement at zero until implemented and measured.
