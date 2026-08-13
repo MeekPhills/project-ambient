@@ -6,9 +6,9 @@
 
 **Repository:** https://github.com/MeekPhills/project-ambient
 
-**Parent baseline for this handoff:** `846cef807eceaaa11926bae290021c26475c49fd`. After PR #32 merges, resolve and branch from the then-current `main`; never assume this parent remains the head.
+**Parent baseline for this handoff:** `60d2a251661cdbdb4ccbe20ede427dc2f326619d` on `main`, including merged PR #32.
 
-**Working branch:** create an isolated `codex/18-aerial-parity-matrix` branch/worktree from current `main` before editing
+**Working branch:** `docs/18-aerial-parity-matrix` in the isolated full clone `../project-ambient-m0-aerial-parity`
 
 **Current milestone:** M0 — Governance and architecture
 
@@ -20,7 +20,7 @@ Issue #17 remains an independent draft evidence stream in its own worktree and o
 
 ## Next exact action
 
-Start #18 in a new isolated worktree: inventory the accepted Aerial feature universe and convert every row into a machine-validated owner, milestone, issue, evidence source/version, implementation status, automated/manual test, and explicit exception record. Preserve semantic parity without copying Aerial's implementation or visual identity. Do not award the M0 point until the complete matrix, validator, non-author review, and merge gate pass.
+Require and verify clean-runner CI on PR #33 at the exact current head, then confirm required review against that same head. After green CI and review, merge and run the normal tracker activation gate. Do not award the M0 point before those gates pass.
 
 ## Read in this order
 
@@ -29,8 +29,9 @@ Start #18 in a new isolated worktree: inventory the accepted Aerial feature univ
 3. `docs/decisions/0001-m0-launch-boundaries.md`
 4. `docs/product/FULL_PLATFORM_LAUNCH_SPEC.md`
 5. `docs/product/implementation-plan.json` task `m0-aerial-parity`
-6. Aerial's versioned primary evidence: [4.0.14 source](https://github.com/AerialScreensaver/Aerial/tree/v4.0.14), [4.1.0beta13 source](https://github.com/AerialScreensaver/Aerial/tree/v4.1.0beta13), [official features](https://aerialscreensaver.github.io/features/), [official FAQ](https://aerialscreensaver.github.io/faq/), [release notes](https://aerialscreensaver.github.io/release-notes/), and [expansions](https://aerialscreensaver.github.io/expansions/). Freeze the exact tag/commit and retrieval date in every matrix evidence row; use repository source over remembered chat claims.
-7. `schemas/capabilities/` and `apps/site/app/status/status-manifest.json`
+6. `docs/product/aerial-parity.json`, `schemas/aerial-parity/v1/aerial-parity.schema.json`, and `script/validate_aerial_parity.mjs`
+7. Aerial's versioned primary evidence: [4.0.14 source](https://github.com/AerialScreensaver/Aerial/tree/v4.0.14), [4.1.0beta13 source](https://github.com/AerialScreensaver/Aerial/tree/v4.1.0beta13), [official features](https://aerialscreensaver.github.io/features/), [official FAQ](https://aerialscreensaver.github.io/faq/), [release notes](https://aerialscreensaver.github.io/release-notes/), and [expansions](https://aerialscreensaver.github.io/expansions/). Matrix evidence freezes exact tag/commit and retrieval date; repository source takes precedence over remembered chat claims.
+8. `schemas/capabilities/` and `apps/site/app/status/status-manifest.json`
 
 ## Accepted evidence
 
@@ -87,6 +88,20 @@ Start #18 in a new isolated worktree: inventory the accepted Aerial feature univ
 1. #18 — owned Aerial parity matrix (**current**)
 2. #17 — repository/release baseline (**independent draft; review pending**)
 3. #10 integration — validators, cold-start reconstruction, tracker/handoff reconciliation, and M1 entry gate
+
+## #18 working checkpoint
+
+- The first partial-clone worktree failed hydration and appeared to stage tracked files as deleted. It was never committed or pushed. Its isolated local branch was removed, and the protected dirty checkout remains untouched.
+- Clean full clone: `../project-ambient-m0-aerial-parity`; branch `docs/18-aerial-parity-matrix`; parent `60d2a251661cdbdb4ccbe20ede427dc2f326619d`.
+- Frozen upstream baselines: Aerial `v4.0.14` at `15f9c35b9db69795325eab608fa00f11ef13a0a3`; `v4.1.0beta13` at `0083c721dcc0fa6df55a0a011678c11493ad2810`; official gh-pages evidence at `a9c94622a2db978bdfaa9a72a7228dbad6019573`; retrieved 2026-08-13.
+- Canonical matrix: 145 rows across all 19 accepted domains and Static, Hybrid, and Advanced Live. Every row has owner, milestone, implementation task, issue gate, planned implementation state, version-bound evidence, test, and exception where required. Explicit all-row resource and chat conformance suites map every capability to the zero-credit contracts #28 and #29; both suites carry status and durable evidence fields and must pass GA.
+- Explicit exceptions: no arbitrary shell execution from overlay messages; no system-wide audio takeover. Typed local actions/files and app-scoped audio are the safer alternatives.
+- First non-author review: **changes required**. The corrected matrix adds per-app occlusion exclusions, legacy migration and rerunnable defaults, VoiceOver announcements, tags/energy/rights filters, display flip, dip/zoom transitions, inspectable network domains, integration consent, settings export/delete, hardware decode, and broken-item handling. Issue #18 ownership was durably amended to include `docs/product/FULL_PLATFORM_LAUNCH_SPEC.md` in [checkpoint 5287257989](https://github.com/MeekPhills/project-ambient/issues/18#issuecomment-5287257989).
+- `node script/validate_aerial_parity.mjs`: passed — schema v1, 145 rows, 19 domains, three directions, 26 evidence records, 23 negative/fail-closed checks, and a synthetic future-GA pass.
+- Current `node script/validate_aerial_parity.mjs --ga`: intentionally fails closed with 296 findings because both cross-cutting suites, all implementation/test states, and both exceptions are still planned or pending. The future tag gate requires both #28/#29 suites passed with durable evidence, every row verified, every test passed, and every exception approved with durable evidence.
+- `script/verify_release.sh` and release-integrity CI invoke contract validation; GA-tag CI invokes `--ga`. Workflow paths include the matrix, its schema, and the linked launch spec. Full aggregate execution remains a clean-runner merge gate; this checkpoint awards no implementation or tracker credit.
+- Final non-author review of the current filesystem: **approved**. It independently reran contract and strict-GA behavior, shell syntax, and diff checks; all prior coverage, origin, baseline, cross-cutting, exception, workflow, claim-honesty, and ownership findings are closed.
+- Content commit `e75c7f34b6f72d1d53c1e2335ec8f73db6c54c8c`; first checkpoint `db190b48b453e57c1f6c783fe586f990f284cd3b`; branch pushed and draft PR #33 open. This factual checkpoint follows; clean-runner CI, merge, and tracker activation are pending.
 
 ## Stop protocol
 

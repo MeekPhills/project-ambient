@@ -22,6 +22,10 @@ run swift build "${SWIFT_FLAGS[@]}"
 run swift test "${SWIFT_FLAGS[@]}"
 run node "$ROOT_DIR/script/validate_capabilities.mjs"
 run node "$ROOT_DIR/script/validate_rights.mjs"
+run node "$ROOT_DIR/script/validate_aerial_parity.mjs"
+if [[ "${PROJECT_AMBIENT_GA:-0}" == "1" ]]; then
+  run node "$ROOT_DIR/script/validate_aerial_parity.mjs" --ga
+fi
 
 if [[ -d "$ROOT_DIR/services/mcp/node_modules" ]]; then
   run npm --prefix "$ROOT_DIR/services/mcp" run check
