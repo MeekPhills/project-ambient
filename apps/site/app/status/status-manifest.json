@@ -3,9 +3,9 @@
   "project": "Project Ambient",
   "release": "0.1.0-alpha",
   "totalWeight": 100,
-  "updatedAt": "2026-08-13T17:56:00Z",
-  "evidenceAsOf": "2026-08-13T17:56:00Z",
-  "lastVerifiedAt": "2026-08-13T17:56:00Z",
+  "updatedAt": "2026-08-13T19:14:00Z",
+  "evidenceAsOf": "2026-08-13T19:14:00Z",
+  "lastVerifiedAt": "2026-08-13T19:14:00Z",
   "refreshSeconds": 60,
   "fieldDefaults": {
     "deferred": false,
@@ -29,7 +29,7 @@
     "decision": "docs/decisions/0001-m0-launch-boundaries.md",
     "change": "The materially expanded Static, Hybrid, Managed, cross-platform, mobile, Managed Preview, and GA scope replaces the narrow 45/45/10 phase model with M0–M8 weights 8/14/12/20/14/12/7/6/7.",
     "creditRule": "Only accepted artifacts with smoke evidence were remapped. Blocked and not-started work received zero; live health and draft/submission state received zero. This manifest is the only current weighted score.",
-    "activationGate": "The m0-dependency-tracker task and 15/100 schema-v3 score are final-state, merge-conditional content. Until issue #16 is reviewed, merged, and deployed, the public schema-v2 49.75/100 audit remains current.",
+    "activationGate": "Schema v3 activated after issue #16 was reviewed, merged, and deployed. Subsequent accepted evidence updates this same tracker; the schema-v2 49.75/100 audit remains immutable history.",
     "priorManifest": "https://github.com/MeekPhills/project-ambient/blob/e40cf5aa62f9f30180ff743023ceadbf1ca3df9e/apps/site/app/status/status-manifest.json",
     "creditMappings": [
       {
@@ -127,7 +127,7 @@
     }
   ],
   "methodology": {
-    "formula": "Overall completion is earned task weight divided by the one 100-point M0–M8 plan. Current accepted evidence earns 15/100: M0 3/8, M1 5/14, M2 1/12, M3 0.5/20, M4 3/14, M5 0/12, M6 0/7, M7 0.5/6, and M8 2/7.",
+    "formula": "Overall completion is earned task weight divided by the one 100-point M0–M8 plan. Current accepted evidence earns 16/100: M0 4/8, M1 5/14, M2 1/12, M3 0.5/20, M4 3/14, M5 0/12, M6 0/7, M7 0.5/6, and M8 2/7.",
     "statusCredit": {
       "complete": "Earned points equal task weight only after accepted artifact, smoke evidence, and required review",
       "in_progress": "Only explicit accepted partial credit; this migration assigns none to incomplete expanded-scope tasks",
@@ -135,7 +135,7 @@
       "not_started": "0 points"
     },
     "approvalRule": "Account, identity, submission, store, payment, public-launch, and other owner gates stay at zero until actually cleared. Prepared engineering is credited only in a separately weighted task.",
-    "etaRule": "The active hands-on range remains the accepted 138–259 hour planning baseline until milestone task evidence supports a re-estimate. Microsoft enterprise distribution and Google A2A remain outside the weighted scope.",
+    "etaRule": "The accepted capability contract removes its 4–7 hour task estimate from the prior active range, leaving 134–252 hands-on hours. Microsoft enterprise distribution and Google A2A remain outside the weighted scope.",
     "timeRule": "Hands-on effort, the separate 48–72 hour clean-machine/energy soak, deferred initiatives, recurring operations, and external waits are reported separately.",
     "healthRule": "Public endpoint checks are guardrails only. Their results never change earned completion points."
   },
@@ -232,12 +232,13 @@
       "owner": "Sol · medium",
       "name": "M0 program integration",
       "state": "in_progress",
-      "completion": 50,
-      "detail": "Launch decisions and the canonical dependency/tracker migration are accepted in their own merge gates; baseline, rights, capability, parity, and final M0 integration remain.",
+      "completion": 62.5,
+      "detail": "Launch decisions, the canonical dependency/tracker migration, and the platform capability contract are accepted; baseline, rights, parity, and final M0 integration remain.",
       "chunks": [
         { "label": "Launch decisions", "share": 25, "earnedShare": 25, "status": "complete" },
         { "label": "Dependency and tracker migration", "share": 25, "earnedShare": 25, "status": "complete" },
-        { "label": "Remaining M0 artifacts", "share": 50, "earnedShare": 0, "status": "in_progress" }
+        { "label": "Platform capability contract", "share": 12.5, "earnedShare": 12.5, "status": "complete" },
+        { "label": "Remaining M0 artifacts", "share": 37.5, "earnedShare": 0, "status": "in_progress" }
       ]
     },
     {
@@ -292,13 +293,13 @@
       "name": "M0 — Governance and architecture",
       "summary": "Decisions, baseline, contracts, parity, rights, dependency order, tracker migration, and cold-start continuity.",
       "weight": 8,
-      "handsOnRemaining": { "min": 20, "max": 35 },
+      "handsOnRemaining": { "min": 16, "max": 28 },
       "tasks": [
         { "id": "m0-design-governance", "name": "Accepted launch boundaries and agent continuity", "status": "complete", "weight": 1.5, "earnedWeight": 1.5, "hoursRemaining": { "min": 0, "max": 0 }, "evidence": "PR #22 merged after non-author review and green native, MCP, site, secret-scan, and CodeQL jobs; issue #19 closed." },
         { "id": "m0-dependency-tracker", "name": "Dependency plan and canonical tracker migration", "status": "complete", "weight": 1.5, "earnedWeight": 1.5, "hoursRemaining": { "min": 0, "max": 0 }, "evidence": "Issue #16 defines 41 machine-validated tasks, the first vertical slice, exact milestone weights, and schema-v3 historical migration; credit becomes accepted with this merge." },
         { "id": "m0-baseline-integrity", "name": "Repository baseline and release integrity", "status": "in_progress", "weight": 1, "earnedWeight": 0, "hoursRemaining": { "min": 3, "max": 5 }, "evidence": "Issue #17 is executing independently; results earn zero until its report, review, and merge gate pass." },
         { "id": "m0-licensing-rights", "name": "Software, media-rights, and commercial boundaries", "status": "not_started", "weight": 1, "earnedWeight": 0, "hoursRemaining": { "min": 3, "max": 5 }, "evidence": "ADR 0001 sets direction; issue #21 must add versioned rights fields and detailed boundaries with counsel-required labels." },
-        { "id": "m0-capability-contract", "name": "Versioned platform capability contract", "status": "not_started", "weight": 1, "earnedWeight": 0, "hoursRemaining": { "min": 4, "max": 7 }, "evidence": "Issue #20 is open; no schema/example credit is claimed." },
+        { "id": "m0-capability-contract", "name": "Versioned platform capability contract", "status": "complete", "weight": 1, "earnedWeight": 1, "hoursRemaining": { "min": 0, "max": 0 }, "evidence": "PR #26 merged at af600850 after non-author approval and green CI, CodeQL, release preflight, and universal release-candidate verification. Schema v1 validates five platform fixtures, explicit evidence/explanations, and embedded or linked release bindings." },
         { "id": "m0-aerial-parity", "name": "Owned Aerial parity matrix", "status": "not_started", "weight": 1, "earnedWeight": 0, "hoursRemaining": { "min": 6, "max": 10 }, "evidence": "Issue #18 is open; no parity row receives credit before ownership, evidence, test, and exception validation." },
         { "id": "m0-integration", "name": "M0 integration and cold-start gate", "status": "not_started", "weight": 1, "earnedWeight": 0, "hoursRemaining": { "min": 4, "max": 8 }, "evidence": "Requires #17, #21, #20, and #18 plus the full repository/GitHub reconstruction smoke." }
       ]
