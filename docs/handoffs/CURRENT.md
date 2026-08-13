@@ -2,33 +2,33 @@
 
 **Updated:** 2026-08-13
 
-**Program state:** M0 launch boundaries, dependency/tracker migration, the versioned capability contract, and the rights/commercial boundary are accepted. The canonical production tracker is live at 17/100. Product implementation remains gated by the repository baseline, owned Aerial parity matrix, and final M0 integration gate.
+**Program state:** M0 launch boundaries, dependency/tracker migration, the versioned capability contract, rights/commercial boundary, and exhaustive Aerial parity contract are accepted. Reviewed source evidence now supports 18/100, but production remains at 17/100 until this focused tracker update is reviewed, merged, deployed, and publicly verified. Product implementation remains gated by the repository baseline and final M0 integration gate.
 
 **Repository:** https://github.com/MeekPhills/project-ambient
 
-**Parent baseline for this handoff:** `60d2a251661cdbdb4ccbe20ede427dc2f326619d` on `main`, including merged PR #32.
+**Parent baseline for this handoff:** `7f3e97f0f30f1e9007d80fe82cc1feeeb7aaddb5` on `main`, including merged PR #33.
 
-**Working branch:** `docs/18-aerial-parity-matrix` in the isolated full clone `../project-ambient-m0-aerial-parity`
+**Working branch:** `chore/10-m0-integration` in the isolated full clone `../project-ambient-m0-integration`
 
 **Current milestone:** M0 — Governance and architecture
 
 **Milestone epic:** #10 — https://github.com/MeekPhills/project-ambient/issues/10
 
-**Only integration-active issue:** #18 — https://github.com/MeekPhills/project-ambient/issues/18
+**Only integration-active issue:** #10 — https://github.com/MeekPhills/project-ambient/issues/10
 
-Issue #17 remains an independent draft evidence stream in its own worktree and owns only `docs/reports/m0-issue-17-repository-baseline.md`. It has zero accepted tracker credit and does not share edit ownership with #18. Issues #28 and #29 are zero-weight child contracts for the later base-M4 performance gate and local-first chat control plane; neither is active implementation work during M0.
+Issue #17 remains an independent draft evidence stream in its own worktree and owns only `docs/reports/m0-issue-17-repository-baseline.md`. It has zero accepted tracker credit and does not share edit ownership with #10. Issues #28 and #29 are zero-weight child contracts for the later base-M4 performance gate and local-first chat control plane; neither is active implementation work during M0.
 
 ## Next exact action
 
-Require and verify clean-runner CI on PR #33 at the exact current head, then confirm required review against that same head. After green CI and review, merge and run the normal tracker activation gate. Do not award the M0 point before those gates pass.
+Validate this 18/100 tracker activation, obtain exact-head non-author review, open a focused #10 draft PR, require clean-runner CI, merge, deploy the exact merge as the next Sites version, and verify `/status`, `/status/manifest`, and `/api/status`. Then resume #17 from its isolated evidence branch; do not award #17 or #10 credit until their complete DoDs pass.
 
 ## Read in this order
 
 1. `CLAUDE.md`
-2. This file and issue #18
+2. This file and issue #10
 3. `docs/decisions/0001-m0-launch-boundaries.md`
 4. `docs/product/FULL_PLATFORM_LAUNCH_SPEC.md`
-5. `docs/product/implementation-plan.json` task `m0-aerial-parity`
+5. `docs/product/implementation-plan.json` tasks `m0-baseline-integrity`, `m0-aerial-parity`, and `m0-integration`
 6. `docs/product/aerial-parity.json`, `schemas/aerial-parity/v1/aerial-parity.schema.json`, and `script/validate_aerial_parity.mjs`
 7. Aerial's versioned primary evidence: [4.0.14 source](https://github.com/AerialScreensaver/Aerial/tree/v4.0.14), [4.1.0beta13 source](https://github.com/AerialScreensaver/Aerial/tree/v4.1.0beta13), [official features](https://aerialscreensaver.github.io/features/), [official FAQ](https://aerialscreensaver.github.io/faq/), [release notes](https://aerialscreensaver.github.io/release-notes/), and [expansions](https://aerialscreensaver.github.io/expansions/). Matrix evidence freezes exact tag/commit and retrieval date; repository source takes precedence over remembered chat claims.
 8. `schemas/capabilities/` and `apps/site/app/status/status-manifest.json`
@@ -42,8 +42,9 @@ Require and verify clean-runner CI on PR #33 at the exact current head, then con
 - PR #30 merged as `d958be915648e7b5586b882f9c9e6694610a01dc` after non-author approval and green CI, CodeQL, release integrity, and rights-contract validation.
 - Production tracker: https://project-ambient.meekphillies.chatgpt.site/status
 - PR #31 merged as `846cef807eceaaa11926bae290021c26475c49fd`; exact subtree source `dfc9789f18e4378a1d84ec1b8adadffea4cd8c04` deployed as Sites version 17.
-- Current readiness: 17/100 — M0 5/8, M1 5/14, M2 1/12, M3 0.5/20, M4 3/14, M5 0/12, M6 0/7, M7 0.5/6, M8 2/7.
-- Public smoke passed: `/status` renders 17/100 and 131–247 active hours; `/status/manifest` returns schema v3, exact 17/100 arithmetic, M0 5/8, and immutable 49.75 history; `/api/status?deployment=17` returns seven operational checks.
+- PR #33 merged as `7f3e97f0f30f1e9007d80fe82cc1feeeb7aaddb5` after exact-head non-author approval and green macOS, MCP, site, secret-scan, release-integrity, and CodeQL jobs. Issue #18 is closed.
+- Merge-final readiness in this activation change: 18/100 — M0 6/8, M1 5/14, M2 1/12, M3 0.5/20, M4 3/14, M5 0/12, M6 0/7, M7 0.5/6, M8 2/7; active hands-on 125–237 hours and separate 48–72 hour soak.
+- Current production smoke still shows Sites version 17 at 17/100 and 131–247 active hours. The 18/100 figures become canonical only after this exact change passes review, merge, deployment, and public endpoint verification.
 
 ## Issue #21 definition of done
 
@@ -58,13 +59,13 @@ Require and verify clean-runner CI on PR #33 at the exact current head, then con
 
 ## New cross-cutting owner requirements
 
-- #28 makes the base 2024 M4 Mac mini (16 GB/256 GB) the reference macOS performance tier with enforceable CPU, memory, wakeup, decoder, network, frame-pacing, and 48–72 hour soak gates.
+- #28 makes the base 2024 M4 Mac mini (16 GB/256 GB) the reference macOS performance tier with enforceable CPU, memory, wakeup, GPU/decoder, network, storage-churn, frame-pacing, and 48–72 hour soak gates.
 - #29 requires an in-app local-first chat control plane over the same typed command bus as direct settings. The default deterministic mode works offline without a model server; optional OS-provided or self-hosted inference may never bypass preview, policy, verification, undo, or resource attribution.
 - These contracts strengthen existing M3/M4 tasks and add no score or completion credit by themselves.
 
 ## Ownership and safety
 
-- #18 owns only the Aerial parity matrix, its schema/validator/fixtures, focused documentation, and this handoff checkpoint. Establish exact file paths in the issue checkpoint before editing.
+- #10 owns this focused activation only in `apps/site/app/status/status-manifest.json`, `apps/site/tests/rendered-html.test.mjs`, and this handoff. Its issue checkpoint records the exact branch, parent, arithmetic, and merge gates.
 - The protected dirty checkout at `/Users/luismorrobel/Library/Mobile Documents/com~apple~CloudDocs/Codename Ambiant` is untouched. Never reset, clean, stash, switch, overwrite, or integrate from it.
 - Do not copy Aerial code, assets, branding, or trade dress. Record semantic behavior and independently implement/test the resulting contract.
 - No user media, secrets, credentials, stores, submissions, payments, production deletion, or public announcement is in scope.
@@ -85,9 +86,9 @@ Require and verify clean-runner CI on PR #33 at the exact current head, then con
 
 ## M0 remaining order
 
-1. #18 — owned Aerial parity matrix (**current**)
+1. #18 — owned Aerial parity matrix (**accepted and merged; activation in this #10 change**)
 2. #17 — repository/release baseline (**independent draft; review pending**)
-3. #10 integration — validators, cold-start reconstruction, tracker/handoff reconciliation, and M1 entry gate
+3. #10 integration — aggregate validators, final risk review, cold-start reconstruction, tracker/handoff reconciliation, and explicit M1 entry gate
 
 ## #18 working checkpoint
 
@@ -101,7 +102,17 @@ Require and verify clean-runner CI on PR #33 at the exact current head, then con
 - Current `node script/validate_aerial_parity.mjs --ga`: intentionally fails closed with 296 findings because both cross-cutting suites, all implementation/test states, and both exceptions are still planned or pending. The future tag gate requires both #28/#29 suites passed with durable evidence, every row verified, every test passed, and every exception approved with durable evidence.
 - `script/verify_release.sh` and release-integrity CI invoke contract validation; GA-tag CI invokes `--ga`. Workflow paths include the matrix, its schema, and the linked launch spec. Full aggregate execution remains a clean-runner merge gate; this checkpoint awards no implementation or tracker credit.
 - Final non-author review of the current filesystem: **approved**. It independently reran contract and strict-GA behavior, shell syntax, and diff checks; all prior coverage, origin, baseline, cross-cutting, exception, workflow, claim-honesty, and ownership findings are closed.
-- Content commit `e75c7f34b6f72d1d53c1e2335ec8f73db6c54c8c`; first checkpoint `db190b48b453e57c1f6c783fe586f990f284cd3b`; branch pushed and draft PR #33 open. This factual checkpoint follows; clean-runner CI, merge, and tracker activation are pending.
+- Content commit `e75c7f34b6f72d1d53c1e2335ec8f73db6c54c8c`; final reviewed head `8ec952ecc145fd0743a64bb24f0cab1d2a1cd63a`; PR #33 merged as `7f3e97f0f30f1e9007d80fe82cc1feeeb7aaddb5`; issue #18 closed. The contract earns one M0 point only and does not claim implementation, M4 benchmark, chat, exception approval, or GA credit.
+
+## #10 activation checkpoint
+
+- Isolated full clone: `../project-ambient-m0-integration`; branch `chore/10-m0-integration`; parent `7f3e97f0f30f1e9007d80fe82cc1feeeb7aaddb5`.
+- Exact edit ownership: `apps/site/app/status/status-manifest.json`, `apps/site/tests/rendered-html.test.mjs`, and `docs/handoffs/CURRENT.md`.
+- Proposed activation arithmetic: 18/100 overall; M0 6/8; active hands-on 125–237 hours; workstreams 87.5/0/66/80; separate 48–72 hour soak unchanged.
+- Focused validation passes: implementation plan (41 tasks, nine milestones, 100 points, acyclic), Aerial parity (145 rows, 19 domains, three directions, 26 immutable evidence records, 23 adversarial checks), capabilities (five platform fixtures × 20 capabilities plus release bindings), rights (five fixtures and 29 fail-closed checks), JSON/diff checks, production site build, and all 12 rendered-route tests.
+- The installed `project-ambient-status` helper still rejects schema v3 because it hard-codes the retired three-bar 45/45/10 model. The repository's accepted M0–M8 plan, manifest arithmetic, and render tests are authoritative; this known helper mismatch earns no credit and must not be used to rewrite the accepted scope.
+- Production remains Sites version 17 at 17/100 until the focused branch passes validation, exact-head review, CI, merge, exact-merge deployment, and public endpoint smoke.
+- After activation, #10 stays open with zero task credit. The next executable evidence gate is #17; M1 entry remains closed until #17 and final M0 integration pass.
 
 ## Stop protocol
 
