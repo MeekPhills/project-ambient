@@ -22,7 +22,7 @@ Issue #17 remains an independent draft evidence stream in its own worktree and o
 
 ## Next exact action
 
-Correct the five findings from the non-author review of commit `17ac6b7`: evaluate fixtures through the published JSON Schema, prove embedded/linked release bindings and digest verification, remove unsupported experimental alpha claims, run the contract from release preflight/CI, and reconcile the declared worktree. Re-run focused checks, commit the correction, and request re-review before making PR #26 ready.
+Finish the re-review correction at commit `9004b26736479aae6aee44d20aa72799fecc177d`: make the in-repo JSON Schema evaluator fail closed on unsupported schema keywords, prove that behavior with a negative test, refresh this checkpoint, then request final non-author approval before making PR #26 ready.
 
 ## Read in this order
 
@@ -67,6 +67,8 @@ Correct the five findings from the non-author review of commit `17ac6b7`: evalua
 - JSON parsing and `node --check script/validate_capabilities.mjs`: passed.
 - `git diff --check`: passed.
 - Non-author review at `17ac6b7`: **changes required**; corrections are in progress and no credit is claimed.
+- Correction commit `9004b26736479aae6aee44d20aa72799fecc177d`: published-schema evaluation, 5 fixtures × 20 capabilities, 7 negative/compatibility cases, 3 embedded/linked/digest checks, conservative macOS claim states, release preflight/CI hook, and the declared worktree path all pass.
+- Re-review at `9004b26`: release-binding, evidence, release-hook, and worktree findings resolved; final approval remains pending a fail-closed schema-keyword audit and this current checkpoint.
 - Required corrected smoke: `node script/validate_capabilities.mjs`
 - Required hygiene: `git diff --check`
 - Release-link behavior must be tested without publishing a release; `script/verify_release.sh` and release-integrity CI must invoke the focused preflight.

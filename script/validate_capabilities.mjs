@@ -65,6 +65,14 @@ const integrationMethods = [
 const lifecycleValues = ["preview", "current", "maintenance", "legacy", "archived"];
 const channels = ["development", "nightly", "alpha", "beta", "stable", "archived"];
 const evidenceTypes = ["contract_fixture", "source", "test", "release", "platform_documentation", "issue"];
+const supportedSchemaKeywords = new Set([
+  "$schema", "$id", "$ref", "$defs",
+  "title", "description",
+  "type", "const", "enum", "format", "pattern", "minLength",
+  "required", "properties", "propertyNames", "additionalProperties", "minProperties",
+  "items", "minItems", "uniqueItems",
+  "allOf", "oneOf", "if", "then", "else",
+]);
 
 const semver = /^[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?$/;
 const revision = /^[a-f0-9]{40}$/;
@@ -93,6 +101,29 @@ function resolveLocalReference(rootSchema, reference) {
     const key = segment.replaceAll("~1", "/").replaceAll("~0", "~");
     return value?.[key];
   }, rootSchema);
+}
+
+function auditSchemaKeywords(rule, at = "$", errors = []) {
+  if (typeof rule === "boolean") return errors;
+  if (!isObject(rule)) {
+    errors.push(`${at}: schema node must be an object or boolean`);
+    return errors;
+  }
+  for (const key of Object.keys(rule)) {
+    if (!supportedSchemaKeywords.has(key)) errors.push(`${at}: unsupported JSON Schema keyword ${key}`);
+  }
+  for (const [key, subrule] of Object.entries(rule.$defs ?? {})) auditSchemaKeywords(subrule, `${at}.$defs.${key}`, errors);
+  for (const [key, subrule] of Object.entries(rule.properties ?? {})) auditSchemaKeywords(subrule, `${at}.properties.${key}`, errors);
+  if (rule.propertyNames !== undefined) auditSchemaKeywords(rule.propertyNames, `${at}.propertyNames`, errors);
+  if (isObject(rule.additionalProperties) || typeof rule.additionalProperties === "boolean") auditSchemaKeywords(rule.additionalProperties, `${at}.additionalProperties`, errors);
+  if (rule.items !== undefined) auditSchemaKeywords(rule.items, `${at}.items`, errors);
+  for (const keyword of ["allOf", "oneOf"]) {
+    (rule[keyword] ?? []).forEach((subrule, index) => auditSchemaKeywords(subrule, `${at}.${keyword}[${index}]`, errors));
+  }
+  for (const keyword of ["if", "then", "else"]) {
+    if (rule[keyword] !== undefined) auditSchemaKeywords(rule[keyword], `${at}.${keyword}`, errors);
+  }
+  return errors;
 }
 
 function schemaErrors(value, rule, at = "$", rootSchema = rule) {
@@ -352,6 +383,18 @@ async function verifyEmbeddedBinding(manifest, releaseRoot) {
   assert.deepEqual(validateManifest(boundManifest, boundManifest.platform.family), [], "embedded release manifest must pass semantic validation");
 }
 
+function linkedClaimIdentity(manifest) {
+  return {
+    schemaVersion: manifest.schemaVersion,
+    manifestVersion: manifest.manifestVersion,
+    claimScope: manifest.claimScope,
+    build: manifest.build,
+    platform: manifest.platform,
+    evidenceCatalog: manifest.evidenceCatalog,
+    capabilities: manifest.capabilities,
+  };
+}
+
 async function verifyLinkedBinding(manifest, loadLinkedContent) {
   assert.equal(manifest.releaseBinding.mode, "linked", "linked verification requires linked binding");
   const bytes = await loadLinkedContent(manifest.releaseBinding.url);
@@ -360,16 +403,22 @@ async function verifyLinkedBinding(manifest, loadLinkedContent) {
   const linkedManifest = JSON.parse(bytes.toString("utf8"));
   assert.deepEqual(schemaErrors(linkedManifest, schema), [], "linked release manifest must validate against the published schema");
   assert.deepEqual(validateManifest(linkedManifest, linkedManifest.platform.family), [], "linked release manifest must pass semantic validation");
+  assert.deepEqual(linkedClaimIdentity(linkedManifest), linkedClaimIdentity(manifest), "linked release manifest must describe the same build, platform, evidence, and capability claims as the linking envelope");
 }
 
 const schema = await readJson(schemaPath);
 assert.equal(schema.$schema, "https://json-schema.org/draft/2020-12/schema");
+assert.deepEqual(auditSchemaKeywords(schema), [], "published schema uses a keyword unsupported by the in-repo evaluator");
 assert.equal(schema.properties?.schemaVersion?.const, 1);
 assert.deepEqual(schema.$defs?.capability?.properties?.state?.enum, states);
 assert.deepEqual([...schema.$defs.platform.properties.family.enum].sort(), [...platformFamilies].sort());
 assert.equal(schema.properties?.capabilities?.minItems, capabilityIds.length);
 assert.ok(schema.required.includes("evidenceCatalog"));
 assert.ok(schema.$defs?.releaseBinding?.oneOf?.length === 2);
+
+const unsupportedKeywordSchema = clone(schema);
+unsupportedKeywordSchema.properties.manifestVersion.maxLength = 12;
+assert.ok(auditSchemaKeywords(unsupportedKeywordSchema).some((error) => error.includes("unsupported JSON Schema keyword maxLength")), "schema audit must fail closed on an unsupported validation keyword");
 
 const filenames = (await readdir(fixtureDirectory)).filter((file) => file.endsWith(".json")).sort();
 assert.deepEqual(filenames, [...platformFiles.keys()].sort(), "fixtures must contain exactly the five platform examples");
@@ -455,8 +504,12 @@ try {
   const tampered = clone(linked);
   tampered.releaseBinding.sha256 = "f".repeat(64);
   await assert.rejects(() => verifyLinkedBinding(tampered, async () => linkedBytes), /digest must match/);
+
+  const wrongPlatform = clone(linked);
+  wrongPlatform.platform = clone(fixtures.get("windows.json").platform);
+  await assert.rejects(() => verifyLinkedBinding(wrongPlatform, async () => linkedBytes), /same build, platform, evidence, and capability claims/);
 } finally {
   await rm(releaseRoot, { recursive: true, force: true });
 }
 
-console.log(`Capability contract valid: schema v1, ${fixtures.size} platform fixtures, ${capabilityIds.length} explicit capabilities each, published-schema evaluation plus 7 negative/compatibility and 3 release-binding checks passed.`);
+console.log(`Capability contract valid: schema v1, ${fixtures.size} platform fixtures, ${capabilityIds.length} explicit capabilities each, fail-closed published-schema evaluation plus 8 negative/compatibility and 4 release-binding checks passed.`);

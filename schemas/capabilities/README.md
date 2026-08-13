@@ -34,6 +34,11 @@ Every manifest declares one of two release bindings:
 2. `linked` — the release metadata points to an immutable HTTPS manifest URL and
    pins its SHA-256 digest.
 
+A linked envelope and fetched document must declare identical schema/manifest
+versions, claim scope, build, platform target, evidence catalog, and capability
+claims. Only the fetched document's own binding field may differ. A valid digest
+of a different platform or build is rejected.
+
 This is the M0 contract. M8 release packaging must embed or link the validated
 manifest and verify the binding before publication; a prepared fixture does not
 claim that an existing release has already been repackaged.
