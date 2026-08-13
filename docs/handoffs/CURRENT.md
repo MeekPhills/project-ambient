@@ -20,7 +20,7 @@ Issue #17 remains an independent draft evidence stream in its own worktree and o
 
 ## Next exact action
 
-Address the non-author findings on draft PR #30, rerun focused validation and link/diff checks, then obtain final re-review. Do not mark the PR ready or award the M0 point until approval, green final-head CI, merge, tracker activation, and public verification pass.
+Obtain non-author re-review of correction commit `85dabbbe932850fdb75afc7b7a7383510dd7b762`. Do not mark draft PR #30 ready or award the M0 point until approval, green final-head CI, merge, tracker activation, and public verification pass.
 
 ## Read in this order
 
@@ -69,14 +69,14 @@ Address the non-author findings on draft PR #30, rerun focused validation and li
 
 ## Current #21 verification
 
-- Correction commit `8311c1c9ea847299ff56caf81b8671e6b736dbc0`: actor-scoped Project/end-user grants, verified remote providers, provider-terms/origin/source-descriptor binding, private evidence records, paid-personal and private-enterprise fixtures, contradiction/time checks, and clarified contribution policy.
+- Correction commits `8311c1c9ea847299ff56caf81b8671e6b736dbc0` and `85dabbbe932850fdb75afc7b7a7383510dd7b762`: actor-scoped Project/end-user grants, enforced grantee roles, verified remote providers, exact provider-terms/origin/source-descriptor/transport binding, private evidence records, paid-personal and private-enterprise fixtures, contradiction/time checks, and clarified contribution policy.
 - `node script/validate_rights.mjs`: passed — schema 1.0.0, five fixtures, and 29 negative/fail-closed checks.
 - Rights schema and all fixture JSON parsing: passed.
 - Relative Markdown links in the seven changed policy/handoff/schema documents: passed.
 - `git diff --check 4aafa87494cf36c3364aa989560906562cfa20eb...HEAD`: passed after correction; the first reviewed head's inaccurate PASS claim is superseded by this exact result.
 - `script/verify_release.sh` and release-integrity CI invoke the rights validator; full aggregate execution remains a clean-runner gate.
 - Legal-risk assessment uses a severity × likelihood register and explicitly requires qualified review; it is not legal advice.
-- Non-author reviews at `8854cf2` and `da8cbe1`: **changes required**; the second review narrowed the remaining gaps to actor-field enforcement, exact provider-terms binding, future provider review, and transport/source consistency. These are corrected in the current working tree; final-head re-review is pending. No merge or tracker credit before final approval.
+- Non-author reviews at `8854cf2` and `da8cbe1`: **changes required**; the second review narrowed the remaining gaps to actor-field enforcement, exact provider-terms binding, future provider review, and transport/source consistency. These are corrected at `85dabbbe`; final-head re-review is pending. No merge or tracker credit before final approval.
 
 ## M0 remaining order
 
