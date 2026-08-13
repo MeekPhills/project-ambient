@@ -2,35 +2,35 @@
 
 **Updated:** 2026-08-13
 
-**Program state:** M0 launch boundaries, dependency/tracker migration, the versioned capability contract, and the rights/commercial boundary are accepted. The merge-final tracker target is 17/100; production remains 16/100 until the exact activation merge is deployed and verified. Product implementation remains gated by the remaining M0 contracts and final integration gate.
+**Program state:** M0 launch boundaries, dependency/tracker migration, the versioned capability contract, and the rights/commercial boundary are accepted. The canonical production tracker is live at 17/100. Product implementation remains gated by the repository baseline, owned Aerial parity matrix, and final M0 integration gate.
 
 **Repository:** https://github.com/MeekPhills/project-ambient
 
-**Base branch:** `main` at `4aafa87494cf36c3364aa989560906562cfa20eb`
+**Parent baseline for this handoff:** `846cef807eceaaa11926bae290021c26475c49fd`. After PR #32 merges, resolve and branch from the then-current `main`; never assume this parent remains the head.
 
-**Working branch:** `docs/21-commercial-rights`
+**Working branch:** create an isolated `codex/18-aerial-parity-matrix` branch/worktree from current `main` before editing
 
 **Current milestone:** M0 — Governance and architecture
 
 **Milestone epic:** #10 — https://github.com/MeekPhills/project-ambient/issues/10
 
-**Only integration-active issue:** #21 — https://github.com/MeekPhills/project-ambient/issues/21
+**Only integration-active issue:** #18 — https://github.com/MeekPhills/project-ambient/issues/18
 
-Issue #17 remains an independent draft evidence stream in its own worktree and owns only `docs/reports/m0-issue-17-repository-baseline.md`. It has zero accepted tracker credit and does not share edit ownership with #21. Issues #28 and #29 are zero-weight child contracts for the later base-M4 performance gate and local-first chat control plane; neither is active implementation work during M0.
+Issue #17 remains an independent draft evidence stream in its own worktree and owns only `docs/reports/m0-issue-17-repository-baseline.md`. It has zero accepted tracker credit and does not share edit ownership with #18. Issues #28 and #29 are zero-weight child contracts for the later base-M4 performance gate and local-first chat control plane; neither is active implementation work during M0.
 
 ## Next exact action
 
-Review and merge the isolated #21 tracker activation, deploy its exact site subtree, verify `/status`, `/status/manifest`, and `/api/status`, then close #21 and promote #18 as the sole integration-active issue. Do not expose 17/100 as canonical before exact-merge deployment and public verification pass.
+Start #18 in a new isolated worktree: inventory the accepted Aerial feature universe and convert every row into a machine-validated owner, milestone, issue, evidence source/version, implementation status, automated/manual test, and explicit exception record. Preserve semantic parity without copying Aerial's implementation or visual identity. Do not award the M0 point until the complete matrix, validator, non-author review, and merge gate pass.
 
 ## Read in this order
 
 1. `CLAUDE.md`
-2. This file and issue #21
+2. This file and issue #18
 3. `docs/decisions/0001-m0-launch-boundaries.md`
 4. `docs/product/FULL_PLATFORM_LAUNCH_SPEC.md`
-5. `docs/product/implementation-plan.json` task `m0-licensing-rights`
-6. `CONTENT_RIGHTS.md` and `OPEN_SOURCE_PROMISE.md`
-7. `apps/site/app/status/status-manifest.json`
+5. `docs/product/implementation-plan.json` task `m0-aerial-parity`
+6. Aerial's versioned primary evidence: [4.0.14 source](https://github.com/AerialScreensaver/Aerial/tree/v4.0.14), [4.1.0beta13 source](https://github.com/AerialScreensaver/Aerial/tree/v4.1.0beta13), [official features](https://aerialscreensaver.github.io/features/), [official FAQ](https://aerialscreensaver.github.io/faq/), [release notes](https://aerialscreensaver.github.io/release-notes/), and [expansions](https://aerialscreensaver.github.io/expansions/). Freeze the exact tag/commit and retrieval date in every matrix evidence row; use repository source over remembered chat claims.
+7. `schemas/capabilities/` and `apps/site/app/status/status-manifest.json`
 
 ## Accepted evidence
 
@@ -40,8 +40,9 @@ Review and merge the isolated #21 tracker activation, deploy its exact site subt
 - PR #27 merged as `4aafa87494cf36c3364aa989560906562cfa20eb`; its exact site subtree was deployed as Sites version 16.
 - PR #30 merged as `d958be915648e7b5586b882f9c9e6694610a01dc` after non-author approval and green CI, CodeQL, release integrity, and rights-contract validation.
 - Production tracker: https://project-ambient.meekphillies.chatgpt.site/status
-- Merge-final readiness target: 17/100 — M0 5/8, M1 5/14, M2 1/12, M3 0.5/20, M4 3/14, M5 0/12, M6 0/7, M7 0.5/6, M8 2/7.
-- Required activation smoke: `/status` renders 17/100 and 131–247 active hours; `/status/manifest` returns schema v3, 17/100, and the immutable historical 49.75 audit; `/api/status` returns the seven operational checks for the new deployment.
+- PR #31 merged as `846cef807eceaaa11926bae290021c26475c49fd`; exact subtree source `dfc9789f18e4378a1d84ec1b8adadffea4cd8c04` deployed as Sites version 17.
+- Current readiness: 17/100 — M0 5/8, M1 5/14, M2 1/12, M3 0.5/20, M4 3/14, M5 0/12, M6 0/7, M7 0.5/6, M8 2/7.
+- Public smoke passed: `/status` renders 17/100 and 131–247 active hours; `/status/manifest` returns schema v3, exact 17/100 arithmetic, M0 5/8, and immutable 49.75 history; `/api/status?deployment=17` returns seven operational checks.
 
 ## Issue #21 definition of done
 
@@ -62,11 +63,11 @@ Review and merge the isolated #21 tracker activation, deploy its exact site subt
 
 ## Ownership and safety
 
-- #21 owns `CONTENT_RIGHTS.md`, `OPEN_SOURCE_PROMISE.md`, `docs/decisions/0002-commercial-rights.md`, `docs/legal/`, `schemas/rights/**`, `fixtures/rights/**`, `script/validate_rights.mjs`, and this handoff checkpoint.
+- #18 owns only the Aerial parity matrix, its schema/validator/fixtures, focused documentation, and this handoff checkpoint. Establish exact file paths in the issue checkpoint before editing.
 - The protected dirty checkout at `/Users/luismorrobel/Library/Mobile Documents/com~apple~CloudDocs/Codename Ambiant` is untouched. Never reset, clean, stash, switch, overwrite, or integrate from it.
-- Do not provide or claim legal advice. High-risk or jurisdiction-specific conclusions require qualified counsel.
+- Do not copy Aerial code, assets, branding, or trade dress. Record semantic behavior and independently implement/test the resulting contract.
 - No user media, secrets, credentials, stores, submissions, payments, production deletion, or public announcement is in scope.
-- Do not silently change the canonical tracker or award #21 credit on a draft branch.
+- Do not silently change the canonical tracker or award #18 credit on a draft branch.
 
 ## Accepted #21 contract and activation verification
 
@@ -79,14 +80,13 @@ Review and merge the isolated #21 tracker activation, deploy its exact site subt
 - Legal-risk assessment uses a severity × likelihood register and explicitly requires qualified review; it is not legal advice.
 - Final non-author review at `331bdc56c7bd4486d5430c31b0bce3a4038bb5cd`: **approved**; all residual actor, provider-evidence, time, transport, and documentation findings are closed.
 - Final-head CI, CodeQL, release integrity, macOS/site/MCP tests, secret scan, rights validation, and universal release-candidate packaging: passed.
-- PR #30 is merged; the 1-point tracker activation remains merge-and-deploy conditional in the current branch. No public 17/100 claim before exact activation deployment.
+- PR #30 and tracker PR #31 are merged; Sites version 17 passed exact production verification. Issue #21 is eligible for completed closure.
 
 ## M0 remaining order
 
-1. #21 — tracker activation, exact deployment, public verification, and closure (**current; contract merged**)
+1. #18 — owned Aerial parity matrix (**current**)
 2. #17 — repository/release baseline (**independent draft; review pending**)
-3. #18 — owned Aerial parity matrix
-4. #10 integration — validators, cold-start reconstruction, tracker/handoff reconciliation, and M1 entry gate
+3. #10 integration — validators, cold-start reconstruction, tracker/handoff reconciliation, and M1 entry gate
 
 ## Stop protocol
 
