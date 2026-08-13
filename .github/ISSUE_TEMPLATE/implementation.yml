@@ -78,8 +78,8 @@ body:
       label: Verification plan
       description: Give exact automated commands and bounded manual matrices.
       placeholder: |
-        - `swift test`
-        - `swift build`
+        - `swift build --package-path apps/macos`
+        - `swift test --package-path apps/macos`
         - Platform/display/content scenarios:
     validations:
       required: true
