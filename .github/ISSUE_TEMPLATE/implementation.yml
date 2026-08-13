@@ -1,0 +1,104 @@
+name: Implementation task
+description: A scoped, testable unit of Project Ambient work
+title: "[Area] "
+labels:
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Complete every section. This issue is the durable handoff for human and coding-agent work.
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Outcome and user value
+      description: Describe the observable result, not the implementation.
+    validations:
+      required: true
+  - type: dropdown
+    id: mode
+    attributes:
+      label: Product mode
+      multiple: true
+      options:
+        - Static
+        - Hybrid
+        - Managed
+        - Shared foundation
+    validations:
+      required: true
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platforms
+      multiple: true
+      options:
+        - Shared core
+        - macOS
+        - Windows
+        - Linux
+        - iOS/iPadOS
+        - Android
+        - Web/service
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope and non-goals
+      placeholder: |
+        In scope:
+        -
+        Non-goals:
+        -
+    validations:
+      required: true
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: Dependencies and related decisions
+      description: Link blocking issues, ADRs, capability rows, and milestone epic.
+    validations:
+      required: true
+  - type: textarea
+    id: criteria
+    attributes:
+      label: Acceptance criteria
+      placeholder: |
+        - [ ] Observable behavior
+        - [ ] Failure/offline/fallback behavior
+        - [ ] Accessibility behavior for UI work
+        - [ ] Resource measurement for performance-sensitive work
+        - [ ] Documentation and capability manifest updated
+    validations:
+      required: true
+  - type: textarea
+    id: verification
+    attributes:
+      label: Verification plan
+      description: Give exact automated commands and bounded manual matrices.
+      placeholder: |
+        - `swift test`
+        - `swift build`
+        - Platform/display/content scenarios:
+    validations:
+      required: true
+  - type: textarea
+    id: privacy
+    attributes:
+      label: Privacy, security, licensing, and data handling
+      description: State affected data, network domains, permissions, licenses, or write "None."
+    validations:
+      required: true
+  - type: textarea
+    id: handoff
+    attributes:
+      label: Claude Code handoff contract
+      value: |
+        Before stopping:
+        - [ ] Update `docs/handoffs/CURRENT.md`.
+        - [ ] Comment with branch, commit, PR, files, commands/results, blockers, and next exact action.
+        - [ ] Leave the branch buildable and preserve unrelated/user changes.
+        - [ ] Do not begin another issue when context or credits are low.
+    validations:
+      required: true
