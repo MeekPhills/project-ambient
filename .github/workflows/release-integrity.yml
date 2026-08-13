@@ -8,6 +8,11 @@ on:
       - "docs/release-checklist.md"
       - "docs/launch-day-runbook.md"
       - "script/**"
+      - "schemas/rights/**"
+      - "fixtures/rights/**"
+      - "CONTENT_RIGHTS.md"
+      - "OPEN_SOURCE_PROMISE.md"
+      - "DCO.txt"
       - "services/mcp/**"
       - "apps/macos/**"
       - "apps/site/**"
@@ -48,6 +53,8 @@ jobs:
         run: node --check script/generate_release_sbom.mjs
       - name: Validate platform capability and release-binding contracts
         run: node script/validate_capabilities.mjs
+      - name: Validate media-rights and commercial-boundary contracts
+        run: node script/validate_rights.mjs
 
   package-candidate:
     name: Build and verify universal release candidate

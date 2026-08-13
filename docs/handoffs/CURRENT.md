@@ -73,6 +73,7 @@ Complete the versioned rights manifest, commercial/open-source boundary ADR, pol
 - Rights schema and all fixture JSON parsing: passed.
 - Relative Markdown links in the seven changed policy/handoff/schema documents: passed.
 - Focused `git diff --check`: passed.
+- `script/verify_release.sh` and release-integrity CI invoke the rights validator; full aggregate execution remains a clean-runner gate.
 - Legal-risk assessment uses a severity × likelihood register and explicitly requires qualified review; it is not legal advice.
 - Non-author licensing/privacy/product-boundary review: pending; no merge or tracker credit before approval.
 
