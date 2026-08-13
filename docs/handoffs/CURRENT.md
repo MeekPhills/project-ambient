@@ -2,133 +2,86 @@
 
 **Updated:** 2026-08-13
 
-**Program state:** Six launch-boundary decisions are recorded; non-author review is complete, both findings are corrected, and product implementation remains gated until issue #19 is accepted and PR #22 is merged
+**Program state:** M0 launch boundaries are accepted. Issue #16 has a machine-valid dependency plan and a schema-v3 migration of the sole canonical tracker; review, full site verification, PR, and merge remain. Product implementation is still gated by the rest of M0.
 
 **Repository:** https://github.com/MeekPhills/project-ambient
 
-**Base branch:** current `main` at `e40cf5aa62f9f30180ff743023ceadbf1ca3df9e`, integrated by merge commit `f791e41fdac02ba4c4b73ba3d3fad560a970d099`
+**Base branch:** `main` at merge commit `e46979ec163239887c2eff04edbf7bb3109dbd4d`
 
-**Planning branch:** `plan/full-platform-launch`; accepted decision content at `03a0e37`, review corrections complete through `17764ccc211c`, with this file serving as the final local checkpoint before push
+**Working branch:** `plan/m0-dependency-tracker` in its own clean worktree; commit and PR are pending final validation/review
 
-**Active pull request:** #22 — https://github.com/MeekPhills/project-ambient/pull/22
+**Completed planning pull request:** #22 — https://github.com/MeekPhills/project-ambient/pull/22
 
-**Current milestone:** M0 — Program Governance & Agent Continuity (#1)
+**Current milestone:** M0 — Governance and architecture
 
 **Milestone epic:** #10 — https://github.com/MeekPhills/project-ambient/issues/10
 
-**Only active issue:** #19 — https://github.com/MeekPhills/project-ambient/issues/19
+**Only integration-active issue:** #16 — https://github.com/MeekPhills/project-ambient/issues/16
+
+Issue #17 is a bounded parallel read/verification stream in a different worktree and owns only `docs/reports/m0-repository-baseline.md`. It may not edit this handoff, roadmap, implementation plan, status manifest/UI/tests, or product code.
 
 ## Next exact action
 
-Push the clean planning branch, update PR #22 with the accepted decisions and validation evidence, record the accepted decision list on #19, and mark the PR ready for review. Merge and close #19 only after GitHub checks pass and the evidence is visible on both the PR and issue.
+Run the full site build/render suite for the schema-v3 tracker migration, obtain non-author review of the 41-task dependency plan and conservative 15/100 remap, correct findings, then push and open the issue #16 PR. Merge only after CI/CodeQL and the cold-start reconstruction smoke pass.
 
-Do not begin product implementation until #19 is accepted and PR #22 is merged. After #19, make #16 the sole active issue for task-level planning and canonical tracker scope migration. #17 may establish the clean baseline only when file ownership and dependencies are explicitly non-overlapping.
-
-## M0 decision checkpoint evidence
-
-- Non-author review: changes required for two medium documentation defects; both are corrected. No decision contradiction, scope creep, dangerous command, legal overclaim, or competing tracker was found.
-- `node --test --test-name-pattern='status manifest is a fixed, conservative 100-point audit' apps/site/tests/rendered-html.test.mjs`: 1 test passed, 0 failed.
-- `ruby -e 'require "yaml"; YAML.load_file(".github/ISSUE_TEMPLATE/implementation.yml"); puts "implementation.yml: valid"'`: parsed successfully.
-- `bash -n script/verify_release.sh` and `bash -n script/build_and_run.sh`: both passed with no syntax errors.
-- `git diff --check origin/main...HEAD`: passed with no whitespace errors.
-- Bounded relative-link review: 35 Markdown files passed with no missing repository-relative targets.
-- Product build/release baseline: not claimed by this documentation-only issue; issue #17 owns clean execution of the aggregate and component commands.
-- Blockers: none locally. GitHub push, evidence update, CI, and merge remain the next gated actions.
+After #16, make #20 the sole integration-active issue for the versioned capability contract. Accept issue #17 independently when its evidence report passes review. Product implementation remains blocked until #17, #21, #20, #18, and final M0 integration are accepted.
 
 ## Read in this order
 
 1. `CLAUDE.md`
-2. Issue #19 and PR #22
+2. This file and issue #16
 3. `docs/decisions/0001-m0-launch-boundaries.md`
 4. `docs/product/FULL_PLATFORM_LAUNCH_SPEC.md`
-5. M0 epic #10
-6. Existing `ROADMAP.md`, `README.md`, and `docs/architecture.md`
-7. The next issue selected by this file
+5. `docs/product/implementation-plan.json`
+6. `ROADMAP.md`
+7. `apps/site/app/status/status-manifest.json`
+8. M0 epic #10 and the next issue named here
 
-## GitHub program state
+## Issue #16 artifacts and decisions
 
-Nine milestones exist without speculative due dates:
+- `docs/product/implementation-plan.json`: 41 task contracts across M0–M8. Every task names milestone weight, owner, size, branch, parallel group, dependencies, mutable areas, acceptance criteria, and verification.
+- `script/validate_implementation_plan.mjs`: fails on missing fields, duplicate IDs, unknown dependencies, dependency cycles, milestone weight drift, broken first-slice sequencing, same-group exact area conflicts, plan/manifest task mismatch, or historical-score loss.
+- `ROADMAP.md`: human-readable M0–M8 sequence and exit smoke for every milestone.
+- `apps/site/app/status/status-manifest.json`: the only current 100-point tracker, version-migrated from 45/45/10 to weights 8/14/12/20/14/12/7/6/7.
+- The historical 49.75/100 audit is preserved in `scoreHistory` with its phase totals, effort ranges, timestamp, and source commit. It is history, not a second live score.
+- Current expanded-scope credit is a conservative 15/100: M0 3, M1 5, M2 1, M3 0.5, M4 3, M5 0, M6 0, M7 0.5, M8 2. Only merged/accepted alpha and M0 artifacts with smoke evidence are credited.
+- Microsoft enterprise distribution and Google A2A remain deferred outside the weighted scope at 84–168 hours. The accepted active planning baseline remains 138–259 hours plus a separate 48–72 hour soak until task evidence supports re-estimation.
+- The first product slice is strictly sequenced: onboarding/import → display continuity → lock-only rotation → recovery/accessibility. It cannot start until final M0 integration.
 
-- M0 — Program Governance & Agent Continuity
-- M1 — Guided Static Foundation
-- M2 — Media Library & Content Ecosystem
-- M3 — macOS Renderer & Aerial Feature Parity
-- M4 — Automation, Energy & Resilience
-- M5 — Windows & Linux Desktop
-- M6 — Mobile Companions & OS Integrations
-- M7 — Managed, Enterprise & Commercial
-- M8 — Public GA, Distribution & Compatibility Archive
+## Verification completed in this branch
 
-Each milestone has one epic:
+- `node script/validate_implementation_plan.mjs`: **passed** — 41 tasks, 9 milestones, 100 points, acyclic dependencies.
+- Focused status-manifest Node test: **passed** — 1 test, 0 failures; validates schema v3, 15/100 current score, preserved 49.75 history, exact milestone/task weights, 138–259 active hours, 84–168 deferred hours, and 48–72 soak.
+- `git diff --check`: **passed** at the pre-review checkpoint.
+- `npm --prefix apps/site test`: **passed** — production build completed and all 12 server-render/status/API tests passed.
+- `npm --prefix apps/site run lint`: **failed on 14 inherited `@next/next/no-html-link-for-pages` errors in unchanged `Footer.tsx`, `Header.tsx`, and `not-found.tsx`; no changed file produced a lint finding.** The baseline issue owns recording/linking this existing gap; #16 does not mix an unrelated UI refactor into the tracker PR.
+- Non-author plan/tracker review: **pending**.
+- GitHub CI/CodeQL: **pending PR**.
 
-- M0: #10
-- M1: #8
-- M2: #14
-- M3: #7
-- M4: #11
-- M5: #9
-- M6: #12
-- M7: #13
-- M8: #15
+## Protected state and ownership
 
-M0 execution issues:
+- A pre-existing dirty checkout on another branch remains protected and untouched. Never reset, clean, stash, switch, overwrite, or integrate from it.
+- This branch owns `ROADMAP.md`, `docs/product/implementation-plan.json`, `script/validate_implementation_plan.mjs`, the status manifest/model/dashboard/tests/styles, and this handoff.
+- Issue #17 owns only its report in its separate worktree. No two active agents share mutable files.
+- No product code, user media, credentials, production resources, stores, payments, submissions, or public announcements are in scope for #16.
 
-- #19 — review and approve the launch design (**active**)
-- #21 — define software, media-rights, and commercial boundaries
-- #20 — define the platform capability manifest
-- #18 — convert Aerial parity into an owned test matrix
-- #16 — publish dependency map and task-level implementation plan
-- #17 — verify repository baseline and release-integrity commands
+## M0 remaining order
 
-## What is in PR #22
+1. #16 — dependency plan and canonical tracker migration (**current**)
+2. #17 — clean repository/release baseline (parallel evidence stream)
+3. #20 — versioned platform capability contract
+4. #21 — software, media-rights, and commercial boundaries
+5. #18 — owned Aerial parity matrix
+6. #10 integration — validators, cold-start reconstruction, tracker/handoff reconciliation, and M1 entry gate
 
-- `CLAUDE.md`: Claude Code pickup, branch discipline, verification, definition of done, and credit/context stop protocol.
-- `docs/decisions/0001-m0-launch-boundaries.md`: accepted shared-core, licensing, Linux, Managed Preview, marketplace, diagnostics, and tracker boundaries.
-- `docs/product/FULL_PLATFORM_LAUNCH_SPEC.md`: Static → Hybrid → Managed design, full macOS Aerial-parity contract, differentiators, cross-platform policy, compatibility archive, commercial direction, and M0–M8 gates.
-- `docs/handoffs/CURRENT.md`: this atomic handoff.
-- `.github/ISSUE_TEMPLATE/implementation.yml`: agent-ready task contract.
-- `.github/pull_request_template.md`: evidence, energy, privacy, licensing, recovery, and handoff requirements.
+The #20/#21/#18 order may be parallelized only with distinct file ownership and at most three active instances. M1 does not start until the M0 integration gate passes.
 
-The PR diff against current `main` contains planning and template files only; it does not add product implementation.
-
-## Repository facts to verify in #17
-
-- Remote: `MeekPhills/project-ambient`
-- An older local branch `harden/supabase-private-schema` was observed and must not be repurposed.
-- Verified native command paths are `swift build --package-path apps/macos` and `swift test --package-path apps/macos`.
-- The aggregate verifier is `./script/verify_release.sh`; there is no `scripts/verify-release-integrity.sh`.
-- MCP and website commands are defined in their package manifests and `CLAUDE.md`; #17 still owns clean execution and bounded output.
-- Status PR #6 and corrective PR #23 are merged on `main` and were integrated into the isolated planning checkout before decision edits.
-
-## Product facts that must survive handoff
-
-- One progressively disclosed product: Static, Hybrid, and Managed.
-- Static is the default onboarding path and must support first-class photos and near-zero idle rendering.
-- macOS public GA is blocked on full permitted Aerial capability parity with evidence or a documented legal/OS exception.
-- Windows and Linux use capability-equivalent native adapters.
-- iOS/iPadOS and Android expose only behavior permitted by those operating systems; no false parity claims.
-- Source media is preserved. Imports never move or delete originals by default.
-- Every live source has a cached/local still fallback.
-- Every automatic decision exposes Now / Next / Why.
-- Legacy builds are added only with vendor support or measured demand plus CI; archived status is explicit.
-- GitHub is the source of truth for program state. Conversation history is not a dependency.
-
-## Risks
-
-- Aerial parity is a large launch gate and must be controlled through issue #18 rather than implicit scope.
-- Display topology changes after sleep/reconnect are a first-order reliability problem.
-- Live feeds and overlays can erase the energy advantage without M4’s degradation ladder.
-- Cross-platform native integration cannot be forced into false lowest-common-denominator parity.
-- Media rights and software licensing are separate decisions.
-- A large compatibility archive becomes a security burden without evidence and maintained CI.
-- The current 49.75/100 tracker predates expanded Windows, Linux, mobile, and Managed scope; #16 must perform one versioned canonical migration rather than introduce a competing percentage.
-
-## Stop protocol for the next agent
+## Stop protocol
 
 Before context or credits run low:
 
 1. stop starting new work;
-2. update this file so it names exactly one active issue;
-3. comment on that issue with branch, commit, PR, files changed, commands and exact results, blockers, risks, and next exact action;
+2. update this file so it names exactly one integration-active issue;
+3. comment on that issue with branch, commit, PR, files changed, commands/results, blockers, risks, and next exact action;
 4. leave the branch buildable and preserve unrelated/user changes;
-5. mark unfinished work draft; never depend on chat history for resumption.
+5. mark unfinished work draft and release unused agents; never depend on chat history.
