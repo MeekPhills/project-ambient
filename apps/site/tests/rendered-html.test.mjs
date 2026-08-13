@@ -125,10 +125,19 @@ test("status manifest is a fixed, conservative 100-point audit", () => {
   assert.deepEqual(deferred, { min: 84, max: 168 });
   assert.deepEqual(soak, { min: 48, max: 72 });
   assert.ok(Object.values(statusManifest.evidenceSources).every((url) => url.startsWith("https://")));
-  assert.match(statusManifest.evidenceSources.postgresCi, /31658219482\/job\/94317251186/);
-  assert.match(statusManifest.evidenceSources.codeql, /31658219468\/job\/94317250824/);
-  assert.match(statusManifest.evidenceSources.releaseCandidate, /31658219608\/job\/94317251307/);
+  assert.match(statusManifest.evidenceSources.postgresCi, /31659415459\/job\/94320889848/);
+  assert.match(statusManifest.evidenceSources.codeql, /31659415452\/job\/94320889771/);
+  assert.match(statusManifest.evidenceSources.codeqlAlert, /security\/code-scanning\/3/);
+  assert.match(statusManifest.evidenceSources.releaseCandidate, /31659415484\/job\/94320890102/);
+  assert.match(statusManifest.evidenceSources.releaseTagCi, /31612134104\/job\/94165844230/);
+  assert.match(statusManifest.evidenceSources.releaseSourceCommit, /f9dbc7f42b5a8dd1edfd6fe33b27d693c7a27e81/);
   assert.match(statusManifest.evidenceSources.secureBootstrap, /6ab0b4926439a14eda7d0608b4b4e5f581048c3b/);
+  assert.equal(statusManifest.evidenceSources.mcpRegistryPackageRules, "https://modelcontextprotocol.io/registry/package-types");
+  const registryPublication = tasks.find((task) => task.id === "registry-publication");
+  assert.match(registryPublication.blockedReason, /mcpName.*server\.json/i);
+  assert.match(registryPublication.evidence, /released npm tarball has no mcpName/i);
+  const supplyChain = tasks.find((task) => task.id === "supply-chain");
+  assert.match(supplyChain.evidence, /high.*CodeQL alert/i);
   assert.ok(statusManifest.liveChecks.every((check) => statusManifest.phases.some((phase) => phase.id === check.phaseId)));
 });
 
