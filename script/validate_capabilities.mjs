@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 
 import assert from "node:assert/strict";
-import { readFile, readdir } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import { mkdtemp, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -79,6 +81,95 @@ function isObject(value) {
 
 function isDateTime(value) {
   return typeof value === "string" && /^\d{4}-\d{2}-\d{2}T/.test(value) && !Number.isNaN(Date.parse(value));
+}
+
+function jsonEqual(left, right) {
+  return JSON.stringify(left) === JSON.stringify(right);
+}
+
+function resolveLocalReference(rootSchema, reference) {
+  assert.ok(reference.startsWith("#/"), `only local JSON Schema references are supported: ${reference}`);
+  return reference.slice(2).split("/").reduce((value, segment) => {
+    const key = segment.replaceAll("~1", "/").replaceAll("~0", "~");
+    return value?.[key];
+  }, rootSchema);
+}
+
+function schemaErrors(value, rule, at = "$", rootSchema = rule) {
+  if (rule === true) return [];
+  if (rule === false) return [`${at}: rejected by schema`];
+  if (!isObject(rule)) return [`${at}: invalid schema rule`];
+
+  if (rule.$ref) {
+    const target = resolveLocalReference(rootSchema, rule.$ref);
+    return target ? schemaErrors(value, target, at, rootSchema) : [`${at}: unresolved schema reference ${rule.$ref}`];
+  }
+
+  const errors = [];
+  const matchesType = {
+    object: isObject(value),
+    array: Array.isArray(value),
+    string: typeof value === "string",
+    number: typeof value === "number" && Number.isFinite(value),
+    integer: Number.isInteger(value),
+    boolean: typeof value === "boolean",
+    null: value === null,
+  };
+  if (rule.type && !matchesType[rule.type]) {
+    errors.push(`${at}: expected ${rule.type}`);
+    return errors;
+  }
+  if (Object.hasOwn(rule, "const") && !jsonEqual(value, rule.const)) errors.push(`${at}: expected constant ${JSON.stringify(rule.const)}`);
+  if (rule.enum && !rule.enum.some((item) => jsonEqual(item, value))) errors.push(`${at}: value is not in enum`);
+
+  if (typeof value === "string") {
+    if (rule.minLength !== undefined && value.length < rule.minLength) errors.push(`${at}: shorter than minLength ${rule.minLength}`);
+    if (rule.pattern && !new RegExp(rule.pattern).test(value)) errors.push(`${at}: does not match pattern ${rule.pattern}`);
+    if (rule.format === "date-time" && !isDateTime(value)) errors.push(`${at}: invalid date-time`);
+  }
+
+  if (Array.isArray(value)) {
+    if (rule.minItems !== undefined && value.length < rule.minItems) errors.push(`${at}: fewer than minItems ${rule.minItems}`);
+    if (rule.uniqueItems && new Set(value.map((item) => JSON.stringify(item))).size !== value.length) errors.push(`${at}: array items are not unique`);
+    if (rule.items) {
+      value.forEach((item, index) => errors.push(...schemaErrors(item, rule.items, `${at}[${index}]`, rootSchema)));
+    }
+  }
+
+  if (isObject(value)) {
+    if (rule.minProperties !== undefined && Object.keys(value).length < rule.minProperties) errors.push(`${at}: fewer than minProperties ${rule.minProperties}`);
+    if (rule.required) {
+      for (const key of rule.required) if (!Object.hasOwn(value, key)) errors.push(`${at}: missing required property ${key}`);
+    }
+    if (rule.propertyNames) {
+      for (const key of Object.keys(value)) errors.push(...schemaErrors(key, rule.propertyNames, `${at}{property:${key}}`, rootSchema));
+    }
+    const declared = rule.properties ?? {};
+    for (const [key, propertyRule] of Object.entries(declared)) {
+      if (Object.hasOwn(value, key)) errors.push(...schemaErrors(value[key], propertyRule, `${at}.${key}`, rootSchema));
+    }
+    const extras = Object.keys(value).filter((key) => !Object.hasOwn(declared, key));
+    if (rule.additionalProperties === false) {
+      for (const key of extras) errors.push(`${at}: unknown property ${key}`);
+    } else if (isObject(rule.additionalProperties) || typeof rule.additionalProperties === "boolean") {
+      for (const key of extras) errors.push(...schemaErrors(value[key], rule.additionalProperties, `${at}.${key}`, rootSchema));
+    }
+  }
+
+  if (rule.allOf) {
+    for (const subrule of rule.allOf) errors.push(...schemaErrors(value, subrule, at, rootSchema));
+  }
+  if (rule.if) {
+    const conditionMatches = schemaErrors(value, rule.if, at, rootSchema).length === 0;
+    if (conditionMatches && rule.then) errors.push(...schemaErrors(value, rule.then, at, rootSchema));
+    if (!conditionMatches && rule.else) errors.push(...schemaErrors(value, rule.else, at, rootSchema));
+  }
+  if (rule.oneOf) {
+    const alternatives = rule.oneOf.map((subrule) => schemaErrors(value, subrule, at, rootSchema));
+    const matchCount = alternatives.filter((candidate) => candidate.length === 0).length;
+    if (matchCount !== 1) errors.push(`${at}: expected exactly one oneOf match, received ${matchCount}`);
+  }
+  return errors;
 }
 
 function exactKeys(value, allowed, at, errors) {
@@ -252,6 +343,25 @@ function expectInvalid(name, manifest, expectedFragment) {
   assert.ok(errors.some((error) => error.includes(expectedFragment)), `${name}: expected ${expectedFragment}; got ${errors.join(" | ")}`);
 }
 
+async function verifyEmbeddedBinding(manifest, releaseRoot) {
+  assert.equal(manifest.releaseBinding.mode, "embedded", "embedded verification requires embedded binding");
+  const boundPath = path.resolve(releaseRoot, manifest.releaseBinding.assetPath);
+  assert.ok(boundPath.startsWith(`${path.resolve(releaseRoot)}${path.sep}`), "embedded manifest must remain inside the release root");
+  const boundManifest = await readJson(boundPath);
+  assert.deepEqual(schemaErrors(boundManifest, schema), [], "embedded release manifest must validate against the published schema");
+  assert.deepEqual(validateManifest(boundManifest, boundManifest.platform.family), [], "embedded release manifest must pass semantic validation");
+}
+
+async function verifyLinkedBinding(manifest, loadLinkedContent) {
+  assert.equal(manifest.releaseBinding.mode, "linked", "linked verification requires linked binding");
+  const bytes = await loadLinkedContent(manifest.releaseBinding.url);
+  const actual = createHash("sha256").update(bytes).digest("hex");
+  assert.equal(actual, manifest.releaseBinding.sha256, "linked release manifest digest must match fetched bytes");
+  const linkedManifest = JSON.parse(bytes.toString("utf8"));
+  assert.deepEqual(schemaErrors(linkedManifest, schema), [], "linked release manifest must validate against the published schema");
+  assert.deepEqual(validateManifest(linkedManifest, linkedManifest.platform.family), [], "linked release manifest must pass semantic validation");
+}
+
 const schema = await readJson(schemaPath);
 assert.equal(schema.$schema, "https://json-schema.org/draft/2020-12/schema");
 assert.equal(schema.properties?.schemaVersion?.const, 1);
@@ -267,6 +377,8 @@ assert.deepEqual(filenames, [...platformFiles.keys()].sort(), "fixtures must con
 const fixtures = new Map();
 for (const filename of filenames) {
   const manifest = await readJson(path.join(fixtureDirectory, filename));
+  const structuralErrors = schemaErrors(manifest, schema);
+  assert.deepEqual(structuralErrors, [], `${filename} failed JSON Schema validation:\n${structuralErrors.join("\n")}`);
   const errors = validateManifest(manifest, platformFiles.get(filename));
   assert.deepEqual(errors, [], `${filename} failed:\n${errors.join("\n")}`);
   fixtures.set(filename, manifest);
@@ -275,10 +387,12 @@ for (const filename of filenames) {
 const macos = fixtures.get("macos.json");
 const future = clone(macos);
 future.schemaVersion = 2;
+assert.ok(schemaErrors(future, schema).some((error) => error.includes("schemaVersion")), "JSON Schema must reject a future major version");
 expectInvalid("future schema rejection", future, "schemaVersion");
 
 const missingEvidence = clone(macos);
 missingEvidence.capabilities[0].evidenceRefs = [];
+assert.ok(schemaErrors(missingEvidence, schema).some((error) => error.includes("evidenceRefs")), "JSON Schema must reject missing evidence references");
 expectInvalid("missing evidence rejection", missingEvidence, "evidenceRefs");
 
 const duplicate = clone(macos);
@@ -288,6 +402,7 @@ expectInvalid("explicit coverage rejection", duplicate, "missing explicit states
 
 const badStateDetails = clone(macos);
 badStateDetails.capabilities[0].state = "unavailable_by_os";
+assert.ok(schemaErrors(badStateDetails, schema).some((error) => error.includes("stateDetails")), "JSON Schema must enforce state-specific fields");
 expectInvalid("state-specific contract rejection", badStateDetails, "expected os_* code");
 
 const archived = clone(fixtures.get("windows.json"));
@@ -299,13 +414,49 @@ archived.capabilities[0] = {
   stateDetails: { lastSupportedBuild: "0.0.0-example", archivedAt: "2026-08-13T18:00:00Z", securityStatus: "no_security_updates" },
 };
 assert.deepEqual(validateManifest(archived, "windows"), [], "archived state should validate when support and security fields are explicit");
+assert.deepEqual(schemaErrors(archived, schema), [], "JSON Schema should accept a complete archived state");
 
 const incompleteArchive = clone(archived);
 delete incompleteArchive.capabilities[0].stateDetails.securityStatus;
+assert.ok(schemaErrors(incompleteArchive, schema).some((error) => error.includes("securityStatus")), "JSON Schema must reject incomplete archived state");
 expectInvalid("incomplete archive rejection", incompleteArchive, "securityStatus");
 
 const placeholderShippedLink = clone(fixtures.get("android.json"));
+placeholderShippedLink.releaseBinding = {
+  mode: "linked",
+  url: "https://example.invalid/capabilities.json",
+  sha256: "0".repeat(64),
+  mediaType: "application/vnd.project-ambient.capabilities+json;version=1",
+};
 placeholderShippedLink.claimScope = "shipped_build";
 expectInvalid("placeholder release digest rejection", placeholderShippedLink, "placeholder digest");
 
-console.log(`Capability contract valid: schema v1, ${fixtures.size} platform fixtures, ${capabilityIds.length} explicit capabilities each, 7 negative/compatibility checks passed.`);
+const releaseRoot = await mkdtemp(path.join(os.tmpdir(), "project-ambient-capability-release-"));
+try {
+  const embedded = clone(macos);
+  const embeddedPath = path.join(releaseRoot, embedded.releaseBinding.assetPath);
+  await mkdir(path.dirname(embeddedPath), { recursive: true });
+  await writeFile(embeddedPath, `${JSON.stringify(embedded, null, 2)}\n`);
+  await verifyEmbeddedBinding(embedded, releaseRoot);
+
+  const linkedBytes = Buffer.from(`${JSON.stringify(fixtures.get("android.json"), null, 2)}\n`);
+  const linked = clone(fixtures.get("android.json"));
+  linked.releaseBinding = {
+    mode: "linked",
+    url: "https://fixtures.project-ambient.invalid/android-capabilities.json",
+    sha256: createHash("sha256").update(linkedBytes).digest("hex"),
+    mediaType: "application/vnd.project-ambient.capabilities+json;version=1",
+  };
+  await verifyLinkedBinding(linked, async (url) => {
+    assert.equal(url, linked.releaseBinding.url, "linked verifier must request the declared immutable URL");
+    return linkedBytes;
+  });
+
+  const tampered = clone(linked);
+  tampered.releaseBinding.sha256 = "f".repeat(64);
+  await assert.rejects(() => verifyLinkedBinding(tampered, async () => linkedBytes), /digest must match/);
+} finally {
+  await rm(releaseRoot, { recursive: true, force: true });
+}
+
+console.log(`Capability contract valid: schema v1, ${fixtures.size} platform fixtures, ${capabilityIds.length} explicit capabilities each, published-schema evaluation plus 7 negative/compatibility and 3 release-binding checks passed.`);

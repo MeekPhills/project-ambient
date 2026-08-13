@@ -10,7 +10,7 @@
 
 **Working branch:** `feat/20-capability-contract`
 
-**Active pull request:** pending
+**Active pull request:** draft PR #26 — https://github.com/MeekPhills/project-ambient/pull/26
 
 **Current milestone:** M0 — Governance and architecture
 
@@ -22,7 +22,7 @@ Issue #17 remains an independent draft evidence stream in its own worktree and o
 
 ## Next exact action
 
-Create and validate the versioned platform-neutral capability contract in `schemas/capabilities/`, five platform examples in `fixtures/capabilities/`, and `script/validate_capabilities.mjs`. The contract must make every support claim explicit, evidence-linked, and user-readable, and it must define how release assets embed or link the manifest. Obtain non-author review before merge.
+Correct the five findings from the non-author review of commit `17ac6b7`: evaluate fixtures through the published JSON Schema, prove embedded/linked release bindings and digest verification, remove unsupported experimental alpha claims, run the contract from release preflight/CI, and reconcile the declared worktree. Re-run focused checks, commit the correction, and request re-review before making PR #26 ready.
 
 ## Read in this order
 
@@ -61,9 +61,15 @@ Create and validate the versioned platform-neutral capability contract in `schem
 
 ## Verification baseline
 
-- Required focused smoke: `node script/validate_capabilities.mjs`
+- Initial commit: `17ac6b764b2d8bc1b64701ccf6d5b01a1cf33570`
+- `node script/validate_capabilities.mjs`: passed at the initial commit — schema v1 metadata/manual rules, 5 fixtures, 20 explicit capabilities per fixture, 7 negative/compatibility checks. Reviewer correctly required actual published-schema evaluation and executable release bindings before approval.
+- `node script/validate_implementation_plan.mjs`: passed — 41 tasks, 9 milestones, 100 points, acyclic.
+- JSON parsing and `node --check script/validate_capabilities.mjs`: passed.
+- `git diff --check`: passed.
+- Non-author review at `17ac6b7`: **changes required**; corrections are in progress and no credit is claimed.
+- Required corrected smoke: `node script/validate_capabilities.mjs`
 - Required hygiene: `git diff --check`
-- Release-link behavior must be tested without building or publishing a release.
+- Release-link behavior must be tested without publishing a release; `script/verify_release.sh` and release-integrity CI must invoke the focused preflight.
 - The #17 native build instability and site dependency advisories remain independent baseline risks; #20 does not claim to resolve them.
 
 ## M0 remaining order

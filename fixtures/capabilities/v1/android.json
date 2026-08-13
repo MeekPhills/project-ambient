@@ -5,7 +5,7 @@
   "generatedAt": "2026-08-13T18:00:00Z",
   "build": { "product": "Project Ambient", "version": "0.0.0-contract-fixture", "channel": "development", "sourceRevision": "a5b3f41b4155f8bfe8bf859934314746c943cfea" },
   "platform": { "family": "android", "displayName": "Android companion contract fixture", "versionRange": { "minimum": "API 26", "maximumTested": "not-yet-tested" }, "architectures": ["arm64", "x86_64"], "environment": { "role": "companion and OS-permitted wallpaper service" }, "integrationMethods": ["wallpaper_service", "remote_companion"], "supportLifecycle": "preview" },
-  "releaseBinding": { "mode": "linked", "url": "https://github.com/MeekPhills/project-ambient/raw/a5b3f41b4155f8bfe8bf859934314746c943cfea/fixtures/capabilities/v1/android.json", "sha256": "0000000000000000000000000000000000000000000000000000000000000000", "mediaType": "application/vnd.project-ambient.capabilities+json;version=1" },
+  "releaseBinding": { "mode": "embedded", "assetPath": "capabilities/project-ambient-capabilities.json", "mediaType": "application/vnd.project-ambient.capabilities+json;version=1" },
   "evidenceCatalog": {
     "contract-issue": { "type": "contract_fixture", "uri": "https://github.com/MeekPhills/project-ambient/issues/20", "summary": "Exercises the Android contract without claiming that an Android build exists." },
     "wallpaper-service-doc": { "type": "platform_documentation", "uri": "https://developer.android.com/reference/android/service/wallpaper/WallpaperService", "summary": "Android documents the WallpaperService surface for app-provided live wallpaper engines." }

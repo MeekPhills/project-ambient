@@ -20,6 +20,7 @@ run() {
 
 run swift build "${SWIFT_FLAGS[@]}"
 run swift test "${SWIFT_FLAGS[@]}"
+run node "$ROOT_DIR/script/validate_capabilities.mjs"
 
 if [[ -d "$ROOT_DIR/services/mcp/node_modules" ]]; then
   run npm --prefix "$ROOT_DIR/services/mcp" run check

@@ -38,6 +38,9 @@ This is the M0 contract. M8 release packaging must embed or link the validated
 manifest and verify the binding before publication; a prepared fixture does not
 claim that an existing release has already been repackaged.
 
-Run `node script/validate_capabilities.mjs` to validate the schema, all five
-platform fixtures, release bindings, state-specific evidence, and negative
-compatibility cases.
+Run `node script/validate_capabilities.mjs` to evaluate all five platform
+fixtures against this published schema, then validate semantic cross-references,
+state-specific evidence, embedded and linked release bindings, digest integrity,
+and negative compatibility cases. `script/verify_release.sh` and the static
+release-integrity workflow run the same preflight; packaging or publication must
+not bypass it.
