@@ -1,36 +1,38 @@
 # Current Handoff
 
-**Updated:** 2026-08-12  
-**Program state:** Handover prepared; product implementation is gated on design approval  
-**Repository:** https://github.com/MeekPhills/project-ambient  
-**Base branch:** `main` at `6ab0b4926439a14eda7d0608b4b4e5f581048c3b` when PR opened  
-**Planning branch:** `plan/full-platform-launch` at `80fc23306a498fa21177335ceb5c39691b6a84b7` before this update  
-**Active pull request:** #22 — https://github.com/MeekPhills/project-ambient/pull/22  
-**Current milestone:** M0 — Program Governance & Agent Continuity (#1)  
-**Milestone epic:** #10 — https://github.com/MeekPhills/project-ambient/issues/10  
+**Updated:** 2026-08-13
+
+**Program state:** Six launch-boundary decisions are recorded; independent review is pending and product implementation remains gated
+
+**Repository:** https://github.com/MeekPhills/project-ambient
+
+**Base branch:** current `main` at `e40cf5aa62f9f30180ff743023ceadbf1ca3df9e`, integrated by merge commit `f791e41fdac02ba4c4b73ba3d3fad560a970d099`
+
+**Planning branch:** `plan/full-platform-launch`; accepted decision content at `03a0e37` before this handoff update
+
+**Active pull request:** #22 — https://github.com/MeekPhills/project-ambient/pull/22
+
+**Current milestone:** M0 — Program Governance & Agent Continuity (#1)
+
+**Milestone epic:** #10 — https://github.com/MeekPhills/project-ambient/issues/10
+
 **Only active issue:** #19 — https://github.com/MeekPhills/project-ambient/issues/19
 
 ## Next exact action
 
-Review `docs/product/FULL_PLATFORM_LAUNCH_SPEC.md` through draft PR #22 and resolve or explicitly defer the six decisions in issue #19:
+Review commit `03a0e37` as a non-author against issue #19 and [decision record 0001](../decisions/0001-m0-launch-boundaries.md). Confirm the six decisions, canonical-tracker boundary, corrected commands, privacy constraints, and implementation gate. Fix any findings, push the planning branch, update PR #22 validation evidence, and record the accepted decision list on #19.
 
-1. shared-core prototype scope;
-2. software-license direction;
-3. first Linux desktop/session targets;
-4. Managed GA versus commercial-preview timing;
-5. content marketplace timing;
-6. opt-in diagnostics schema and retention.
-
-Do not begin product implementation until #19 records approval. After #19, proceed to #16 for task-level planning and #17 for baseline verification. Work on only one issue at a time unless GitHub dependencies and non-overlapping files make parallel work explicit.
+Do not begin product implementation until #19 passes independent review. After #19, make #16 the sole active issue for task-level planning and canonical tracker scope migration. #17 may establish the clean baseline only when file ownership and dependencies are explicitly non-overlapping.
 
 ## Read in this order
 
 1. `CLAUDE.md`
 2. Issue #19 and PR #22
-3. `docs/product/FULL_PLATFORM_LAUNCH_SPEC.md`
-4. M0 epic #10
-5. Existing `ROADMAP.md`, `README.md`, and `docs/architecture.md`
-6. The next issue selected by this file
+3. `docs/decisions/0001-m0-launch-boundaries.md`
+4. `docs/product/FULL_PLATFORM_LAUNCH_SPEC.md`
+5. M0 epic #10
+6. Existing `ROADMAP.md`, `README.md`, and `docs/architecture.md`
+7. The next issue selected by this file
 
 ## GitHub program state
 
@@ -70,6 +72,7 @@ M0 execution issues:
 ## What is in PR #22
 
 - `CLAUDE.md`: Claude Code pickup, branch discipline, verification, definition of done, and credit/context stop protocol.
+- `docs/decisions/0001-m0-launch-boundaries.md`: accepted shared-core, licensing, Linux, Managed Preview, marketplace, diagnostics, and tracker boundaries.
 - `docs/product/FULL_PLATFORM_LAUNCH_SPEC.md`: Static → Hybrid → Managed design, full macOS Aerial-parity contract, differentiators, cross-platform policy, compatibility archive, commercial direction, and M0–M8 gates.
 - `docs/handoffs/CURRENT.md`: this atomic handoff.
 - `.github/ISSUE_TEMPLATE/implementation.yml`: agent-ready task contract.
@@ -80,11 +83,11 @@ No product code was changed by PR #22.
 ## Repository facts to verify in #17
 
 - Remote: `MeekPhills/project-ambient`
-- Local checkout: `/Users/luismorrobel/Library/Mobile Documents/com~apple~CloudDocs/Codename Ambiant`
 - An older local branch `harden/supabase-private-schema` was observed and must not be repurposed.
-- Existing project commands include `swift test`, `swift build`, and `./scripts/verify-release-integrity.sh`; #17 must verify their exact locations and current results.
-- MCP and website validation commands must be discovered from current repository docs/scripts and recorded rather than guessed.
-- Open PR #6 is separate status-evidence work and must remain isolated from PR #22.
+- Verified native command paths are `swift build --package-path apps/macos` and `swift test --package-path apps/macos`.
+- The aggregate verifier is `./script/verify_release.sh`; there is no `scripts/verify-release-integrity.sh`.
+- MCP and website commands are defined in their package manifests and `CLAUDE.md`; #17 still owns clean execution and bounded output.
+- Status PR #6 and corrective PR #23 are merged on `main` and were integrated into the isolated planning checkout before decision edits.
 
 ## Product facts that must survive handoff
 
@@ -107,6 +110,7 @@ No product code was changed by PR #22.
 - Cross-platform native integration cannot be forced into false lowest-common-denominator parity.
 - Media rights and software licensing are separate decisions.
 - A large compatibility archive becomes a security burden without evidence and maintained CI.
+- The current 49.75/100 tracker predates expanded Windows, Linux, mobile, and Managed scope; #16 must perform one versioned canonical migration rather than introduce a competing percentage.
 
 ## Stop protocol for the next agent
 
