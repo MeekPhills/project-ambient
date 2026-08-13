@@ -19,6 +19,33 @@ interface IsolatedDatabase {
   runtimeUrl: string;
 }
 
+async function waitForDatabaseClientsToClose(
+  admin: Pool,
+  database: string,
+  timeoutMs = 2_000,
+): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  while (true) {
+    const active = await admin.query<{ pid: number; state: string | null }>(
+      `SELECT pid, state
+         FROM pg_catalog.pg_stat_activity
+        WHERE datname = $1
+          AND backend_type = 'client backend'
+        ORDER BY pid`,
+      [database],
+    );
+    if (active.rows.length === 0) return;
+    if (Date.now() >= deadline) {
+      const sessions = active.rows.map(({ pid, state }) => `${pid}:${state ?? "unknown"}`).join(", ");
+      throw new Error(
+        `Isolated PostgreSQL test database retained ${active.rows.length} client connection(s) `
+        + `after both pools closed (${sessions}).`,
+      );
+    }
+    await delay(25);
+  }
+}
+
 async function isolatedDatabase(t: TestContext): Promise<IsolatedDatabase> {
   assert.ok(connectionString);
   const suffix = randomUUID().replaceAll("-", "");
@@ -41,12 +68,20 @@ async function isolatedDatabase(t: TestContext): Promise<IsolatedDatabase> {
   const owner = new Pool({ connectionString: isolatedUrl.toString(), max: 10 });
   const runtime = new Pool({ connectionString: runtimeUrl.toString(), max: 10 });
   t.after(async () => {
-    await runtime.end();
-    await owner.end();
-    // This exact, randomly generated test database is the only cleanup target.
-    await admin.query(`DROP DATABASE "${database}" WITH (FORCE)`);
-    await admin.query(`DROP ROLE "${runtimeRole}"`);
-    await admin.end();
+    try {
+      await Promise.all([runtime.end(), owner.end()]);
+      // Pool shutdown can resolve just before PostgreSQL removes the backends from
+      // pg_stat_activity. Wait for that server-side acknowledgement so cleanup
+      // never converts a harmless socket-close race into an uncaught FATAL.
+      await waitForDatabaseClientsToClose(admin, database);
+      // This exact, randomly generated test database is the only cleanup target.
+      // A non-FORCE drop makes a genuine leaked client fail diagnostically instead
+      // of terminating it underneath node-postgres' event handlers.
+      await admin.query(`DROP DATABASE "${database}"`);
+      await admin.query(`DROP ROLE "${runtimeRole}"`);
+    } finally {
+      await admin.end();
+    }
   });
   return { owner, runtime, runtimeRole, runtimeUrl: runtimeUrl.toString() };
 }
