@@ -3,9 +3,9 @@
   "project": "Project Ambient",
   "release": "0.1.0-alpha",
   "totalWeight": 100,
-  "updatedAt": "2026-08-13T23:16:49Z",
-  "evidenceAsOf": "2026-08-13T23:16:49Z",
-  "lastVerifiedAt": "2026-08-13T23:16:49Z",
+  "updatedAt": "2026-08-13T23:50:57Z",
+  "evidenceAsOf": "2026-08-13T23:50:57Z",
+  "lastVerifiedAt": "2026-08-13T23:50:57Z",
   "refreshSeconds": 60,
   "fieldDefaults": {
     "deferred": false,
@@ -127,7 +127,7 @@
     }
   ],
   "methodology": {
-    "formula": "Overall completion is earned task weight divided by the one 100-point M0–M8 plan. Current accepted evidence earns 18/100: M0 6/8, M1 5/14, M2 1/12, M3 0.5/20, M4 3/14, M5 0/12, M6 0/7, M7 0.5/6, and M8 2/7.",
+    "formula": "Overall completion is earned task weight divided by the one 100-point M0–M8 plan. Current accepted evidence earns 20/100: M0 8/8, M1 5/14, M2 1/12, M3 0.5/20, M4 3/14, M5 0/12, M6 0/7, M7 0.5/6, and M8 2/7.",
     "statusCredit": {
       "complete": "Earned points equal task weight only after accepted artifact, smoke evidence, and required review",
       "in_progress": "Only explicit accepted partial credit; this migration assigns none to incomplete expanded-scope tasks",
@@ -135,7 +135,7 @@
       "not_started": "0 points"
     },
     "approvalRule": "Account, identity, submission, store, payment, public-launch, and other owner gates stay at zero until actually cleared. Prepared engineering is credited only in a separately weighted task.",
-    "etaRule": "The accepted capability, rights/commercial, and Aerial parity contracts remove their completed task estimates from the prior active range, leaving 125–237 hands-on hours. Microsoft enterprise distribution and Google A2A remain outside the weighted scope.",
+    "etaRule": "Completing the accepted M0 baseline and cold-start integration removes their remaining task estimates, leaving 118–224 hands-on hours. Microsoft enterprise distribution and Google A2A remain outside the weighted scope.",
     "timeRule": "Hands-on effort, the separate 48–72 hour clean-machine/energy soak, deferred initiatives, recurring operations, and external waits are reported separately.",
     "healthRule": "Public endpoint checks are guardrails only. Their results never change earned completion points."
   },
@@ -170,6 +170,8 @@
     "implementationPlan": "https://github.com/MeekPhills/project-ambient/issues/16",
     "rightsBoundary": "https://github.com/MeekPhills/project-ambient/pull/30",
     "aerialParity": "https://github.com/MeekPhills/project-ambient/pull/33",
+    "repositoryBaseline": "https://github.com/MeekPhills/project-ambient/pull/24",
+    "m0Integration": "https://github.com/MeekPhills/project-ambient/issues/10",
     "site": "https://project-ambient.meekphillies.chatgpt.site",
     "release": "https://github.com/MeekPhills/project-ambient/releases/tag/v0.1.0-alpha",
     "actions": "https://github.com/MeekPhills/project-ambient/actions",
@@ -233,28 +235,28 @@
       "id": "m0-program-integration",
       "owner": "Sol · medium",
       "name": "M0 program integration",
-      "state": "in_progress",
-      "completion": 87.5,
-      "detail": "Launch decisions, the canonical dependency/tracker migration, platform capability contract, rights/commercial boundary, and owned Aerial parity contract are accepted; baseline and final M0 integration remain.",
+      "state": "complete",
+      "completion": 100,
+      "detail": "All M0 decisions, contracts, dependency/tracker migration, baseline evidence, risk review, and cold-start integration are accepted. M1 issue #37 is the next gated implementation slice.",
       "chunks": [
         { "label": "Launch decisions", "share": 25, "earnedShare": 25, "status": "complete" },
         { "label": "Dependency and tracker migration", "share": 25, "earnedShare": 25, "status": "complete" },
         { "label": "Platform capability contract", "share": 12.5, "earnedShare": 12.5, "status": "complete" },
         { "label": "Rights and commercial boundary", "share": 12.5, "earnedShare": 12.5, "status": "complete" },
         { "label": "Owned Aerial parity contract", "share": 12.5, "earnedShare": 12.5, "status": "complete" },
-        { "label": "Baseline and final integration", "share": 12.5, "earnedShare": 0, "status": "in_progress" }
+        { "label": "Baseline and final integration", "share": 12.5, "earnedShare": 12.5, "status": "complete" }
       ]
     },
     {
       "id": "m0-baseline-validation",
       "owner": "Terra · medium",
       "name": "Repository baseline validation",
-      "state": "in_progress",
-      "completion": 0,
-      "detail": "Issue #17 is running in an isolated worktree; no credit is awarded until its evidence report, smoke test, non-author review, and merge gate pass.",
+      "state": "complete",
+      "completion": 100,
+      "detail": "Issue #17 passed independent review, clean-runner native/MCP/site/CodeQL checks, an exact-head release-integrity dispatch, and merged as PR #24. Security follow-up #36 remains explicit and uncredited.",
       "chunks": [
-        { "label": "Clean subsystem and aggregate commands", "share": 70, "earnedShare": 0, "status": "in_progress" },
-        { "label": "Independent evidence review", "share": 30, "earnedShare": 0, "status": "not_started" }
+        { "label": "Clean subsystem and aggregate commands", "share": 70, "earnedShare": 70, "status": "complete" },
+        { "label": "Independent evidence review", "share": 30, "earnedShare": 30, "status": "complete" }
       ]
     },
     {
@@ -280,15 +282,15 @@
       "id": "m0-policy-risk",
       "owner": "Luna · medium",
       "name": "Policy, parity, and risk",
-      "state": "in_progress",
-      "completion": 80,
-      "detail": "Launch boundaries, detailed licensing/media rights, capability claims, and exhaustive Aerial parity coverage passed independent review. The final M0 risk review remains.",
+      "state": "complete",
+      "completion": 100,
+      "detail": "Launch boundaries, licensing/media rights, capability claims, exhaustive parity, baseline risk disposition, and final M0 claim boundaries passed independent review.",
       "chunks": [
         { "label": "Launch-boundary review", "share": 20, "earnedShare": 20, "status": "complete" },
         { "label": "Rights and commercial review", "share": 25, "earnedShare": 25, "status": "complete" },
         { "label": "Capability review", "share": 15, "earnedShare": 15, "status": "complete" },
         { "label": "Aerial parity review", "share": 20, "earnedShare": 20, "status": "complete" },
-        { "label": "M0 exit risk review", "share": 20, "earnedShare": 0, "status": "not_started" }
+        { "label": "M0 exit risk review", "share": 20, "earnedShare": 20, "status": "complete" }
       ]
     }
   ],
@@ -298,15 +300,15 @@
       "name": "M0 — Governance and architecture",
       "summary": "Decisions, baseline, contracts, parity, rights, dependency order, tracker migration, and cold-start continuity.",
       "weight": 8,
-      "handsOnRemaining": { "min": 7, "max": 13 },
+      "handsOnRemaining": { "min": 0, "max": 0 },
       "tasks": [
         { "id": "m0-design-governance", "name": "Accepted launch boundaries and agent continuity", "status": "complete", "weight": 1.5, "earnedWeight": 1.5, "hoursRemaining": { "min": 0, "max": 0 }, "evidence": "PR #22 merged after non-author review and green native, MCP, site, secret-scan, and CodeQL jobs; issue #19 closed." },
         { "id": "m0-dependency-tracker", "name": "Dependency plan and canonical tracker migration", "status": "complete", "weight": 1.5, "earnedWeight": 1.5, "hoursRemaining": { "min": 0, "max": 0 }, "evidence": "Issue #16 defines 41 machine-validated tasks, the first vertical slice, exact milestone weights, and schema-v3 historical migration; credit becomes accepted with this merge." },
-        { "id": "m0-baseline-integrity", "name": "Repository baseline and release integrity", "status": "in_progress", "weight": 1, "earnedWeight": 0, "hoursRemaining": { "min": 3, "max": 5 }, "evidence": "Issue #17 is executing independently; results earn zero until its report, review, and merge gate pass." },
+        { "id": "m0-baseline-integrity", "name": "Repository baseline and release integrity", "status": "complete", "weight": 1, "earnedWeight": 1, "hoursRemaining": { "min": 0, "max": 0 }, "evidence": "PR #24 merged as 08166c73042f07654f82220265de30f5af48e7a8 after independent approval and exact-head macOS, MCP/PostgreSQL, site, secret-scan, CodeQL, static-contract, aggregate-verifier, and unsigned universal-candidate evidence. Issue #36 openly retains site advisories and install-script policy with no hidden credit." },
         { "id": "m0-licensing-rights", "name": "Software, media-rights, and commercial boundaries", "status": "complete", "weight": 1, "earnedWeight": 1, "hoursRemaining": { "min": 0, "max": 0 }, "evidence": "PR #30 merged as d958be915648e7b5586b882f9c9e6694610a01dc after non-author approval and green CI, CodeQL, release-integrity, 5 positive rights fixtures, and 29 adversarial fail-closed checks." },
         { "id": "m0-capability-contract", "name": "Versioned platform capability contract", "status": "complete", "weight": 1, "earnedWeight": 1, "hoursRemaining": { "min": 0, "max": 0 }, "evidence": "PR #26 merged at af600850 after non-author approval and green CI, CodeQL, release preflight, and universal release-candidate verification. Schema v1 validates five platform fixtures, explicit evidence/explanations, and embedded or linked release bindings." },
         { "id": "m0-aerial-parity", "name": "Owned Aerial parity matrix", "status": "complete", "weight": 1, "earnedWeight": 1, "hoursRemaining": { "min": 0, "max": 0 }, "evidence": "PR #33 merged as 7f3e97f0f30f1e9007d80fe82cc1feeeb7aaddb5 after exact-head non-author approval and green CI. The version-bound contract validates 145 rows, 19 domains, all three product directions, 26 immutable evidence records, and 23 adversarial checks. Strict GA intentionally remains closed until 296 implementation, cross-cutting resource/chat, and exception findings are resolved." },
-        { "id": "m0-integration", "name": "M0 integration and cold-start gate", "status": "not_started", "weight": 1, "earnedWeight": 0, "hoursRemaining": { "min": 4, "max": 8 }, "evidence": "Requires the accepted #17 baseline plus all merged M0 contracts, aggregate validators, risk review, and the full repository/GitHub reconstruction smoke." }
+        { "id": "m0-integration", "name": "M0 integration and cold-start gate", "status": "complete", "weight": 1, "earnedWeight": 1, "hoursRemaining": { "min": 0, "max": 0 }, "evidence": "This merge reconciles the machine plan, canonical tracker, accepted M0 artifacts, risk disposition, and cold-start handoff after aggregate validation and non-author reconstruction review. Credit activates only when this exact change is merged, deployed, and publicly verified; issue #37 is the explicit M1 entry." }
       ]
     },
     {
