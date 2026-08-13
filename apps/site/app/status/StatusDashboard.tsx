@@ -173,8 +173,8 @@ export function StatusDashboard() {
             <h1 id="status-title">Delivery, without the hand-waving.</h1>
             <p>
               Project Ambient is launched as an alpha. This page measures the
-              harder question: how close the full initiative is to production
-              readiness, marketplace distribution, and repeatable growth.
+              harder question: how close the accepted M0–M8 scope is to full-platform
+              production readiness, managed preview, and reproducible GA.
             </p>
             <div className="status-hero-meta">
               <span>Release {statusManifest.release}</span>
@@ -235,7 +235,7 @@ export function StatusDashboard() {
           <div className="progress-groups">
             <article className="progress-group">
               <div className="progress-group-head">
-                <div><p className="kicker">Three phases</p><h2 id="overview-title">One score, three accountable tracks.</h2></div>
+                <div><p className="kicker">Nine milestones</p><h2 id="overview-title">One score, nine accountable gates.</h2></div>
                 <p>Each chunk is one weighted task. Color shows state; the inner fill shows earned credit.</p>
               </div>
               <div className="compact-progress-list">
@@ -500,7 +500,7 @@ export function StatusDashboard() {
       <aside className="running-status-dock" aria-label="Persistent Project Ambient delivery status">
         <div className="running-status-dock-inner">
           <div className="dock-total"><span><i aria-hidden="true" /> Status bot</span><strong>{roundedCompletion}%</strong></div>
-          <div className="dock-phase-bars" aria-label="Three phase progress">
+          <div className="dock-phase-bars" aria-label="Nine milestone progress">
             {statusManifest.phases.map((phase, index) => {
               const completion = phaseCompletion(phase);
               return (

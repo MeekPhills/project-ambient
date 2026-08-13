@@ -51,7 +51,7 @@ test("homepage exposes launch and trust paths", async () => {
 
 test("status manifest is a fixed, conservative 100-point audit", () => {
   const phaseWeight = statusManifest.phases.reduce((sum, phase) => sum + phase.weight, 0);
-  assert.equal(statusManifest.schemaVersion, 2);
+  assert.equal(statusManifest.schemaVersion, 3);
   assert.equal(statusManifest.totalWeight, 100);
   assert.equal(phaseWeight, statusManifest.totalWeight);
   assert.match(statusManifest.updatedAt, /^\d{4}-\d{2}-\d{2}T/);
@@ -60,7 +60,7 @@ test("status manifest is a fixed, conservative 100-point audit", () => {
   assert.equal(statusManifest.automation.agent, "Project Ambient Status Bot");
   assert.equal(statusManifest.automation.weightedAuditCadence, "Every 6 hours and on demand");
   assert.equal(statusManifest.automation.liveHealthCadence, "Every 60 seconds");
-  assert.deepEqual(statusManifest.phases.map((phase) => phase.weight), [45, 45, 10]);
+  assert.deepEqual(statusManifest.phases.map((phase) => phase.weight), [8, 14, 12, 20, 14, 12, 7, 6, 7]);
   assert.equal(statusManifest.deliveryWorkstreams.length, 4);
 
   const statuses = new Set();
@@ -88,14 +88,14 @@ test("status manifest is a fixed, conservative 100-point audit", () => {
     [...statuses].sort(),
     ["blocked", "complete", "in_progress", "not_started"].sort(),
   );
-  assert.equal(earned, 49.75);
-  assert.equal(Math.round(earned), 50);
+  assert.equal(earned, 15);
+  assert.equal(Math.round(earned), 15);
   assert.deepEqual(
     statusManifest.phases.map((phase) => phase.tasks.reduce(
       (sum, task) => sum + (task.status === "complete" || task.status === "in_progress" ? task.earnedWeight : 0),
       0,
     )),
-    [24, 20.25, 5.5],
+    [3, 5, 1, 0.5, 3, 0, 0, 0.5, 2],
   );
 
   for (const workstream of statusManifest.deliveryWorkstreams) {
@@ -105,16 +105,16 @@ test("status manifest is a fixed, conservative 100-point audit", () => {
     assert.equal(workstream.completion, derivedCompletion);
     assert.equal(workstream.state, derivedCompletion === 100 ? "complete" : "in_progress");
   }
-  assert.deepEqual(statusManifest.deliveryWorkstreams.map((workstream) => workstream.completion), [100, 85, 95, 100]);
-  assert.match(statusManifest.deliveryWorkstreams[0].detail, /34/);
-  assert.match(statusManifest.deliveryWorkstreams[1].detail, /PostgreSQL/);
+  assert.deepEqual(statusManifest.deliveryWorkstreams.map((workstream) => workstream.completion), [50, 0, 66, 20]);
+  assert.match(statusManifest.deliveryWorkstreams[0].detail, /tracker migration/);
+  assert.match(statusManifest.deliveryWorkstreams[2].detail, /Six of nine/);
 
   const active = tasks.filter((task) => !task.deferred).reduce(
     (sum, task) => ({ min: sum.min + task.hoursRemaining.min, max: sum.max + task.hoursRemaining.max }),
     { min: 0, max: 0 },
   );
-  const deferred = tasks.filter((task) => task.deferred).reduce(
-    (sum, task) => ({ min: sum.min + task.hoursRemaining.min, max: sum.max + task.hoursRemaining.max }),
+  const deferred = statusManifest.deferredInitiatives.reduce(
+    (sum, initiative) => ({ min: sum.min + initiative.hoursRemaining.min, max: sum.max + initiative.hoursRemaining.max }),
     { min: 0, max: 0 },
   );
   const soak = tasks.reduce(
@@ -125,19 +125,18 @@ test("status manifest is a fixed, conservative 100-point audit", () => {
   assert.deepEqual(deferred, { min: 84, max: 168 });
   assert.deepEqual(soak, { min: 48, max: 72 });
   assert.ok(Object.values(statusManifest.evidenceSources).every((url) => url.startsWith("https://")));
-  assert.match(statusManifest.evidenceSources.postgresCi, /31659415459\/job\/94320889848/);
-  assert.match(statusManifest.evidenceSources.codeql, /31659415452\/job\/94320889771/);
-  assert.match(statusManifest.evidenceSources.codeqlAlert, /security\/code-scanning\/3/);
-  assert.match(statusManifest.evidenceSources.releaseCandidate, /31659415484\/job\/94320890102/);
-  assert.match(statusManifest.evidenceSources.releaseTagCi, /31612134104\/job\/94165844230/);
-  assert.match(statusManifest.evidenceSources.releaseSourceCommit, /f9dbc7f42b5a8dd1edfd6fe33b27d693c7a27e81/);
-  assert.match(statusManifest.evidenceSources.secureBootstrap, /6ab0b4926439a14eda7d0608b4b4e5f581048c3b/);
-  assert.equal(statusManifest.evidenceSources.mcpRegistryPackageRules, "https://modelcontextprotocol.io/registry/package-types");
-  const registryPublication = tasks.find((task) => task.id === "registry-publication");
-  assert.match(registryPublication.blockedReason, /mcpName.*server\.json/i);
-  assert.match(registryPublication.evidence, /released npm tarball has no mcpName/i);
-  const supplyChain = tasks.find((task) => task.id === "supply-chain");
-  assert.match(supplyChain.evidence, /high.*CodeQL alert/i);
+  assert.equal(statusManifest.migration.fromSchemaVersion, 2);
+  assert.equal(statusManifest.migration.toSchemaVersion, 3);
+  assert.match(statusManifest.migration.activationGate, /merge-conditional/i);
+  assert.match(statusManifest.migration.activationGate, /49\.75\/100/);
+  assert.match(statusManifest.migration.priorManifest, /e40cf5aa62f9f30180ff743023ceadbf1ca3df9e/);
+  assert.equal(statusManifest.migration.creditMappings.reduce((sum, mapping) => sum + mapping.earnedWeight, 0), 15);
+  assert.equal(statusManifest.scoreHistory.length, 1);
+  assert.equal(statusManifest.scoreHistory[0].score, 49.75);
+  assert.deepEqual(statusManifest.scoreHistory[0].phaseWeights, [45, 45, 10]);
+  assert.deepEqual(statusManifest.scoreHistory[0].phaseEarned, [24, 20.25, 5.5]);
+  assert.match(statusManifest.scoreHistory[0].reason, /not a second current score/i);
+  assert.equal(statusManifest.phases.length, 9);
   assert.ok(statusManifest.liveChecks.every((check) => statusManifest.phases.some((phase) => phase.id === check.phaseId)));
 });
 
@@ -145,19 +144,19 @@ test("status page renders the exact score, ETA boundaries, filters, and methodol
   const response = await render("/status");
   const html = await response.text();
   const cleanHtml = html.replaceAll("<!-- -->", "");
-  assert.match(cleanHtml, /50%/);
-  assert.match(cleanHtml, /49\.75\s*\/\s*100/);
+  assert.match(cleanHtml, /15%/);
+  assert.match(cleanHtml, /15\s*\/\s*100/);
   assert.match(cleanHtml, /138[–-]259/);
   assert.match(cleanHtml, /External wait/);
   assert.match(cleanHtml, /Deferred/);
   assert.match(cleanHtml, /Every 6 hours and on demand/);
   assert.match(cleanHtml, /Every 60 seconds/);
-  assert.match(cleanHtml, /One score, three accountable tracks/);
+  assert.match(cleanHtml, /One score, nine accountable gates/);
   assert.match(cleanHtml, /Exact parallel-agent progress/);
   assert.match(cleanHtml, /Persistent Project Ambient delivery status/);
   assert.match(cleanHtml, /Status bot/);
   assert.match(cleanHtml, /Project Ambient Status Bot/);
-  assert.equal([...cleanHtml.matchAll(/data-status-dock-phase/g)].length, 3);
+  assert.equal([...cleanHtml.matchAll(/data-status-dock-phase/g)].length, 9);
   assert.equal([...cleanHtml.matchAll(/data-status-dock-agent/g)].length, 4);
   for (const workstream of statusManifest.deliveryWorkstreams) {
     const [agent, model] = workstream.owner.split("·").map((part) => part.trim());
@@ -179,9 +178,9 @@ test("raw status manifest endpoint exposes the canonical machine-readable source
   assert.doesNotMatch(cacheControl, /\b(?:public|s-maxage|stale-while-revalidate)\b/i);
   assert.equal(response.headers.get("x-content-type-options"), "nosniff");
   const manifest = await response.json();
-  assert.equal(manifest.schemaVersion, 2);
+  assert.equal(manifest.schemaVersion, 3);
   assert.equal(manifest.totalWeight, 100);
-  assert.equal(manifest.phases.length, 3);
+  assert.equal(manifest.phases.length, 9);
   assert.equal(manifest.deliveryWorkstreams.length, 4);
 });
 

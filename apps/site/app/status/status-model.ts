@@ -69,6 +69,36 @@ export type StatusManifest = {
     label: string;
     alphaLaunchStatus: string;
   };
+  migration: {
+    fromSchemaVersion: number;
+    toSchemaVersion: number;
+    effectiveAt: string;
+    decision: string;
+    change: string;
+    creditRule: string;
+    activationGate: string;
+    priorManifest: string;
+    creditMappings: Array<{
+      newTaskId: string;
+      earnedWeight: number;
+      priorTaskIds: string[];
+      sourceType: "schema-v2-remap" | "post-history-accepted" | "merge-conditional";
+      evidenceRefs: string[];
+    }>;
+  };
+  scoreHistory: Array<{
+    schemaVersion: number;
+    model: string;
+    auditedAt: string;
+    score: number;
+    phaseWeights: number[];
+    phaseEarned: number[];
+    activeHoursRemaining: { min: number; max: number };
+    deferredHoursRemaining: { min: number; max: number };
+    soakHours: { min: number; max: number };
+    sourceCommit: string;
+    reason: string;
+  }>;
   methodology: {
     formula: string;
     statusCredit: Record<TaskStatus, string>;
@@ -81,6 +111,12 @@ export type StatusManifest = {
     timeEstimate: string;
     gates: string[];
   };
+  deferredInitiatives: Array<{
+    id: string;
+    name: string;
+    hoursRemaining: { min: number; max: number };
+    reason: string;
+  }>;
   evidenceSources: Record<string, string>;
   dependencies: Record<string, string[]>;
   liveChecks: Array<{ id: string; label: string; url: string; phaseId: string }>;
@@ -141,10 +177,10 @@ export function calculateStatus(manifest: StatusManifest) {
     }),
     { min: 0, max: 0 },
   );
-  const deferredRemaining = tasks.filter((task) => task.deferred).reduce(
-    (hours, task) => ({
-      min: hours.min + task.hoursRemaining.min,
-      max: hours.max + task.hoursRemaining.max,
+  const deferredRemaining = manifest.deferredInitiatives.reduce(
+    (hours, initiative) => ({
+      min: hours.min + initiative.hoursRemaining.min,
+      max: hours.max + initiative.hoursRemaining.max,
     }),
     { min: 0, max: 0 },
   );
