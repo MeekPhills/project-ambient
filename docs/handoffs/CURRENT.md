@@ -2,11 +2,11 @@
 
 **Updated:** 2026-08-13
 
-**Program state:** M0 launch boundaries, dependency/tracker migration, the versioned capability contract, rights/commercial boundary, and exhaustive Aerial parity contract are accepted. Reviewed source evidence now supports 18/100, but production remains at 17/100 until this focused tracker update is reviewed, merged, deployed, and publicly verified. Product implementation remains gated by the repository baseline and final M0 integration gate.
+**Program state:** M0 launch boundaries, dependency/tracker migration, the versioned capability contract, rights/commercial boundary, and exhaustive Aerial parity contract are accepted. The canonical production tracker is live and publicly verified at 18/100. Product implementation remains gated by the repository baseline and final M0 integration gate.
 
 **Repository:** https://github.com/MeekPhills/project-ambient
 
-**Parent baseline for this handoff:** `7f3e97f0f30f1e9007d80fe82cc1feeeb7aaddb5` on `main`, including merged PR #33.
+**Parent baseline for this handoff:** `2f0b925c950db9d145a3949b3fbd53761ab21f88` on `main`, including merged PR #34.
 
 **Working branch:** `chore/10-m0-integration` in the isolated full clone `../project-ambient-m0-integration`
 
@@ -20,7 +20,7 @@ Issue #17 remains an independent draft evidence stream in its own worktree and o
 
 ## Next exact action
 
-Validate this 18/100 tracker activation, obtain exact-head non-author review, open a focused #10 draft PR, require clean-runner CI, merge, deploy the exact merge as the next Sites version, and verify `/status`, `/status/manifest`, and `/api/status`. Then resume #17 from its isolated evidence branch; do not award #17 or #10 credit until their complete DoDs pass.
+Resume issue #17 from its isolated evidence branch. Reconcile its report with current clean-runner macOS, MCP, site, CodeQL, and release-integrity evidence; give every remaining dependency/security/environment gap a linked owner and follow-up; obtain non-author review; and merge only if the complete #17 DoD passes. Do not award #17 or #10 credit sooner.
 
 ## Read in this order
 
@@ -43,8 +43,9 @@ Validate this 18/100 tracker activation, obtain exact-head non-author review, op
 - Production tracker: https://project-ambient.meekphillies.chatgpt.site/status
 - PR #31 merged as `846cef807eceaaa11926bae290021c26475c49fd`; exact subtree source `dfc9789f18e4378a1d84ec1b8adadffea4cd8c04` deployed as Sites version 17.
 - PR #33 merged as `7f3e97f0f30f1e9007d80fe82cc1feeeb7aaddb5` after exact-head non-author approval and green macOS, MCP, site, secret-scan, release-integrity, and CodeQL jobs. Issue #18 is closed.
-- Merge-final readiness in this activation change: 18/100 — M0 6/8, M1 5/14, M2 1/12, M3 0.5/20, M4 3/14, M5 0/12, M6 0/7, M7 0.5/6, M8 2/7; active hands-on 125–237 hours and separate 48–72 hour soak.
-- Current production smoke still shows Sites version 17 at 17/100 and 131–247 active hours. The 18/100 figures become canonical only after this exact change passes review, merge, deployment, and public endpoint verification.
+- PR #34 merged as `2f0b925c950db9d145a3949b3fbd53761ab21f88` from exact reviewed head `a62b5d41820cecb8047abfa21aee8422adf04c09`; all required jobs passed.
+- Current readiness: 18/100 — M0 6/8, M1 5/14, M2 1/12, M3 0.5/20, M4 3/14, M5 0/12, M6 0/7, M7 0.5/6, M8 2/7; active hands-on 125–237 hours and separate 48–72 hour soak.
+- Exact site subtree source `dfc5cfceace1eb7f0276481e6cc7a35fd0001956` is deployed as Sites version 18. Public smoke passed: `/status` renders 18/100 and 125–237 hours; `/status/manifest` returns schema v3, exact 18/100 arithmetic, M0 6/8, workstreams 87.5/0/66/80, immutable 49.75 history, and the unchanged 15-point migration; `/api/status?deployment=18` returns all seven checks operational with HTTP 200.
 
 ## Issue #21 definition of done
 
@@ -108,11 +109,11 @@ Validate this 18/100 tracker activation, obtain exact-head non-author review, op
 
 - Isolated full clone: `../project-ambient-m0-integration`; branch `chore/10-m0-integration`; parent `7f3e97f0f30f1e9007d80fe82cc1feeeb7aaddb5`.
 - Exact edit ownership: `apps/site/app/status/status-manifest.json`, `apps/site/tests/rendered-html.test.mjs`, and `docs/handoffs/CURRENT.md`.
-- Proposed activation arithmetic: 18/100 overall; M0 6/8; active hands-on 125–237 hours; workstreams 87.5/0/66/80; separate 48–72 hour soak unchanged.
+- Activated arithmetic: 18/100 overall; M0 6/8; active hands-on 125–237 hours; workstreams 87.5/0/66/80; separate 48–72 hour soak unchanged.
 - Focused validation passes: implementation plan (41 tasks, nine milestones, 100 points, acyclic), Aerial parity (145 rows, 19 domains, three directions, 26 immutable evidence records, 23 adversarial checks), capabilities (five platform fixtures × 20 capabilities plus release bindings), rights (five fixtures and 29 fail-closed checks), JSON/diff checks, production site build, and all 12 rendered-route tests.
 - The installed `project-ambient-status` helper still rejects schema v3 because it hard-codes the retired three-bar 45/45/10 model. The repository's accepted M0–M8 plan, manifest arithmetic, and render tests are authoritative; this known helper mismatch earns no credit and must not be used to rewrite the accepted scope.
-- Production remains Sites version 17 at 17/100 until the focused branch passes validation, exact-head review, CI, merge, exact-merge deployment, and public endpoint smoke.
-- After activation, #10 stays open with zero task credit. The next executable evidence gate is #17; M1 entry remains closed until #17 and final M0 integration pass.
+- PR #34 merged as `2f0b925c950db9d145a3949b3fbd53761ab21f88`; Sites version 18 deployment and all three public endpoint checks passed.
+- #10 stays open with zero task credit. The next executable evidence gate is #17; M1 entry remains closed until #17 and final M0 integration pass.
 
 ## Stop protocol
 
