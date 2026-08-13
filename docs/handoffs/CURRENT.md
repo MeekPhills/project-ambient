@@ -2,93 +2,94 @@
 
 **Updated:** 2026-08-13
 
-**Program state:** M0 launch boundaries are accepted. Issue #16 has a machine-valid dependency plan and a schema-v3 migration of the sole canonical tracker; non-author review is approved, exact-head verification and PR/merge remain. Product implementation is still gated by the rest of M0.
+**Program state:** M0 launch boundaries and the dependency/tracker migration are accepted. The sole canonical tracker is schema v3 and is live at 15/100. Product implementation remains gated until the remaining M0 contracts and final integration gate are accepted.
 
 **Repository:** https://github.com/MeekPhills/project-ambient
 
-**Base branch:** `main` at merge commit `e46979ec163239887c2eff04edbf7bb3109dbd4d`
+**Base branch:** `main` at `a5b3f41b4155f8bfe8bf859934314746c943cfea`
 
-**Working branch:** `plan/m0-dependency-tracker` in its own clean worktree; plan at `acf9053`, review corrections at `98957e7`, and approved checkpoint at `a741ed8` before this PR-link update
+**Working branch:** `feat/20-capability-contract`
 
-**Active pull request:** #25 — https://github.com/MeekPhills/project-ambient/pull/25
-
-**Completed planning pull request:** #22 — https://github.com/MeekPhills/project-ambient/pull/22
+**Active pull request:** draft PR #26 — https://github.com/MeekPhills/project-ambient/pull/26
 
 **Current milestone:** M0 — Governance and architecture
 
 **Milestone epic:** #10 — https://github.com/MeekPhills/project-ambient/issues/10
 
-**Only integration-active issue:** #16 — https://github.com/MeekPhills/project-ambient/issues/16
+**Only integration-active issue:** #20 — https://github.com/MeekPhills/project-ambient/issues/20
 
-Issue #17 is a bounded parallel read/verification stream in a different worktree and owns only `docs/reports/m0-repository-baseline.md`. It may not edit this handoff, roadmap, implementation plan, status manifest/UI/tests, or product code.
+Issue #17 remains an independent draft evidence stream in its own worktree and owns only `docs/reports/m0-issue-17-repository-baseline.md`. It has zero accepted tracker credit and does not share edit ownership with #20.
 
 ## Next exact action
 
-Push this PR-link checkpoint, then mark PR #25 ready after final-head CI/CodeQL and the cold-start reconstruction smoke pass. Merge only after those gates; deploy the exact merged commit before treating schema v3's 15/100 as the public current score.
-
-After #16, make #20 the sole integration-active issue for the versioned capability contract. Accept issue #17 independently when its evidence report passes review. Product implementation remains blocked until #17, #21, #20, #18, and final M0 integration are accepted.
+Non-author review approved the contract at `88411aec574b65020d61875e13e3b4dc111e8f80`; this final checkpoint follows it. Await final-head GitHub gates, then mark PR #26 ready and merge. After merge, update and deploy the canonical tracker before closing #20 or awarding its M0 point.
 
 ## Read in this order
 
 1. `CLAUDE.md`
-2. This file and issue #16
+2. This file and issue #20
 3. `docs/decisions/0001-m0-launch-boundaries.md`
 4. `docs/product/FULL_PLATFORM_LAUNCH_SPEC.md`
-5. `docs/product/implementation-plan.json`
+5. `docs/product/implementation-plan.json` task `m0-capability-contract`
 6. `ROADMAP.md`
 7. `apps/site/app/status/status-manifest.json`
-8. M0 epic #10 and the next issue named here
 
-## Issue #16 artifacts and decisions
+## Accepted evidence
 
-- `docs/product/implementation-plan.json`: 41 task contracts across M0–M8. Every task names milestone weight, owner, size, branch, parallel group, dependencies, mutable areas, acceptance criteria, and verification.
-- Every task also has an existing issue or create-before-start issue gate, an isolated/accepted worktree identity, and a stop/checkpoint escalation path to the Sol integrator.
-- `script/validate_implementation_plan.mjs`: fails on missing fields, duplicate IDs, unknown dependencies, dependency cycles, milestone weight drift, broken first-slice sequencing, same-group exact area conflicts, plan/manifest task mismatch, or historical-score loss.
-- `ROADMAP.md`: human-readable M0–M8 sequence and exit smoke for every milestone.
-- GitHub milestone epic issues now record the same canonical weights: M0 8, M1 14, M2 12, M3 20, M4 14, M5 12, M6 7, M7 6, and M8 7. Direct milestone-description mutation remains pending because the authenticated connector does not expose it and the requested external-browser extension is disconnected.
-- `apps/site/app/status/status-manifest.json`: the only current 100-point tracker, version-migrated from 45/45/10 to weights 8/14/12/20/14/12/7/6/7.
-- The historical 49.75/100 audit is preserved in `scoreHistory` with its phase totals, effort ranges, timestamp, and source commit. It is history, not a second live score.
-- `migration.creditMappings` provides an exact evidence crosswalk for all 15 remapped points, including prior schema-v2 task IDs or post-history/merge-conditional sources and immutable evidence links.
-- Current expanded-scope credit is a conservative 15/100: M0 3, M1 5, M2 1, M3 0.5, M4 3, M5 0, M6 0, M7 0.5, M8 2. Only merged/accepted alpha and M0 artifacts with smoke evidence are credited.
-- The #16 task's 1.5 points and the 15/100 schema-v3 score are merge-conditional final-state content. Until this branch is reviewed, merged, and deployed, the public schema-v2 49.75/100 audit remains the current score.
-- Microsoft enterprise distribution and Google A2A remain deferred outside the weighted scope at 84–168 hours. The accepted active planning baseline remains 138–259 hours plus a separate 48–72 hour soak until task evidence supports re-estimation.
-- The first product slice is strictly sequenced: onboarding/import → display continuity → lock-only rotation → recovery/accessibility. It cannot start until final M0 integration.
+- PR #22 / issue #19: six M0 launch decisions accepted and merged.
+- PR #25 / issue #16: 41-task dependency plan, M0–M8 roadmap, and schema-v3 canonical tracker accepted and merged.
+- Production status deployment: https://project-ambient.meekphillies.chatgpt.site/status
+- Current canonical readiness: 15/100 — M0 3/8, M1 5/14, M2 1/12, M3 0.5/20, M4 3/14, M5 0/12, M6 0/7, M7 0.5/6, M8 2/7.
+- The historical 49.75/100 schema-v2 audit remains evidence history, not a second current score.
 
-## Verification completed in this branch
+## Issue #20 definition of done
 
-- `node script/validate_implementation_plan.mjs`: **passed** — 41 tasks, 9 milestones, 100 points, acyclic dependencies.
-- Focused status-manifest Node test: **passed** — 1 test, 0 failures; validates schema v3, 15/100 current score, preserved 49.75 history, exact milestone/task weights, 138–259 active hours, 84–168 deferred hours, and 48–72 soak.
-- `git diff --check`: **passed** at the pre-review checkpoint.
-- `npm --prefix apps/site test`: **passed** — production build completed and all 12 server-render/status/API tests passed.
-- `npm --prefix apps/site run lint`: **failed on 14 inherited `@next/next/no-html-link-for-pages` errors in unchanged `Footer.tsx`, `Header.tsx`, and `not-found.tsx`; no changed file produced a lint finding.** The baseline issue owns recording/linking this existing gap; #16 does not mix an unrelated UI refactor into the tracker PR.
-- Non-author plan/tracker review: **approved** after corrections. The reviewer verified all 41 issue/worktree/escalation contracts, exact plan/manifest dependencies, 15-point evidence crosswalk, merge activation gate, and milestone-linked epic weights.
-- GitHub epic→milestone verification: **passed 9/9** — #10/#8/#14/#7/#11/#9/#12/#13/#15 are attached to M0–M8 respectively and record weights 8/14/12/20/14/12/7/6/7.
-- GitHub CI/CodeQL: **pending PR**.
+- A versioned language-neutral JSON Schema covers build identity, OS/version, architecture, integration method, support lifecycle, evidence, explanations, and the accepted capability domains.
+- Examples exist for macOS, Windows, Linux, iOS/iPadOS, and Android.
+- Support states distinguish `supported`, `experimental`, `unavailable_by_os`, `unavailable_by_build`, and `archived`.
+- Every capability state carries evidence and an exact user-facing explanation; no capability is inferred from platform identity.
+- Release artifacts have a machine-valid embed-or-link contract.
+- Positive, negative, and backward/forward compatibility fixtures pass `node script/validate_capabilities.mjs`.
+- Non-author review approves the contract before merge.
 
-## Protected state and ownership
+## Ownership and safety
 
-- A pre-existing dirty checkout on another branch remains protected and untouched. Never reset, clean, stash, switch, overwrite, or integrate from it.
-- This branch owns `ROADMAP.md`, `docs/product/implementation-plan.json`, `script/validate_implementation_plan.mjs`, the status manifest/model/dashboard/tests/styles, and this handoff.
-- Issue #17 owns only its report in its separate worktree. No two active agents share mutable files.
-- No product code, user media, credentials, production resources, stores, payments, submissions, or public announcements are in scope for #16.
+- #20 owns `schemas/capabilities/**`, `fixtures/capabilities/**`, `script/validate_capabilities.mjs`, and this handoff checkpoint.
+- The pre-existing dirty checkout at `/Users/luismorrobel/Library/Mobile Documents/com~apple~CloudDocs/Codename Ambiant` is protected and untouched. Never reset, clean, stash, switch, overwrite, or integrate from it.
+- No product implementation, user media, secrets, credentials, stores, submissions, payments, or public announcements are in scope.
+- Do not infer support from an OS name. Example manifests are contract fixtures, not shipped-product claims, unless their evidence says otherwise.
+
+## Verification baseline
+
+- Initial commit: `17ac6b764b2d8bc1b64701ccf6d5b01a1cf33570`
+- `node script/validate_capabilities.mjs`: passed at the initial commit — schema v1 metadata/manual rules, 5 fixtures, 20 explicit capabilities per fixture, 7 negative/compatibility checks. Reviewer correctly required actual published-schema evaluation and executable release bindings before approval.
+- `node script/validate_implementation_plan.mjs`: passed — 41 tasks, 9 milestones, 100 points, acyclic.
+- JSON parsing and `node --check script/validate_capabilities.mjs`: passed.
+- `git diff --check`: passed.
+- Non-author review at `17ac6b7`: **changes required**; corrections are in progress and no credit is claimed.
+- Correction commit `9004b26736479aae6aee44d20aa72799fecc177d`: published-schema evaluation, 5 fixtures × 20 capabilities, 7 negative/compatibility cases, 3 embedded/linked/digest checks, conservative macOS claim states, release preflight/CI hook, and the declared worktree path all pass.
+- Re-review at `9004b26`: release-binding, evidence, release-hook, and worktree findings resolved; final approval remains pending a fail-closed schema-keyword audit and this current checkpoint.
+- Final correction commit `88411aec574b65020d61875e13e3b4dc111e8f80`: fail-closed schema-keyword audit, unsupported-keyword negative, linked-claim identity check, wrong-platform negative, and refreshed checkpoint pass locally; final re-review is pending.
+- Non-author final review: **approved** at `88411aec574b65020d61875e13e3b4dc111e8f80`; all original and residual findings are closed.
+- Required corrected smoke: `node script/validate_capabilities.mjs`
+- Required hygiene: `git diff --check`
+- Release-link behavior must be tested without publishing a release; `script/verify_release.sh` and release-integrity CI must invoke the focused preflight.
+- The #17 native build instability and site dependency advisories remain independent baseline risks; #20 does not claim to resolve them.
 
 ## M0 remaining order
 
-1. #16 — dependency plan and canonical tracker migration (**current**)
-2. #17 — clean repository/release baseline (parallel evidence stream)
-3. #20 — versioned platform capability contract
-4. #21 — software, media-rights, and commercial boundaries
-5. #18 — owned Aerial parity matrix
-6. #10 integration — validators, cold-start reconstruction, tracker/handoff reconciliation, and M1 entry gate
-
-The #20/#21/#18 order may be parallelized only with distinct file ownership and at most three active instances. M1 does not start until the M0 integration gate passes.
+1. #20 — versioned platform capability contract (**current**)
+2. #17 — repository/release baseline (**independent draft; review pending**)
+3. #21 — software, media-rights, and commercial boundaries
+4. #18 — owned Aerial parity matrix
+5. #10 integration — validators, cold-start reconstruction, tracker/handoff reconciliation, and M1 entry gate
 
 ## Stop protocol
 
 Before context or credits run low:
 
 1. stop starting new work;
-2. update this file so it names exactly one integration-active issue;
-3. comment on that issue with branch, commit, PR, files changed, commands/results, blockers, risks, and next exact action;
-4. leave the branch buildable and preserve unrelated/user changes;
-5. mark unfinished work draft and release unused agents; never depend on chat history.
+2. keep exactly one integration-active issue in this file;
+3. commit only safe scoped work;
+4. post branch, commit, PR, files, exact test results, risks, blockers, and next action to the issue;
+5. leave the branch buildable and the protected checkout untouched.

@@ -1,0 +1,241 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://project-ambient.meekphillies.chatgpt.site/schemas/capabilities/v1/capability-manifest.schema.json",
+  "title": "Project Ambient platform capability manifest",
+  "description": "An evidence-linked capability declaration for one build and one platform target. Platform identity never implies capability support.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "manifestVersion",
+    "claimScope",
+    "generatedAt",
+    "build",
+    "platform",
+    "releaseBinding",
+    "evidenceCatalog",
+    "capabilities"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "manifestVersion": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?$" },
+    "claimScope": { "enum": ["contract_fixture", "shipped_build"] },
+    "generatedAt": { "type": "string", "format": "date-time" },
+    "build": { "$ref": "#/$defs/build" },
+    "platform": { "$ref": "#/$defs/platform" },
+    "releaseBinding": { "$ref": "#/$defs/releaseBinding" },
+    "evidenceCatalog": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": { "pattern": "^[a-z0-9][a-z0-9._-]*$" },
+      "additionalProperties": { "$ref": "#/$defs/evidence" }
+    },
+    "capabilities": {
+      "type": "array",
+      "minItems": 20,
+      "items": { "$ref": "#/$defs/capability" }
+    }
+  },
+  "$defs": {
+    "nonEmpty": { "type": "string", "minLength": 1 },
+    "httpsUri": { "type": "string", "pattern": "^https://[^\\s]+$" },
+    "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "build": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["product", "version", "channel", "sourceRevision"],
+      "properties": {
+        "product": { "const": "Project Ambient" },
+        "version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?$" },
+        "channel": { "enum": ["development", "nightly", "alpha", "beta", "stable", "archived"] },
+        "sourceRevision": { "type": "string", "pattern": "^[a-f0-9]{40}$" }
+      }
+    },
+    "platform": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["family", "displayName", "versionRange", "architectures", "integrationMethods", "supportLifecycle"],
+      "properties": {
+        "family": { "enum": ["macos", "windows", "linux", "ios_ipados", "android"] },
+        "displayName": { "$ref": "#/$defs/nonEmpty" },
+        "versionRange": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["minimum", "maximumTested"],
+          "properties": {
+            "minimum": { "$ref": "#/$defs/nonEmpty" },
+            "maximumTested": { "$ref": "#/$defs/nonEmpty" }
+          }
+        },
+        "architectures": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "enum": ["arm64", "x86_64"] }
+        },
+        "environment": {
+          "type": "object",
+          "additionalProperties": { "type": "string", "minLength": 1 }
+        },
+        "integrationMethods": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "native_wallpaper_api",
+              "screen_saver_extension",
+              "desktop_shell_adapter",
+              "wallpaper_service",
+              "device_management",
+              "app_intents",
+              "remote_companion",
+              "none"
+            ]
+          }
+        },
+        "supportLifecycle": { "enum": ["preview", "current", "maintenance", "legacy", "archived"] }
+      }
+    },
+    "releaseBinding": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["mode", "assetPath", "mediaType"],
+          "properties": {
+            "mode": { "const": "embedded" },
+            "assetPath": { "type": "string", "pattern": "^(?!/)(?!.*\\.\\.).+\\.json$" },
+            "mediaType": { "const": "application/vnd.project-ambient.capabilities+json;version=1" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["mode", "url", "sha256", "mediaType"],
+          "properties": {
+            "mode": { "const": "linked" },
+            "url": { "$ref": "#/$defs/httpsUri" },
+            "sha256": { "$ref": "#/$defs/sha256" },
+            "mediaType": { "const": "application/vnd.project-ambient.capabilities+json;version=1" }
+          }
+        }
+      ]
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "uri", "summary"],
+      "properties": {
+        "type": { "enum": ["contract_fixture", "source", "test", "release", "platform_documentation", "issue"] },
+        "uri": { "$ref": "#/$defs/httpsUri" },
+        "summary": { "type": "string", "minLength": 12 },
+        "verifiedAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "capability": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "state", "explanation", "evidenceRefs", "stateDetails"],
+      "properties": {
+        "id": { "$ref": "#/$defs/nonEmpty" },
+        "state": { "enum": ["supported", "experimental", "unavailable_by_os", "unavailable_by_build", "archived"] },
+        "explanation": { "type": "string", "minLength": 20 },
+        "evidenceRefs": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]*$" }
+        },
+        "stateDetails": {
+          "type": "object",
+          "minProperties": 1
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "state": { "const": "supported" } }, "required": ["state"] },
+          "then": {
+            "properties": {
+              "stateDetails": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["sinceBuild", "verification"],
+                "properties": {
+                  "sinceBuild": { "$ref": "#/$defs/nonEmpty" },
+                  "verification": { "$ref": "#/$defs/nonEmpty" }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "state": { "const": "experimental" } }, "required": ["state"] },
+          "then": {
+            "properties": {
+              "stateDetails": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["sinceBuild", "limitations", "fallbackCapabilityId"],
+                "properties": {
+                  "sinceBuild": { "$ref": "#/$defs/nonEmpty" },
+                  "limitations": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/nonEmpty" } },
+                  "fallbackCapabilityId": { "$ref": "#/$defs/nonEmpty" }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "state": { "const": "unavailable_by_os" } }, "required": ["state"] },
+          "then": {
+            "properties": {
+              "stateDetails": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["reasonCode", "osConstraint"],
+                "properties": {
+                  "reasonCode": { "type": "string", "pattern": "^os_[a-z0-9_]+$" },
+                  "osConstraint": { "$ref": "#/$defs/nonEmpty" }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "state": { "const": "unavailable_by_build" } }, "required": ["state"] },
+          "then": {
+            "properties": {
+              "stateDetails": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["reasonCode", "plannedMilestone"],
+                "properties": {
+                  "reasonCode": { "type": "string", "pattern": "^build_[a-z0-9_]+$" },
+                  "plannedMilestone": { "type": "string", "pattern": "^M[0-8]$" }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "state": { "const": "archived" } }, "required": ["state"] },
+          "then": {
+            "properties": {
+              "stateDetails": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["lastSupportedBuild", "archivedAt", "securityStatus"],
+                "properties": {
+                  "lastSupportedBuild": { "$ref": "#/$defs/nonEmpty" },
+                  "archivedAt": { "type": "string", "format": "date-time" },
+                  "securityStatus": { "enum": ["no_security_updates", "critical_fixes_only"] }
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

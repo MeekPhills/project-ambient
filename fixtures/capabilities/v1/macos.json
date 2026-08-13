@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 1,
+  "manifestVersion": "1.0.0",
+  "claimScope": "contract_fixture",
+  "generatedAt": "2026-08-13T18:00:00Z",
+  "build": { "product": "Project Ambient", "version": "0.1.0-alpha", "channel": "alpha", "sourceRevision": "a5b3f41b4155f8bfe8bf859934314746c943cfea" },
+  "platform": {
+    "family": "macos",
+    "displayName": "macOS reference contract fixture",
+    "versionRange": { "minimum": "14.0", "maximumTested": "26.5" },
+    "architectures": ["arm64", "x86_64"],
+    "environment": { "adapter": "AppKit NSWorkspace" },
+    "integrationMethods": ["native_wallpaper_api"],
+    "supportLifecycle": "preview"
+  },
+  "releaseBinding": { "mode": "embedded", "assetPath": "capabilities/project-ambient-capabilities.json", "mediaType": "application/vnd.project-ambient.capabilities+json;version=1" },
+  "evidenceCatalog": {
+    "contract-issue": { "type": "contract_fixture", "uri": "https://github.com/MeekPhills/project-ambient/issues/20", "summary": "Defines contract shape only; it is not a shipped support claim." },
+    "static-source": { "type": "source", "uri": "https://github.com/MeekPhills/project-ambient/blob/a5b3f41b4155f8bfe8bf859934314746c943cfea/apps/macos/Sources/AmbientCore/WallpaperService.swift", "summary": "Reference source applies static images through public AppKit APIs." },
+    "display-tests": { "type": "test", "uri": "https://github.com/MeekPhills/project-ambient/blob/a5b3f41b4155f8bfe8bf859934314746c943cfea/apps/macos/Tests/AmbientCoreTests/RotationCoordinatorTests.swift", "summary": "Reference tests cover all-display application and restoration behavior." }
+  },
+  "capabilities": [
+    { "id": "wallpaper.static", "state": "supported", "explanation": "The reference alpha can apply a local static image through the public macOS wallpaper API.", "evidenceRefs": ["static-source", "display-tests"], "stateDetails": { "sinceBuild": "0.1.0-alpha", "verification": "Source and focused display tests are linked." } },
+    { "id": "wallpaper.live", "state": "unavailable_by_build", "explanation": "This alpha build does not include a continuous live-wallpaper renderer.", "evidenceRefs": ["contract-issue"], "stateDetails": { "reasonCode": "build_not_implemented", "plannedMilestone": "M3" } },
+    { "id": "screen_saver", "state": "unavailable_by_build", "explanation": "This alpha build does not install a screen-saver extension.", "evidenceRefs": ["contract-issue"], "stateDetails": { "reasonCode": "build_not_implemented", "plannedMilestone": "M3" } },
+    { "id": "lock_screen", "state": "unavailable_by_build", "explanation": "This alpha build does not expose a distinct lock-screen integration.", "evidenceRefs": ["contract-issue"], "stateDetails": { "reasonCode": "build_not_implemented", "plannedMilestone": "M3" } },
+    { "id": "displays.independent", "state": "experimental", "explanation": "The contract fixture models independent display control while the current alpha exposes only all or primary scope.", "evidenceRefs": ["contract-issue", "display-tests"], "stateDetails": { "sinceBuild": "0.1.0-alpha", "limitations": ["Per-display playlist mapping is not implemented."], "fallbackCapabilityId": "displays.same_source" } },
+    { "id": "displays.same_source", "state": "supported", "explanation": "The reference alpha can apply the same selected source across all detected displays.", "evidenceRefs": ["static-source", "display-tests"], "stateDetails": { "sinceBuild": "0.1.0-alpha", "verification": "All-display application and restoration tests are linked." } },
+    { "id": "displays.synchronized", "state": "unavailable_by_build", "explanation": "Frame- or sequence-synchronized display playback is not included in this alpha build.", "evidenceRefs": ["contract-issue"], "stateDetails": { "reasonCode": "build_not_implemented", "plannedMilestone": "M3" } },
+    { "id": "displays.spanned", "state": "unavailable_by_build", "explanation": "Panorama spanning across display geometry is not included in this alpha build.", "evidenceRefs": ["contract-issue"], "stateDetails": { "reasonCode": "build_not_implemented", "plannedMilestone": "M3" } },
+    { "id": "overlays", "state": "unavailable_by_build", "explanation": "Clock, weather, media, and text overlays are not included in this alpha build.", "evidenceRefs": ["contract-issue"], "stateDetails": { "reasonCode": "build_not_implemented", "plannedMilestone": "M3" } },
+    { "id": "solar.rules", "state": "unavailable_by_build", "explanation": "Location-approved sunrise and sunset rules are not included in this alpha build.", "evidenceRefs": ["contract-issue"], "stateDetails": { "reasonCode": "build_not_implemented", "plannedMilestone": "M3" } },
+    { "id": "lifecycle.lock", "state": "unavailable_by_build", "explanation": "Exactly-once lock-event rotation remains a planned static-product capability.", "evidenceRefs": ["contract-issue"], "stateDetails": { "reasonCode": "build_not_implemented", "plannedMilestone": "M1" } },
+    { "id": "lifecycle.login_logout", "state": "unavailable_by_build", "explanation": "Login and logout policy handling is not included in this alpha build.", "evidenceRefs": ["contract-issue"], "stateDetails": { "reasonCode": "build_not_implemented", "plannedMilestone": "M4" } },
+    { "id": "lifecycle.power", "state": "unavailable_by_build", "explanation": "The full battery, Low Power, thermal, and resource-budget policy is not included in this alpha build.", "evidenceRefs": ["contract-issue"], "stateDetails": { "reasonCode": "build_not_implemented", "plannedMilestone": "M4" } },
+    { "id": "lifecycle.camera", "state": "unavailable_by_build", "explanation": "Camera-aware motion policy is not included in this alpha build.", "evidenceRefs": ["contract-issue"], "stateDetails": { "reasonCode": "build_not_implemented", "plannedMilestone": "M4" } },
+    { "id": "lifecycle.occlusion", "state": "unavailable_by_build", "explanation": "Window-occlusion-aware rendering policy is not included in this alpha build.", "evidenceRefs": ["contract-issue"], "stateDetails": { "reasonCode": "build_not_implemented", "plannedMilestone": "M4" } },
+    { "id": "secure_storage", "state": "unavailable_by_build", "explanation": "Integration credentials and secure-storage UI are not included in this alpha build.", "evidenceRefs": ["contract-issue"], "stateDetails": { "reasonCode": "build_not_implemented", "plannedMilestone": "M3" } },
+    { "id": "package.install", "state": "unavailable_by_build", "explanation": "Production signing, notarization, and clean-install acceptance are not complete for this alpha build.", "evidenceRefs": ["contract-issue"], "stateDetails": { "reasonCode": "build_production_install_gate_open", "plannedMilestone": "M8" } },
+    { "id": "package.update", "state": "unavailable_by_build", "explanation": "A production updater is not included in this alpha build.", "evidenceRefs": ["contract-issue"], "stateDetails": { "reasonCode": "build_not_implemented", "plannedMilestone": "M8" } },
+    { "id": "remote.control", "state": "unavailable_by_build", "explanation": "Durable authenticated remote-device control is not complete in this alpha build.", "evidenceRefs": ["contract-issue"], "stateDetails": { "reasonCode": "build_real_device_bridge_incomplete", "plannedMilestone": "M6" } },
+    { "id": "mobile.wallpaper_action", "state": "unavailable_by_build", "explanation": "This macOS target does not ship the mobile companion action surface.", "evidenceRefs": ["contract-issue"], "stateDetails": { "reasonCode": "build_platform_target_excludes_mobile", "plannedMilestone": "M6" } }
+  ]
+}
