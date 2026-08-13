@@ -8,7 +8,9 @@
 
 **Base branch:** `main` at merge commit `e46979ec163239887c2eff04edbf7bb3109dbd4d`
 
-**Working branch:** `plan/m0-dependency-tracker` in its own clean worktree; plan at `acf9053`, review corrections at `98957e7`, and this final checkpoint update pending commit
+**Working branch:** `plan/m0-dependency-tracker` in its own clean worktree; plan at `acf9053`, review corrections at `98957e7`, and approved checkpoint at `a741ed8` before this PR-link update
+
+**Active pull request:** #25 — https://github.com/MeekPhills/project-ambient/pull/25
 
 **Completed planning pull request:** #22 — https://github.com/MeekPhills/project-ambient/pull/22
 
@@ -22,7 +24,7 @@ Issue #17 is a bounded parallel read/verification stream in a different worktree
 
 ## Next exact action
 
-Commit this final checkpoint, rerun the exact-head plan validator and full site build/render suite, then push and open the issue #16 PR. Merge only after CI/CodeQL and the cold-start reconstruction smoke pass; deploy the exact merged commit before treating schema v3's 15/100 as the public current score.
+Push this PR-link checkpoint, then mark PR #25 ready after final-head CI/CodeQL and the cold-start reconstruction smoke pass. Merge only after those gates; deploy the exact merged commit before treating schema v3's 15/100 as the public current score.
 
 After #16, make #20 the sole integration-active issue for the versioned capability contract. Accept issue #17 independently when its evidence report passes review. Product implementation remains blocked until #17, #21, #20, #18, and final M0 integration are accepted.
 
