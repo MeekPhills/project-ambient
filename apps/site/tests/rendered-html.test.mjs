@@ -121,12 +121,23 @@ test("status manifest is a fixed, conservative 100-point audit", () => {
     (sum, task) => ({ min: sum.min + (task.soakHours?.min ?? 0), max: sum.max + (task.soakHours?.max ?? 0) }),
     { min: 0, max: 0 },
   );
-  assert.deepEqual(active, { min: 140, max: 262 });
+  assert.deepEqual(active, { min: 138, max: 259 });
   assert.deepEqual(deferred, { min: 84, max: 168 });
   assert.deepEqual(soak, { min: 48, max: 72 });
   assert.ok(Object.values(statusManifest.evidenceSources).every((url) => url.startsWith("https://")));
-  assert.match(statusManifest.evidenceSources.postgresCi, /31639061413\/job\/94256664605/);
-  assert.match(statusManifest.evidenceSources.codeql, /94256919170/);
+  assert.match(statusManifest.evidenceSources.postgresCi, /31659415459\/job\/94320889848/);
+  assert.match(statusManifest.evidenceSources.codeql, /31659415452\/job\/94320889771/);
+  assert.match(statusManifest.evidenceSources.codeqlAlert, /security\/code-scanning\/3/);
+  assert.match(statusManifest.evidenceSources.releaseCandidate, /31659415484\/job\/94320890102/);
+  assert.match(statusManifest.evidenceSources.releaseTagCi, /31612134104\/job\/94165844230/);
+  assert.match(statusManifest.evidenceSources.releaseSourceCommit, /f9dbc7f42b5a8dd1edfd6fe33b27d693c7a27e81/);
+  assert.match(statusManifest.evidenceSources.secureBootstrap, /6ab0b4926439a14eda7d0608b4b4e5f581048c3b/);
+  assert.equal(statusManifest.evidenceSources.mcpRegistryPackageRules, "https://modelcontextprotocol.io/registry/package-types");
+  const registryPublication = tasks.find((task) => task.id === "registry-publication");
+  assert.match(registryPublication.blockedReason, /mcpName.*server\.json/i);
+  assert.match(registryPublication.evidence, /released npm tarball has no mcpName/i);
+  const supplyChain = tasks.find((task) => task.id === "supply-chain");
+  assert.match(supplyChain.evidence, /high.*CodeQL alert/i);
   assert.ok(statusManifest.liveChecks.every((check) => statusManifest.phases.some((phase) => phase.id === check.phaseId)));
 });
 
@@ -136,7 +147,7 @@ test("status page renders the exact score, ETA boundaries, filters, and methodol
   const cleanHtml = html.replaceAll("<!-- -->", "");
   assert.match(cleanHtml, /50%/);
   assert.match(cleanHtml, /49\.75\s*\/\s*100/);
-  assert.match(cleanHtml, /140[–-]262/);
+  assert.match(cleanHtml, /138[–-]259/);
   assert.match(cleanHtml, /External wait/);
   assert.match(cleanHtml, /Deferred/);
   assert.match(cleanHtml, /Every 6 hours and on demand/);
