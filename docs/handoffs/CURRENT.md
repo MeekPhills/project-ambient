@@ -101,7 +101,7 @@ Commit and push the non-author-approved 145-row parity contract, open the #18 dr
 - Current `node script/validate_aerial_parity.mjs --ga`: intentionally fails closed with 296 findings because both cross-cutting suites, all implementation/test states, and both exceptions are still planned or pending. The future tag gate requires both #28/#29 suites passed with durable evidence, every row verified, every test passed, and every exception approved with durable evidence.
 - `script/verify_release.sh` and release-integrity CI invoke contract validation; GA-tag CI invokes `--ga`. Workflow paths include the matrix, its schema, and the linked launch spec. Full aggregate execution remains a clean-runner merge gate; this checkpoint awards no implementation or tracker credit.
 - Final non-author review of the current filesystem: **approved**. It independently reran contract and strict-GA behavior, shell syntax, and diff checks; all prior coverage, origin, baseline, cross-cutting, exception, workflow, claim-honesty, and ownership findings are closed.
-- Content commit `e75c7f34b6f72d1d53c1e2335ec8f73db6c54c8c`; this final handoff checkpoint commit follows it. Push, draft PR, clean-runner CI, merge, and tracker activation are pending.
+- Content commit `e75c7f34b6f72d1d53c1e2335ec8f73db6c54c8c`; first checkpoint `db190b48b453e57c1f6c783fe586f990f284cd3b`; branch pushed and draft PR #33 open. This factual checkpoint follows; clean-runner CI, merge, and tracker activation are pending.
 
 ## Stop protocol
 
