@@ -1,76 +1,119 @@
 # Current Handoff
 
 **Updated:** 2026-08-12  
-**Program state:** Product design proposed; implementation not yet authorized by spec approval  
+**Program state:** Handover prepared; product implementation is gated on design approval  
 **Repository:** https://github.com/MeekPhills/project-ambient  
-**Base branch:** `main`  
-**Planning branch:** `plan/full-platform-launch`  
-**Active pull request:** To be opened after planning files are complete  
-**Current milestone:** M0 — Program Governance & Agent Continuity  
-**Current issue:** To be assigned after GitHub milestones are created
+**Base branch:** `main` at `6ab0b4926439a14eda7d0608b4b4e5f581048c3b` when PR opened  
+**Planning branch:** `plan/full-platform-launch` at `80fc23306a498fa21177335ceb5c39691b6a84b7` before this update  
+**Active pull request:** #22 — https://github.com/MeekPhills/project-ambient/pull/22  
+**Current milestone:** M0 — Program Governance & Agent Continuity (#1)  
+**Milestone epic:** #10 — https://github.com/MeekPhills/project-ambient/issues/10  
+**Only active issue:** #19 — https://github.com/MeekPhills/project-ambient/issues/19
 
-## Read next
+## Next exact action
+
+Review `docs/product/FULL_PLATFORM_LAUNCH_SPEC.md` through draft PR #22 and resolve or explicitly defer the six decisions in issue #19:
+
+1. shared-core prototype scope;
+2. software-license direction;
+3. first Linux desktop/session targets;
+4. Managed GA versus commercial-preview timing;
+5. content marketplace timing;
+6. opt-in diagnostics schema and retention.
+
+Do not begin product implementation until #19 records approval. After #19, proceed to #16 for task-level planning and #17 for baseline verification. Work on only one issue at a time unless GitHub dependencies and non-overlapping files make parallel work explicit.
+
+## Read in this order
 
 1. `CLAUDE.md`
-2. `docs/product/FULL_PLATFORM_LAUNCH_SPEC.md`
-3. Current M0 GitHub epic and its first unblocked child issue
-4. Existing `ROADMAP.md`, `README.md`, and `docs/architecture.md`
+2. Issue #19 and PR #22
+3. `docs/product/FULL_PLATFORM_LAUNCH_SPEC.md`
+4. M0 epic #10
+5. Existing `ROADMAP.md`, `README.md`, and `docs/architecture.md`
+6. The next issue selected by this file
 
-## What was learned
+## GitHub program state
 
-- The repository already contains a macOS SwiftUI app, `ambientctl`, local orchestration, MCP services, release/distribution work, an Aerial video adapter, and remote-bridge hardening.
-- Existing roadmap phases predate the new Static / Hybrid / Managed product model and the requirement that macOS public GA include Aerial’s full capability surface.
-- Aerial 4.1 covers materially more than video playback: wallpaper and screen saver modes, playlists, filters, Apple/personal/Expansion/live sources, independent/cloned/spanned display behavior, solar/time rules, pause policies, transitions, overlays, cache controls, privacy posture, and diagnostics.
-- Project Ambient’s defensible gap is first-class photos, explainable automation, a measurable energy budget, robust multi-display reconciliation, event-driven static operation, live fallback, and managed deployment.
-- Cross-platform work must be capability-based. iOS/iPadOS cannot honestly promise the same continuous wallpaper behavior as desktop platforms.
-- No GitHub milestones existed when this handoff was created. Only closed PRs were present; milestone/issue decomposition is the next program-control action.
-- Local `gh` authentication was invalid. The signed-in GitHub web session and GitHub connector were available.
+Nine milestones exist without speculative due dates:
 
-## Changes on the planning branch
+- M0 — Program Governance & Agent Continuity
+- M1 — Guided Static Foundation
+- M2 — Media Library & Content Ecosystem
+- M3 — macOS Renderer & Aerial Feature Parity
+- M4 — Automation, Energy & Resilience
+- M5 — Windows & Linux Desktop
+- M6 — Mobile Companions & OS Integrations
+- M7 — Managed, Enterprise & Commercial
+- M8 — Public GA, Distribution & Compatibility Archive
 
-- Added `CLAUDE.md` with the Claude Code pickup and end-of-session contract.
-- Added `docs/product/FULL_PLATFORM_LAUNCH_SPEC.md` with product modes, Aerial parity contract, architecture, platform policy, milestones, and open decisions.
-- Added this handoff.
+Each milestone has one epic:
 
-No product code was changed.
+- M0: #10
+- M1: #8
+- M2: #14
+- M3: #7
+- M4: #11
+- M5: #9
+- M6: #12
+- M7: #13
+- M8: #15
 
-## Required next actions
+M0 execution issues:
 
-1. Create GitHub milestones M0 through M8 exactly as specified in the launch design, without speculative due dates.
-2. Create one epic issue per milestone and task-level M0 issues.
-3. Link the planning PR to the M0 epic.
-4. Review the design with the maintainer and record decisions on licensing, shared-core prototype scope, first Linux targets, Managed GA timing, marketplace timing, and opt-in diagnostics.
-5. Only after design approval, produce the task-level implementation plan and update the existing roadmap.
-6. Begin with the first vertical slice: install → import a photo folder without touching originals → map both displays → apply synchronized static scenes → rotate only at lock/unlock → verify and restore.
+- #19 — review and approve the launch design (**active**)
+- #21 — define software, media-rights, and commercial boundaries
+- #20 — define the platform capability manifest
+- #18 — convert Aerial parity into an owned test matrix
+- #16 — publish dependency map and task-level implementation plan
+- #17 — verify repository baseline and release-integrity commands
 
-## Baseline repository facts
+## What is in PR #22
 
-At handoff creation:
+- `CLAUDE.md`: Claude Code pickup, branch discipline, verification, definition of done, and credit/context stop protocol.
+- `docs/product/FULL_PLATFORM_LAUNCH_SPEC.md`: Static → Hybrid → Managed design, full macOS Aerial-parity contract, differentiators, cross-platform policy, compatibility archive, commercial direction, and M0–M8 gates.
+- `docs/handoffs/CURRENT.md`: this atomic handoff.
+- `.github/ISSUE_TEMPLATE/implementation.yml`: agent-ready task contract.
+- `.github/pull_request_template.md`: evidence, energy, privacy, licensing, recovery, and handoff requirements.
+
+No product code was changed by PR #22.
+
+## Repository facts to verify in #17
 
 - Remote: `MeekPhills/project-ambient`
-- Default branch: `main`
-- Local checkout observed at `/Users/luismorrobel/Library/Mobile Documents/com~apple~CloudDocs/Codename Ambiant`
-- Local branch observed: `harden/supabase-private-schema`
-- That local branch contained commits associated with already-merged hardening PRs and must not be repurposed for planning.
-- The working tree appeared clean, but verify before using it.
-- Existing baseline commands documented by the project include `swift test`, `swift build`, and `./scripts/verify-release-integrity.sh`.
+- Local checkout: `/Users/luismorrobel/Library/Mobile Documents/com~apple~CloudDocs/Codename Ambiant`
+- An older local branch `harden/supabase-private-schema` was observed and must not be repurposed.
+- Existing project commands include `swift test`, `swift build`, and `./scripts/verify-release-integrity.sh`; #17 must verify their exact locations and current results.
+- MCP and website validation commands must be discovered from current repository docs/scripts and recorded rather than guessed.
+- Open PR #6 is separate status-evidence work and must remain isolated from PR #22.
+
+## Product facts that must survive handoff
+
+- One progressively disclosed product: Static, Hybrid, and Managed.
+- Static is the default onboarding path and must support first-class photos and near-zero idle rendering.
+- macOS public GA is blocked on full permitted Aerial capability parity with evidence or a documented legal/OS exception.
+- Windows and Linux use capability-equivalent native adapters.
+- iOS/iPadOS and Android expose only behavior permitted by those operating systems; no false parity claims.
+- Source media is preserved. Imports never move or delete originals by default.
+- Every live source has a cached/local still fallback.
+- Every automatic decision exposes Now / Next / Why.
+- Legacy builds are added only with vendor support or measured demand plus CI; archived status is explicit.
+- GitHub is the source of truth for program state. Conversation history is not a dependency.
 
 ## Risks
 
-- “Every Aerial feature at launch” is a large GA gate. Keep the parity matrix explicit so schedule pressure cannot silently remove features.
-- Native wallpaper, lock, and screen-saver APIs differ by OS and OS version. Capability manifests and honest limitation UX are mandatory.
-- Live feeds and overlays can erase the energy advantage. Static fallback and measured adaptive quality must be core architecture, not later polish.
-- Display UUID/topology churn after sleep or reconnect is a first-order reliability problem.
-- A large compatibility archive can become a security burden. Do not add legacy builds without demand evidence and CI coverage.
-- Media licensing and software licensing are separate decisions.
-- Avoid relying on conversation context. If a fact matters, move it into the spec, an ADR, an issue, or this handoff.
+- Aerial parity is a large launch gate and must be controlled through issue #18 rather than implicit scope.
+- Display topology changes after sleep/reconnect are a first-order reliability problem.
+- Live feeds and overlays can erase the energy advantage without M4’s degradation ladder.
+- Cross-platform native integration cannot be forced into false lowest-common-denominator parity.
+- Media rights and software licensing are separate decisions.
+- A large compatibility archive becomes a security burden without evidence and maintained CI.
 
 ## Stop protocol for the next agent
 
-Before ending:
+Before context or credits run low:
 
-- update this file;
-- post the same concise checkpoint on the active GitHub issue;
-- record branch, commit, PR, commands/results, blockers, and next exact action;
-- leave the branch buildable;
-- do not start a second issue when context or credits are low.
+1. stop starting new work;
+2. update this file so it names exactly one active issue;
+3. comment on that issue with branch, commit, PR, files changed, commands and exact results, blockers, risks, and next exact action;
+4. leave the branch buildable and preserve unrelated/user changes;
+5. mark unfinished work draft; never depend on chat history for resumption.
