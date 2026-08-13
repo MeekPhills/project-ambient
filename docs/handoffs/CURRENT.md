@@ -8,7 +8,7 @@
 
 **Base branch:** `main` at merge commit `e46979ec163239887c2eff04edbf7bb3109dbd4d`
 
-**Working branch:** `plan/m0-dependency-tracker` in its own clean worktree; commit and PR are pending final validation/review
+**Working branch:** `plan/m0-dependency-tracker` in its own clean worktree at `acf9053`; PR is pending final review corrections and validation
 
 **Completed planning pull request:** #22 — https://github.com/MeekPhills/project-ambient/pull/22
 
@@ -40,11 +40,15 @@ After #16, make #20 the sole integration-active issue for the versioned capabili
 ## Issue #16 artifacts and decisions
 
 - `docs/product/implementation-plan.json`: 41 task contracts across M0–M8. Every task names milestone weight, owner, size, branch, parallel group, dependencies, mutable areas, acceptance criteria, and verification.
+- Every task also has an existing issue or create-before-start issue gate, an isolated/accepted worktree identity, and a stop/checkpoint escalation path to the Sol integrator.
 - `script/validate_implementation_plan.mjs`: fails on missing fields, duplicate IDs, unknown dependencies, dependency cycles, milestone weight drift, broken first-slice sequencing, same-group exact area conflicts, plan/manifest task mismatch, or historical-score loss.
 - `ROADMAP.md`: human-readable M0–M8 sequence and exit smoke for every milestone.
+- GitHub milestone epic issues now record the same canonical weights: M0 8, M1 14, M2 12, M3 20, M4 14, M5 12, M6 7, M7 6, and M8 7. Direct milestone-description mutation remains pending because the authenticated connector does not expose it and the requested external-browser extension is disconnected.
 - `apps/site/app/status/status-manifest.json`: the only current 100-point tracker, version-migrated from 45/45/10 to weights 8/14/12/20/14/12/7/6/7.
 - The historical 49.75/100 audit is preserved in `scoreHistory` with its phase totals, effort ranges, timestamp, and source commit. It is history, not a second live score.
+- `migration.creditMappings` provides an exact evidence crosswalk for all 15 remapped points, including prior schema-v2 task IDs or post-history/merge-conditional sources and immutable evidence links.
 - Current expanded-scope credit is a conservative 15/100: M0 3, M1 5, M2 1, M3 0.5, M4 3, M5 0, M6 0, M7 0.5, M8 2. Only merged/accepted alpha and M0 artifacts with smoke evidence are credited.
+- The #16 task's 1.5 points and the 15/100 schema-v3 score are merge-conditional final-state content. Until this branch is reviewed, merged, and deployed, the public schema-v2 49.75/100 audit remains the current score.
 - Microsoft enterprise distribution and Google A2A remain deferred outside the weighted scope at 84–168 hours. The accepted active planning baseline remains 138–259 hours plus a separate 48–72 hour soak until task evidence supports re-estimation.
 - The first product slice is strictly sequenced: onboarding/import → display continuity → lock-only rotation → recovery/accessibility. It cannot start until final M0 integration.
 

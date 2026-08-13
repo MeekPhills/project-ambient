@@ -127,6 +127,10 @@ test("status manifest is a fixed, conservative 100-point audit", () => {
   assert.ok(Object.values(statusManifest.evidenceSources).every((url) => url.startsWith("https://")));
   assert.equal(statusManifest.migration.fromSchemaVersion, 2);
   assert.equal(statusManifest.migration.toSchemaVersion, 3);
+  assert.match(statusManifest.migration.activationGate, /merge-conditional/i);
+  assert.match(statusManifest.migration.activationGate, /49\.75\/100/);
+  assert.match(statusManifest.migration.priorManifest, /e40cf5aa62f9f30180ff743023ceadbf1ca3df9e/);
+  assert.equal(statusManifest.migration.creditMappings.reduce((sum, mapping) => sum + mapping.earnedWeight, 0), 15);
   assert.equal(statusManifest.scoreHistory.length, 1);
   assert.equal(statusManifest.scoreHistory[0].score, 49.75);
   assert.deepEqual(statusManifest.scoreHistory[0].phaseWeights, [45, 45, 10]);

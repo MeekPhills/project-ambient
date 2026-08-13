@@ -28,7 +28,88 @@
     "effectiveAt": "2026-08-13T17:56:00Z",
     "decision": "docs/decisions/0001-m0-launch-boundaries.md",
     "change": "The materially expanded Static, Hybrid, Managed, cross-platform, mobile, Managed Preview, and GA scope replaces the narrow 45/45/10 phase model with M0–M8 weights 8/14/12/20/14/12/7/6/7.",
-    "creditRule": "Only accepted artifacts with smoke evidence were remapped. Blocked and not-started work received zero; live health and draft/submission state received zero. This manifest is the only current weighted score."
+    "creditRule": "Only accepted artifacts with smoke evidence were remapped. Blocked and not-started work received zero; live health and draft/submission state received zero. This manifest is the only current weighted score.",
+    "activationGate": "The m0-dependency-tracker task and 15/100 schema-v3 score are final-state, merge-conditional content. Until issue #16 is reviewed, merged, and deployed, the public schema-v2 49.75/100 audit remains current.",
+    "priorManifest": "https://github.com/MeekPhills/project-ambient/blob/e40cf5aa62f9f30180ff743023ceadbf1ca3df9e/apps/site/app/status/status-manifest.json",
+    "creditMappings": [
+      {
+        "newTaskId": "m0-design-governance",
+        "earnedWeight": 1.5,
+        "priorTaskIds": [],
+        "sourceType": "post-history-accepted",
+        "evidenceRefs": [
+          "https://github.com/MeekPhills/project-ambient/pull/22",
+          "https://github.com/MeekPhills/project-ambient/issues/19"
+        ]
+      },
+      {
+        "newTaskId": "m0-dependency-tracker",
+        "earnedWeight": 1.5,
+        "priorTaskIds": [],
+        "sourceType": "merge-conditional",
+        "evidenceRefs": [
+          "https://github.com/MeekPhills/project-ambient/issues/16"
+        ]
+      },
+      {
+        "newTaskId": "m1-alpha-static-baseline",
+        "earnedWeight": 5,
+        "priorTaskIds": ["core-app"],
+        "sourceType": "schema-v2-remap",
+        "evidenceRefs": [
+          "https://github.com/MeekPhills/project-ambient/blob/e40cf5aa62f9f30180ff743023ceadbf1ca3df9e/apps/site/app/status/status-manifest.json",
+          "https://github.com/MeekPhills/project-ambient/releases/tag/v0.1.0-alpha"
+        ]
+      },
+      {
+        "newTaskId": "m2-alpha-catalog",
+        "earnedWeight": 1,
+        "priorTaskIds": ["core-app"],
+        "sourceType": "schema-v2-remap",
+        "evidenceRefs": [
+          "https://github.com/MeekPhills/project-ambient/blob/e40cf5aa62f9f30180ff743023ceadbf1ca3df9e/apps/site/app/status/status-manifest.json"
+        ]
+      },
+      {
+        "newTaskId": "m3-aerial-export",
+        "earnedWeight": 0.5,
+        "priorTaskIds": ["core-app"],
+        "sourceType": "schema-v2-remap",
+        "evidenceRefs": [
+          "https://github.com/MeekPhills/project-ambient/blob/e40cf5aa62f9f30180ff743023ceadbf1ca3df9e/apps/site/app/status/status-manifest.json"
+        ]
+      },
+      {
+        "newTaskId": "m4-lifecycle-baseline",
+        "earnedWeight": 3,
+        "priorTaskIds": ["rotation-lifecycle"],
+        "sourceType": "schema-v2-remap",
+        "evidenceRefs": [
+          "https://github.com/MeekPhills/project-ambient/blob/e40cf5aa62f9f30180ff743023ceadbf1ca3df9e/apps/site/app/status/status-manifest.json"
+        ]
+      },
+      {
+        "newTaskId": "m7-hosted-reviewer-baseline",
+        "earnedWeight": 0.5,
+        "priorTaskIds": ["hosted-reviewer", "production-bridge"],
+        "sourceType": "schema-v2-remap",
+        "evidenceRefs": [
+          "https://github.com/MeekPhills/project-ambient/blob/e40cf5aa62f9f30180ff743023ceadbf1ca3df9e/apps/site/app/status/status-manifest.json",
+          "https://project-ambient-control.vercel.app/health"
+        ]
+      },
+      {
+        "newTaskId": "m8-alpha-distribution-baseline",
+        "earnedWeight": 2,
+        "priorTaskIds": ["alpha-foundation", "github-packaging", "homebrew"],
+        "sourceType": "schema-v2-remap",
+        "evidenceRefs": [
+          "https://github.com/MeekPhills/project-ambient/blob/e40cf5aa62f9f30180ff743023ceadbf1ca3df9e/apps/site/app/status/status-manifest.json",
+          "https://github.com/MeekPhills/project-ambient/releases/tag/v0.1.0-alpha",
+          "https://github.com/MeekPhills/homebrew-tap"
+        ]
+      }
+    ]
   },
   "scoreHistory": [
     {
@@ -101,18 +182,22 @@
     "m0-capability-contract": ["m0-dependency-tracker"],
     "m0-aerial-parity": ["m0-dependency-tracker"],
     "m0-integration": ["m0-baseline-integrity", "m0-licensing-rights", "m0-capability-contract", "m0-aerial-parity"],
+    "m1-alpha-static-baseline": ["m0-design-governance"],
     "m1-onboarding-import": ["m0-integration"],
     "m1-display-continuity": ["m1-onboarding-import"],
     "m1-lock-rotation": ["m1-display-continuity"],
     "m1-recovery-accessibility": ["m1-lock-rotation"],
+    "m2-alpha-catalog": ["m1-alpha-static-baseline"],
     "m2-import-dedupe-rights": ["m1-recovery-accessibility", "m0-licensing-rights"],
     "m2-packs-manifests": ["m2-import-dedupe-rights"],
     "m2-playlists-roundtrip": ["m2-import-dedupe-rights", "m2-packs-manifests"],
+    "m3-aerial-export": ["m1-alpha-static-baseline"],
     "m3-wallpaper-screensaver": ["m2-playlists-roundtrip", "m0-aerial-parity"],
     "m3-sources-expansions": ["m2-packs-manifests", "m0-aerial-parity"],
     "m3-playlists-displays": ["m3-wallpaper-screensaver", "m3-sources-expansions"],
     "m3-cache-schedules-playback": ["m3-wallpaper-screensaver", "m3-sources-expansions"],
     "m3-parity-integration": ["m3-playlists-displays", "m3-cache-schedules-playback"],
+    "m4-lifecycle-baseline": ["m1-alpha-static-baseline"],
     "m4-policy-engine": ["m3-parity-integration", "m0-capability-contract"],
     "m4-quality-fallback": ["m4-policy-engine"],
     "m4-observability-explanations": ["m4-quality-fallback"],
@@ -123,9 +208,11 @@
     "m6-device-protocol": ["m0-capability-contract", "m4-policy-engine"],
     "m6-ios": ["m6-device-protocol"],
     "m6-android": ["m6-device-protocol"],
+    "m7-hosted-reviewer-baseline": ["m0-design-governance"],
     "m7-tenancy-authz": ["m6-device-protocol", "m0-licensing-rights"],
     "m7-admin-entitlements": ["m7-tenancy-authz"],
     "m7-security-preview": ["m7-admin-entitlements"],
+    "m8-alpha-distribution-baseline": ["m0-design-governance"],
     "m8-release-integrity": ["m3-parity-integration", "m4-energy-soak", "m5-windows", "m5-linux", "m6-ios", "m6-android", "m7-security-preview"],
     "m8-packages-channels": ["m8-release-integrity"],
     "m8-ga-evidence": ["m8-packages-channels"]

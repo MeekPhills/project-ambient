@@ -76,6 +76,15 @@ export type StatusManifest = {
     decision: string;
     change: string;
     creditRule: string;
+    activationGate: string;
+    priorManifest: string;
+    creditMappings: Array<{
+      newTaskId: string;
+      earnedWeight: number;
+      priorTaskIds: string[];
+      sourceType: "schema-v2-remap" | "post-history-accepted" | "merge-conditional";
+      evidenceRefs: string[];
+    }>;
   };
   scoreHistory: Array<{
     schemaVersion: number;

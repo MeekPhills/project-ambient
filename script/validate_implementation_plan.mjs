@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 
 const plan = JSON.parse(await readFile(new URL("../docs/product/implementation-plan.json", import.meta.url), "utf8"));
 const statusManifest = JSON.parse(await readFile(new URL("../apps/site/app/status/status-manifest.json", import.meta.url), "utf8"));
-const required = ["id", "milestone", "statusWeight", "size", "owner", "branch", "parallelGroup", "dependencies", "areas", "acceptance", "verification"];
+const required = ["id", "milestone", "statusWeight", "size", "owner", "branch", "parallelGroup", "issueRef", "worktreePath", "escalationPath", "dependencies", "areas", "acceptance", "verification"];
 const tasks = new Map();
 
 assert.equal(plan.schemaVersion, 1);
@@ -15,6 +15,9 @@ for (const task of plan.tasks) {
   assert.match(task.id, /^m[0-8]-[a-z0-9-]+$/);
   assert.ok(!tasks.has(task.id), `duplicate task ${task.id}`);
   assert.ok(["S", "M", "L"].includes(task.size), `${task.id} has invalid size`);
+  assert.match(task.issueRef, /^(?:https:\/\/github\.com\/MeekPhills\/project-ambient\/issues\/\d+|create-before-start:https:\/\/github\.com\/MeekPhills\/project-ambient\/issues\/\d+)$/, `${task.id} has no executable issue gate`);
+  assert.ok(task.worktreePath.startsWith("../project-ambient-") || task.worktreePath.startsWith("accepted-main:"), `${task.id} has no isolated or accepted worktree identity`);
+  assert.match(task.escalationPath, /Stop and checkpoint.*Sol integrator.*stopConditions/, `${task.id} has no escalation path`);
   assert.ok(task.statusWeight > 0, `${task.id} must have positive weight`);
   assert.ok(task.areas.length > 0 && task.acceptance.length > 0 && task.verification.length > 0, `${task.id} has an empty execution contract`);
   tasks.set(task.id, task);
@@ -51,9 +54,21 @@ assert.deepEqual(
 for (const task of plan.tasks) {
   const statusTask = statusManifest.phases.flatMap((phase) => phase.tasks).find((candidate) => candidate.id === task.id);
   assert.equal(statusTask.weight, task.statusWeight, `${task.id} weight differs between plan and manifest`);
+  assert.deepEqual(statusManifest.dependencies[task.id] ?? [], task.dependencies, `${task.id} dependencies differ between plan and manifest`);
 }
 assert.equal(statusManifest.scoreHistory.at(-1).score, 49.75);
 assert.match(statusManifest.scoreHistory.at(-1).reason, /not a second current score/i);
+assert.match(statusManifest.migration.activationGate, /merge-conditional/i);
+assert.match(statusManifest.migration.priorManifest, /e40cf5aa62f9f30180ff743023ceadbf1ca3df9e/);
+assert.equal(statusManifest.migration.creditMappings.reduce((sum, mapping) => sum + mapping.earnedWeight, 0), 15);
+for (const mapping of statusManifest.migration.creditMappings) {
+  const task = statusManifest.phases.flatMap((phase) => phase.tasks).find((candidate) => candidate.id === mapping.newTaskId);
+  assert.ok(task, `credit mapping references unknown task ${mapping.newTaskId}`);
+  assert.equal(task.status, "complete", `${mapping.newTaskId} maps credit to a non-complete task`);
+  assert.equal(task.earnedWeight, mapping.earnedWeight, `${mapping.newTaskId} mapping does not equal earned credit`);
+  assert.ok(mapping.evidenceRefs.length > 0 && mapping.evidenceRefs.every((ref) => ref.startsWith("https://")), `${mapping.newTaskId} lacks immutable evidence refs`);
+  if (mapping.sourceType === "schema-v2-remap") assert.ok(mapping.priorTaskIds.length > 0, `${mapping.newTaskId} lacks prior task IDs`);
+}
 
 for (const id of plan.firstVerticalSlice) assert.ok(tasks.has(id), `unknown vertical-slice task ${id}`);
 for (let index = 1; index < plan.firstVerticalSlice.length; index += 1) {
