@@ -112,7 +112,7 @@
         "m0-design-governance"
       ],
       "areas": [
-        "docs/reports/m0-repository-baseline.md"
+        "docs/reports/m0-issue-17-repository-baseline.md"
       ],
       "acceptance": [
         "clean Swift, MCP, site, and release commands have exact results",
@@ -275,7 +275,7 @@
       "statusWeight": 3,
       "size": "M",
       "owner": "Sol",
-      "branch": "feat/m1-onboarding-import",
+      "branch": "feat/37-static-onboarding-import",
       "parallelGroup": "m1-slice-1",
       "dependencies": [
         "m0-integration"
@@ -294,7 +294,7 @@
         "source hashes unchanged",
         "Swift import tests"
       ],
-      "issueRef": "create-before-start:https://github.com/MeekPhills/project-ambient/issues/8",
+      "issueRef": "https://github.com/MeekPhills/project-ambient/issues/37",
       "worktreePath": "../project-ambient-m1-onboarding-import",
       "escalationPath": "Stop and checkpoint the owning issue; escalate to the Sol integrator under executionPolicy.stopConditions."
     },
