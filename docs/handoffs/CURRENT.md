@@ -20,13 +20,13 @@ Issues #17 and #10 are closed after public tracker activation. Issue #37 has a c
 
 ## Display-control expansion checkpoint (2026-08-15)
 
-The BetterDisplay-class display-management expansion now has WS-DC-001 governance drafts on branch `docs/display-control-parity-register` (parent `97affa0b49cbcab239dca0873d04ae13f8bd2951`). It awards **zero tracker credit** and changes no canonical arithmetic.
+The BetterDisplay-class display-management expansion now has WS-DC-001 governance drafts on branch `docs/display-control-parity-register` (parent `97affa0b49cbcab239dca0873d04ae13f8bd2951`), published as draft PR #40 and governed by issue #41. It awards **zero tracker credit** and changes no canonical arithmetic.
 
 - Frozen comparator: BetterDisplay **4.3.6** build 50119 (tag `046b59f8c04e8b46872ee270f5cee76cc1ef1803`, landing `c71b73d5e024c793e8df7be2742017a81599b0cc`); v5.0.2 stays a prerelease watchlist item.
 - `docs/product/display-control-capability-register.json` — 115 rows: the full official Free (40) and Pro (37) matrix 1:1 plus 38 cross-cutting rows; dispositions 62 supported / 36 experimental / 6 manual-only / 1 unavailable / 10 blocked; `launchGate.fullReplacementClaim` is false and validator-enforced.
 - `schemas/display-control/v1/capability-register.schema.json` + `script/validate_display_control.mjs` — fail-closed, wired into `script/verify_release.sh`, thirteen tamper self-tests all rejecting (baseline drift, private SPI claimed supported, hidden credit fields, missing consent/kill-switch gates, premature replacement claim, and more).
 - `docs/decisions/0003-display-control-expansion.md` (Proposed), `docs/reports/display-control-risk-register.md` (17 risks), `docs/product/tracker-schema-v4-proposal.md` (NOT active; corrected against the real nine-milestone manifest, which reconciles 20/100 exactly), and `docs/orchestration/` (recovery ledger, work graph).
-- Still owner-gated: creating the public display-control governance issue; physical MSI/Dell qualification; the private-SPI/EDID/remote-streaming/privileged-helper decisions; any schema-v4 activation step.
+- Governance issue #41 and draft PR #40 were created with explicit owner approval on 2026-08-15. Still owner-gated: physical MSI/Dell qualification; the private-SPI/EDID/remote-streaming/privileged-helper decisions; any schema-v4 activation step.
 - Issue #37 remains the only integration-active issue. Its Mac-local importer worktree and the protected checkout were untouched by this drafting work.
 
 ## Next exact action

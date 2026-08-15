@@ -8,7 +8,7 @@ Snapshot: 2026-08-15, from the SOL parent orchestrator verified handoff, updated
 | PA-002 | Finish Static-first onboarding/import (issue #37) | Uncommitted draft on the owner's Mac | Mac-local only — see constraints. Inspect the dirty diff, run focused Swift tests with isolated caches, commit only safe scoped work |
 | PA-003 | Certify base-M4 efficiency (issue #28) | Planned, zero credit | Blocked on functional implementation and measurable fixtures |
 | PA-004 | Local-first in-app chat (issue #29) | Planned, zero credit | Blocked on stable typed command contracts |
-| PA-005 | BetterDisplay-class display management | Research complete; WS-DC-001 governance artifacts drafted on this branch | Owner approval still gates the public governance issue; ADR 0003 stays Proposed until then |
+| PA-005 | BetterDisplay-class display management | Cleared with explicit owner approval 2026-08-15: governance issue #41 and draft PR #40 published | Non-author review of PR #40; ADR 0003 stays Proposed until accepted at merge |
 | PA-006 | Preserve protected checkout (`~/Library/Mobile Documents/com~apple~CloudDocs/Codename Ambiant`) | Safe | Never reset, clean, stash, switch, overwrite, or integrate from it |
 
 ## Session constraints recorded 2026-08-15
