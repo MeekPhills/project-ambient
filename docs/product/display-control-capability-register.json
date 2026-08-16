@@ -1,0 +1,2861 @@
+{
+  "schemaVersion": "1.0.0",
+  "registerVersion": "0.1.0-draft",
+  "publicationStatus": "draft-unpublished",
+  "retrievedAt": "2026-08-15",
+  "launchGate": {
+    "fullReplacementClaim": false,
+    "policy": "Fail-closed: fullReplacementClaim must remain false while any row is not implementationStatus=qualified, and no public 'full BetterDisplay replacement' claim may ship while it is false. Enforced by script/validate_display_control.mjs."
+  },
+  "baselines": [
+    {
+      "label": "stable",
+      "product": "BetterDisplay",
+      "version": "4.3.6",
+      "build": "50119",
+      "bundleId": "pro.betterdisplay.BetterDisplay",
+      "released": "2026-08-11",
+      "tagCommit": "046b59f8c04e8b46872ee270f5cee76cc1ef1803",
+      "landingCommit": "c71b73d5e024c793e8df7be2742017a81599b0cc",
+      "sourceURL": "https://github.com/waydabber/BetterDisplay/releases/tag/v4.3.6"
+    }
+  ],
+  "watchlist": "BetterDisplay v5.0.2 is a prerelease watchlist item and is NOT the launch parity baseline.",
+  "cleanRoomBoundary": "BetterDisplay's application is proprietary. No BetterDisplay application code, assets, branding, interface trade dress, or internal implementation may be copied. Rows are derived only from user-observable behavior, official public documentation, release evidence, Apple documentation, and separately MIT-licensed projects (MonitorControl, m1ddc).",
+  "requiredDomains": [
+    "discovery-identity",
+    "mode-transactions",
+    "hidpi-custom-modes",
+    "hdr-xdr",
+    "color-management",
+    "ddc-hardware-control",
+    "software-dimming-osd",
+    "audio",
+    "groups-sync-presets",
+    "virtual-displays",
+    "disconnect-reconnect",
+    "edid",
+    "pip-streaming",
+    "network-device-control",
+    "settings-recovery",
+    "control-plane",
+    "privacy-security",
+    "accessibility-localization",
+    "updater-support",
+    "qualification",
+    "packaging-claims",
+    "policy"
+  ],
+  "evidenceCatalog": [
+    {
+      "id": "FREEPRO",
+      "kind": "official-documentation",
+      "uri": "https://github.com/waydabber/BetterDisplay/wiki/List-of-free-and-Pro-features",
+      "retrievedAt": "2026-08-15"
+    },
+    {
+      "id": "README",
+      "kind": "official-documentation",
+      "uri": "https://github.com/waydabber/BetterDisplay",
+      "retrievedAt": "2026-08-15"
+    },
+    {
+      "id": "CLI",
+      "kind": "official-documentation",
+      "uri": "https://github.com/waydabber/BetterDisplay/wiki/Integration-features%2C-CLI",
+      "retrievedAt": "2026-08-15"
+    },
+    {
+      "id": "SAFEMODE",
+      "kind": "official-documentation",
+      "uri": "https://github.com/waydabber/BetterDisplay/wiki/Safe-mode%2C-app-reset%2C-app-removal",
+      "retrievedAt": "2026-08-15"
+    },
+    {
+      "id": "TERMS",
+      "kind": "official-documentation",
+      "uri": "https://github.com/waydabber/BetterDisplay/discussions/739",
+      "retrievedAt": "2026-08-15"
+    },
+    {
+      "id": "RELEASE",
+      "kind": "official-documentation",
+      "uri": "https://github.com/waydabber/BetterDisplay/releases/tag/v4.3.6",
+      "retrievedAt": "2026-08-15"
+    },
+    {
+      "id": "HANDOFF",
+      "kind": "handoff",
+      "uri": "SOL parent orchestrator verified research handoff, 2026-08-15",
+      "retrievedAt": "2026-08-15"
+    },
+    {
+      "id": "APPLE-CG",
+      "kind": "apple-documentation",
+      "uri": "https://developer.apple.com/documentation/coregraphics/cgconfiguredisplaywithdisplaymode",
+      "retrievedAt": "2026-08-15"
+    },
+    {
+      "id": "APPLE-CS",
+      "kind": "apple-documentation",
+      "uri": "https://developer.apple.com/documentation/colorsync/color-devices",
+      "retrievedAt": "2026-08-15"
+    },
+    {
+      "id": "APPLE-SCK",
+      "kind": "apple-documentation",
+      "uri": "https://developer.apple.com/documentation/screencapturekit",
+      "retrievedAt": "2026-08-15"
+    },
+    {
+      "id": "OSS-MC",
+      "kind": "open-source",
+      "uri": "https://github.com/MonitorControl/MonitorControl (MIT)",
+      "retrievedAt": "2026-08-15"
+    },
+    {
+      "id": "OSS-M1DDC",
+      "kind": "open-source",
+      "uri": "https://github.com/waydabber/m1ddc (MIT)",
+      "retrievedAt": "2026-08-15"
+    }
+  ],
+  "rowCount": 115,
+  "rows": [
+    {
+      "id": "BD-CTL-001",
+      "capability": "Easy to use GUI",
+      "comparatorTier": "free",
+      "domain": "control-plane",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "disposition": "supported",
+      "apiBasis": [
+        {
+          "kind": "app-local",
+          "ref": "Native SwiftUI/AppKit application UI"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-009",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:qual/control-plane/ui-contract",
+      "claimGates": [
+        "a11y-review"
+      ],
+      "notes": "Independent design; no BetterDisplay trade dress."
+    },
+    {
+      "id": "BD-DIM-001",
+      "capability": "Multi-method brightness control",
+      "comparatorTier": "free",
+      "domain": "software-dimming-osd",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "disposition": "supported",
+      "apiBasis": [
+        {
+          "kind": "public-apple-api",
+          "ref": "CGSetDisplayTransferByTable gamma path (APPLE-CG)"
+        },
+        {
+          "kind": "app-local",
+          "ref": "Overlay dimming window"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-004",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:tests/dimming/method-selection",
+      "claimGates": [],
+      "notes": "Software methods only in Supported Core; the hardware (DDC) method is delegated to BD-DDC rows in the adapter."
+    },
+    {
+      "id": "BD-DIM-002",
+      "capability": "Native brightness and volume keys",
+      "comparatorTier": "free",
+      "domain": "software-dimming-osd",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "disposition": "supported",
+      "apiBasis": [
+        {
+          "kind": "public-apple-api",
+          "ref": "CGEventTap media-key handling"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-004",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:tests/dimming/media-keys",
+      "claimGates": [
+        "accessibility-permission"
+      ]
+    },
+    {
+      "id": "BD-CTL-002",
+      "capability": "Basic custom keyboard shortcuts",
+      "comparatorTier": "free",
+      "domain": "control-plane",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "disposition": "supported",
+      "apiBasis": [
+        {
+          "kind": "public-apple-api",
+          "ref": "Standard global hotkey registration"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-004",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:tests/control/shortcuts",
+      "claimGates": []
+    },
+    {
+      "id": "BD-DIM-003",
+      "capability": "Native or native-looking OSD",
+      "comparatorTier": "free",
+      "domain": "software-dimming-osd",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "disposition": "supported",
+      "apiBasis": [
+        {
+          "kind": "app-local",
+          "ref": "Own OSD rendering; no private OSDUIHelper use"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-004",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:tests/dimming/osd",
+      "claimGates": [
+        "a11y-review"
+      ],
+      "notes": "Original OSD design only."
+    },
+    {
+      "id": "BD-DIM-004",
+      "capability": "Software dimming (color table)",
+      "comparatorTier": "free",
+      "domain": "software-dimming-osd",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "disposition": "supported",
+      "apiBasis": [
+        {
+          "kind": "public-apple-api",
+          "ref": "CGSetDisplayTransferByTable (APPLE-CG)"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-004",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:tests/dimming/gamma-table",
+      "claimGates": [
+        "rollback-proof"
+      ],
+      "notes": "Gamma restored on quit/crash via WS-DC-003 recovery."
+    },
+    {
+      "id": "BD-DIM-005",
+      "capability": "Software dimming (overlay)",
+      "comparatorTier": "free",
+      "domain": "software-dimming-osd",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "disposition": "supported",
+      "apiBasis": [
+        {
+          "kind": "app-local",
+          "ref": "Overlay window per display"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-004",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:tests/dimming/overlay",
+      "claimGates": []
+    },
+    {
+      "id": "BD-DIM-006",
+      "capability": "Combined dimming",
+      "comparatorTier": "free",
+      "domain": "software-dimming-osd",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "disposition": "supported",
+      "apiBasis": [
+        {
+          "kind": "public-apple-api",
+          "ref": "Gamma + overlay composition"
+        },
+        {
+          "kind": "app-local",
+          "ref": "Overlay window"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-004",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:tests/dimming/combined",
+      "claimGates": []
+    },
+    {
+      "id": "BD-DIM-007",
+      "capability": "Dimming to black",
+      "comparatorTier": "free",
+      "domain": "software-dimming-osd",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "disposition": "supported",
+      "apiBasis": [
+        {
+          "kind": "app-local",
+          "ref": "Blackout overlay"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-004",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:tests/dimming/blackout",
+      "claimGates": [
+        "rollback-proof"
+      ],
+      "notes": "Escape hatch must always restore visibility."
+    },
+    {
+      "id": "BD-NET-001",
+      "capability": "LG webOS TV control",
+      "comparatorTier": "free",
+      "domain": "network-device-control",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "disposition": "experimental",
+      "apiBasis": [
+        {
+          "kind": "vendor-network-protocol",
+          "ref": "LG webOS local network protocol"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-005",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:qual/network/lg-webos",
+      "claimGates": [
+        "opt-in",
+        "adapter-packaging",
+        "timeout",
+        "kill-switch",
+        "hardware-matrix",
+        "local-auth"
+      ]
+    },
+    {
+      "id": "BD-NET-002",
+      "capability": "Samsung Tizen TV control",
+      "comparatorTier": "free",
+      "domain": "network-device-control",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "disposition": "experimental",
+      "apiBasis": [
+        {
+          "kind": "vendor-network-protocol",
+          "ref": "Samsung Tizen local network protocol"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-005",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:qual/network/samsung-tizen",
+      "claimGates": [
+        "opt-in",
+        "adapter-packaging",
+        "timeout",
+        "kill-switch",
+        "hardware-matrix",
+        "local-auth"
+      ]
+    },
+    {
+      "id": "BD-NET-003",
+      "capability": "Philips Android TV control",
+      "comparatorTier": "free",
+      "domain": "network-device-control",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "disposition": "experimental",
+      "apiBasis": [
+        {
+          "kind": "vendor-network-protocol",
+          "ref": "Philips Android TV JointSpace protocol"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-005",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:qual/network/philips",
+      "claimGates": [
+        "opt-in",
+        "adapter-packaging",
+        "timeout",
+        "kill-switch",
+        "hardware-matrix",
+        "local-auth"
+      ]
+    },
+    {
+      "id": "BD-NET-004",
+      "capability": "Yamaha AVR control",
+      "comparatorTier": "free",
+      "domain": "network-device-control",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "disposition": "experimental",
+      "apiBasis": [
+        {
+          "kind": "vendor-network-protocol",
+          "ref": "Yamaha YNCA/MusicCast local protocol"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-005",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:qual/network/yamaha",
+      "claimGates": [
+        "opt-in",
+        "adapter-packaging",
+        "timeout",
+        "kill-switch",
+        "hardware-matrix",
+        "local-auth"
+      ]
+    },
+    {
+      "id": "BD-DDC-001",
+      "capability": "DDC support for most Macs",
+      "comparatorTier": "free",
+      "domain": "ddc-hardware-control",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "disposition": "experimental",
+      "apiBasis": [
+        {
+          "kind": "mit-licensed-oss",
+          "ref": "OSS-MC"
+        },
+        {
+          "kind": "os-undocumented",
+          "ref": "IOKit DDC/CI transport"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-005",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:qual/ddc/transport-matrix",
+      "claimGates": [
+        "opt-in",
+        "adapter-packaging",
+        "timeout",
+        "kill-switch",
+        "hardware-matrix",
+        "m4-resource"
+      ],
+      "notes": "No general Apple-supported DDC API exists; best-effort adapter only."
+    },
+    {
+      "id": "BD-DDC-002",
+      "capability": "DDC via the M1/M2 built-in HDMI",
+      "comparatorTier": "free",
+      "domain": "ddc-hardware-control",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "disposition": "experimental",
+      "apiBasis": [
+        {
+          "kind": "mit-licensed-oss",
+          "ref": "OSS-M1DDC"
+        },
+        {
+          "kind": "os-undocumented",
+          "ref": "IOAVService DDC path"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-005",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:qual/ddc/apple-silicon-hdmi",
+      "claimGates": [
+        "opt-in",
+        "adapter-packaging",
+        "timeout",
+        "kill-switch",
+        "hardware-matrix"
+      ]
+    },
+    {
+      "id": "BD-DDC-003",
+      "capability": "DDC for Intel 2018 mini built-in HDMI",
+      "comparatorTier": "free",
+      "domain": "ddc-hardware-control",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "disposition": "experimental",
+      "apiBasis": [
+        {
+          "kind": "os-undocumented",
+          "ref": "Intel framebuffer DDC path"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-005",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:qual/ddc/intel-2018-mini",
+      "claimGates": [
+        "opt-in",
+        "adapter-packaging",
+        "timeout",
+        "kill-switch",
+        "hardware-matrix"
+      ],
+      "notes": "Intel 2018 mini is not in the initial hardware matrix; cannot qualify until hardware exists."
+    },
+    {
+      "id": "BD-DDC-004",
+      "capability": "DDC brightness control",
+      "comparatorTier": "free",
+      "domain": "ddc-hardware-control",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "disposition": "experimental",
+      "apiBasis": [
+        {
+          "kind": "mit-licensed-oss",
+          "ref": "OSS-MC"
+        },
+        {
+          "kind": "os-undocumented",
+          "ref": "DDC/CI VCP 0x10"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-005",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:qual/ddc/brightness",
+      "claimGates": [
+        "opt-in",
+        "adapter-packaging",
+        "timeout",
+        "kill-switch",
+        "hardware-matrix",
+        "m4-resource"
+      ]
+    },
+    {
+      "id": "BD-DDC-005",
+      "capability": "DDC volume control",
+      "comparatorTier": "free",
+      "domain": "ddc-hardware-control",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "disposition": "experimental",
+      "apiBasis": [
+        {
+          "kind": "mit-licensed-oss",
+          "ref": "OSS-MC"
+        },
+        {
+          "kind": "os-undocumented",
+          "ref": "DDC/CI VCP 0x62"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-005",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:qual/ddc/volume",
+      "claimGates": [
+        "opt-in",
+        "adapter-packaging",
+        "timeout",
+        "kill-switch",
+        "hardware-matrix"
+      ]
+    },
+    {
+      "id": "BD-DDC-006",
+      "capability": "DDC input switching",
+      "comparatorTier": "free",
+      "domain": "ddc-hardware-control",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "disposition": "experimental",
+      "apiBasis": [
+        {
+          "kind": "mit-licensed-oss",
+          "ref": "OSS-M1DDC"
+        },
+        {
+          "kind": "os-undocumented",
+          "ref": "DDC/CI VCP 0x60"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-005",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:qual/ddc/input-switch",
+      "claimGates": [
+        "opt-in",
+        "adapter-packaging",
+        "timeout",
+        "kill-switch",
+        "hardware-matrix"
+      ],
+      "notes": "Input switch can strand the user on a dead input; confirmation and revert window required."
+    },
+    {
+      "id": "BD-DDC-007",
+      "capability": "DDC power control",
+      "comparatorTier": "free",
+      "domain": "ddc-hardware-control",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "disposition": "experimental",
+      "apiBasis": [
+        {
+          "kind": "os-undocumented",
+          "ref": "DDC/CI VCP 0xD6"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-005",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:qual/ddc/power",
+      "claimGates": [
+        "opt-in",
+        "adapter-packaging",
+        "timeout",
+        "kill-switch",
+        "hardware-matrix"
+      ]
+    },
+    {
+      "id": "BD-DDC-008",
+      "capability": "DDC capabilities and auto-config",
+      "comparatorTier": "free",
+      "domain": "ddc-hardware-control",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "disposition": "experimental",
+      "apiBasis": [
+        {
+          "kind": "os-undocumented",
+          "ref": "DDC/CI capabilities string parsing"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-005",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:qual/ddc/capabilities",
+      "claimGates": [
+        "opt-in",
+        "adapter-packaging",
+        "timeout",
+        "kill-switch",
+        "hardware-matrix"
+      ]
+    },
+    {
+      "id": "BD-CTL-003",
+      "capability": "Control integration (external OSD/HUD API)",
+      "comparatorTier": "free",
+      "domain": "control-plane",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "disposition": "supported",
+      "apiBasis": [
+        {
+          "kind": "app-local",
+          "ref": "Typed local integration API"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-009",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:tests/control/integration-api",
+      "claimGates": [
+        "local-auth"
+      ],
+      "notes": "Comparator integrates MediaMate/DynamicLake/Alcove/Atoll/BoringNotch; ours exposes an equivalent typed contract."
+    },
+    {
+      "id": "BD-HIDPI-001",
+      "capability": "Custom scaled resolution editing",
+      "comparatorTier": "free",
+      "domain": "hidpi-custom-modes",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "disposition": "experimental",
+      "apiBasis": [
+        {
+          "kind": "os-undocumented",
+          "ref": "Display mode override mechanisms"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-006",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:qual/hidpi/custom-scaled",
+      "claimGates": [
+        "opt-in",
+        "adapter-packaging",
+        "rollback-proof"
+      ]
+    },
+    {
+      "id": "BD-COLOR-001",
+      "capability": "Night Shift for TVs",
+      "comparatorTier": "free",
+      "domain": "color-management",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "disposition": "unavailable",
+      "apiBasis": [
+        {
+          "kind": "private-spi-risk",
+          "ref": "Night Shift is driven by private CoreBrightness interfaces"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-006",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:docs/unavailable/night-shift-tv",
+      "claimGates": [],
+      "notes": "No safe implementation path; a gamma-based warm-tint alternative may be offered as a distinct supported feature, not as Night Shift."
+    },
+    {
+      "id": "BD-DIS-004",
+      "capability": "Display name override",
+      "comparatorTier": "free",
+      "domain": "discovery-identity",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "disposition": "supported",
+      "apiBasis": [
+        {
+          "kind": "app-local",
+          "ref": "App-scoped display naming layered on stable identity"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-002",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:tests/identity/name-override",
+      "claimGates": [],
+      "notes": "App-scope rename only; system-level EDID name override is BD-EDID-002/003."
+    },
+    {
+      "id": "BD-MODE-001",
+      "capability": "Native, default resolution editing",
+      "comparatorTier": "free",
+      "domain": "mode-transactions",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "disposition": "supported",
+      "apiBasis": [
+        {
+          "kind": "public-apple-api",
+          "ref": "CGDisplayCopyAllDisplayModes + CGConfigureDisplayWithDisplayMode (APPLE-CG)"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-006",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:tests/modes/native-resolution",
+      "claimGates": [
+        "rollback-proof"
+      ],
+      "notes": "Selection among OS-reported modes only."
+    },
+    {
+      "id": "BD-VIRT-001",
+      "capability": "Virtual screen creation",
+      "comparatorTier": "free",
+      "domain": "virtual-displays",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "disposition": "experimental",
+      "apiBasis": [
+        {
+          "kind": "private-spi-risk",
+          "ref": "Virtual display creation relies on non-public CoreGraphics interfaces"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-007",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:qual/virtual/create",
+      "claimGates": [
+        "opt-in",
+        "adapter-packaging",
+        "owner-decision"
+      ],
+      "notes": "WS-DC-007 feasibility decides final disposition."
+    },
+    {
+      "id": "BD-VIRT-002",
+      "capability": "Virtual screen association",
+      "comparatorTier": "free",
+      "domain": "virtual-displays",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "disposition": "experimental",
+      "apiBasis": [
+        {
+          "kind": "private-spi-risk",
+          "ref": "Depends on virtual screen creation"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-007",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:qual/virtual/associate",
+      "claimGates": [
+        "opt-in",
+        "adapter-packaging",
+        "owner-decision"
+      ]
+    },
+    {
+      "id": "BD-MODE-002",
+      "capability": "Display mode selector menu",
+      "comparatorTier": "free",
+      "domain": "mode-transactions",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "disposition": "supported",
+      "apiBasis": [
+        {
+          "kind": "public-apple-api",
+          "ref": "CGDisplayCopyAllDisplayModes (APPLE-CG)"
+        },
+        {
+          "kind": "app-local",
+          "ref": "Menu UI"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-006",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:tests/modes/selector",
+      "claimGates": []
+    },
+    {
+      "id": "BD-MODE-003",
+      "capability": "Refresh rate selector menu",
+      "comparatorTier": "free",
+      "domain": "mode-transactions",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "disposition": "supported",
+      "apiBasis": [
+        {
+          "kind": "public-apple-api",
+          "ref": "Refresh rate via reported CGDisplayModes (APPLE-CG)"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-006",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:tests/modes/refresh-rate",
+      "claimGates": []
+    },
+    {
+      "id": "BD-MODE-004",
+      "capability": "Unexposed & NTSC refresh rates for Apple Silicon",
+      "comparatorTier": "free",
+      "domain": "mode-transactions",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "disposition": "experimental",
+      "apiBasis": [
+        {
+          "kind": "os-undocumented",
+          "ref": "Modes not reported by the public mode list"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-006",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:qual/modes/unexposed-rates",
+      "claimGates": [
+        "opt-in",
+        "adapter-packaging",
+        "rollback-proof"
+      ]
+    },
+    {
+      "id": "BD-COLOR-002",
+      "capability": "Color mode selector for Apple Silicon (RGB/YCbCr/range)",
+      "comparatorTier": "free",
+      "domain": "color-management",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "disposition": "experimental",
+      "apiBasis": [
+        {
+          "kind": "os-undocumented",
+          "ref": "Output pixel encoding/range switches lack a documented public API"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-006",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:qual/color/output-modes",
+      "claimGates": [
+        "opt-in",
+        "adapter-packaging",
+        "rollback-proof"
+      ]
+    },
+    {
+      "id": "BD-MODE-005",
+      "capability": "Resolution slider",
+      "comparatorTier": "free",
+      "domain": "mode-transactions",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "disposition": "supported",
+      "apiBasis": [
+        {
+          "kind": "app-local",
+          "ref": "Slider UI over OS-reported modes"
+        },
+        {
+          "kind": "public-apple-api",
+          "ref": "APPLE-CG"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-006",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:tests/modes/slider",
+      "claimGates": [],
+      "notes": "Slider spans reported modes in Supported Core; custom-mode extension is BD-HIDPI rows."
+    },
+    {
+      "id": "BD-EDID-001",
+      "capability": "EDID retrieval",
+      "comparatorTier": "free",
+      "domain": "edid",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "disposition": "experimental",
+      "apiBasis": [
+        {
+          "kind": "public-apple-api",
+          "ref": "IORegistry read access"
+        },
+        {
+          "kind": "os-undocumented",
+          "ref": "Per-platform EDID property layout"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-007",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:qual/edid/export",
+      "claimGates": [
+        "opt-in",
+        "adapter-packaging"
+      ],
+      "notes": "Read-only; export format documented. Override is a separate, blocked row."
+    },
+    {
+      "id": "BD-COLOR-003",
+      "capability": "Color profile selector",
+      "comparatorTier": "free",
+      "domain": "color-management",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "disposition": "experimental",
+      "apiBasis": [
+        {
+          "kind": "os-undocumented",
+          "ref": "Per-display default profile assignment lacks a stable documented API"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-006",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:qual/color/profile-assign",
+      "claimGates": [
+        "opt-in",
+        "adapter-packaging",
+        "rollback-proof"
+      ],
+      "notes": "Inspection is supported via BD-COLOR-006; assignment stays experimental per architecture review."
+    },
+    {
+      "id": "BD-CTL-004",
+      "capability": "Command Line Integration",
+      "comparatorTier": "free",
+      "domain": "control-plane",
+      "evidenceRefs": [
+        "CLI"
+      ],
+      "disposition": "supported",
+      "apiBasis": [
+        {
+          "kind": "app-local",
+          "ref": "ambientctl typed command surface"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-009",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:tests/control/cli-contract",
+      "claimGates": [
+        "local-auth"
+      ],
+      "notes": "Same typed contract as UI; no free-form shell passthrough."
+    },
+    {
+      "id": "BD-CTL-005",
+      "capability": "macOS Shortcuts app (App Intents)",
+      "comparatorTier": "free",
+      "domain": "control-plane",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "disposition": "supported",
+      "apiBasis": [
+        {
+          "kind": "public-apple-api",
+          "ref": "AppIntents framework"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-009",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:tests/control/app-intents",
+      "claimGates": []
+    },
+    {
+      "id": "BD-CTL-006",
+      "capability": "HTTP, custom URL scheme",
+      "comparatorTier": "free",
+      "domain": "control-plane",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "disposition": "supported",
+      "apiBasis": [
+        {
+          "kind": "app-local",
+          "ref": "Localhost-only HTTP + URL scheme onto the typed command bus"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-009",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:tests/control/http-url-scheme",
+      "claimGates": [
+        "local-auth",
+        "security-review"
+      ],
+      "notes": "Local, authenticated, non-routable by default."
+    },
+    {
+      "id": "BD-CTL-007",
+      "capability": "External HUD/notch app integration",
+      "comparatorTier": "free",
+      "domain": "control-plane",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "disposition": "supported",
+      "apiBasis": [
+        {
+          "kind": "app-local",
+          "ref": "Typed local integration API (same bus as BD-CTL-003)"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-009",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:tests/control/hud-integration",
+      "claimGates": [
+        "local-auth"
+      ]
+    },
+    {
+      "id": "BD-SYNC-001",
+      "capability": "Basic brightness syncing",
+      "comparatorTier": "free",
+      "domain": "groups-sync-presets",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "disposition": "supported",
+      "apiBasis": [
+        {
+          "kind": "app-local",
+          "ref": "Software brightness propagation across displays"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-004",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:tests/sync/basic-brightness",
+      "claimGates": [],
+      "notes": "Software channel only in Supported Core; hardware channel requires the DDC adapter. Loop prevention required."
+    },
+    {
+      "id": "BD-HDR-001",
+      "capability": "Color table XDR/HDR brightness upscaling (Apple Silicon)",
+      "comparatorTier": "pro",
+      "domain": "hdr-xdr",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "disposition": "experimental",
+      "apiBasis": [
+        {
+          "kind": "os-undocumented",
+          "ref": "Gamma-table interaction with EDR headroom is not documented behavior"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-006",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:qual/hdr/colortable-upscale",
+      "claimGates": [
+        "opt-in",
+        "adapter-packaging",
+        "hardware-matrix"
+      ]
+    },
+    {
+      "id": "BD-HDR-002",
+      "capability": "Metal XDR/HDR brightness upscaling (Apple Silicon, Intel)",
+      "comparatorTier": "pro",
+      "domain": "hdr-xdr",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "disposition": "experimental",
+      "apiBasis": [
+        {
+          "kind": "public-apple-api",
+          "ref": "CAMetalLayer extended dynamic range (documented)"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-006",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:qual/hdr/metal-upscale",
+      "claimGates": [
+        "opt-in",
+        "adapter-packaging",
+        "hardware-matrix",
+        "m4-resource"
+      ],
+      "notes": "Public-API path plausible; held at experimental until MSI OLED qualification passes."
+    },
+    {
+      "id": "BD-HDR-003",
+      "capability": "Direct XDR brightness upscaling (Apple Silicon, macOS 26.3+)",
+      "comparatorTier": "pro",
+      "domain": "hdr-xdr",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "disposition": "blocked",
+      "apiBasis": [
+        {
+          "kind": "private-spi-risk",
+          "ref": "Direct panel brightness control beyond public EDR APIs"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-006",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:docs/blocked/direct-xdr",
+      "claimGates": [
+        "owner-decision"
+      ],
+      "notes": "Private-API risk; requires explicit owner decision before any adapter work."
+    },
+    {
+      "id": "BD-HDR-004",
+      "capability": "Native XDR brightness upscaling (Apple Silicon, up to macOS 26.2)",
+      "comparatorTier": "pro",
+      "domain": "hdr-xdr",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "disposition": "blocked",
+      "apiBasis": [
+        {
+          "kind": "private-spi-risk",
+          "ref": "Non-public XDR brightness interfaces"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-006",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:docs/blocked/native-xdr",
+      "claimGates": [
+        "owner-decision"
+      ]
+    },
+    {
+      "id": "BD-DIM-008",
+      "capability": "OSD nits output",
+      "comparatorTier": "pro",
+      "domain": "software-dimming-osd",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "disposition": "experimental",
+      "apiBasis": [
+        {
+          "kind": "os-undocumented",
+          "ref": "Per-display nits telemetry availability varies"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-004",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:qual/osd/nits-readout",
+      "claimGates": [
+        "opt-in",
+        "adapter-packaging",
+        "hardware-matrix"
+      ],
+      "notes": "Only shown when the display actually reports trustworthy nits data."
+    },
+    {
+      "id": "BD-DDC-009",
+      "capability": "DDC input customization",
+      "comparatorTier": "pro",
+      "domain": "ddc-hardware-control",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "disposition": "experimental",
+      "apiBasis": [
+        {
+          "kind": "os-undocumented",
+          "ref": "DDC/CI VCP 0x60 vendor value maps"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-005",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:qual/ddc/input-custom",
+      "claimGates": [
+        "opt-in",
+        "adapter-packaging",
+        "timeout",
+        "kill-switch",
+        "hardware-matrix"
+      ]
+    },
+    {
+      "id": "BD-DDC-010",
+      "capability": "DDC and color control for DisplayLink",
+      "comparatorTier": "pro",
+      "domain": "ddc-hardware-control",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "disposition": "experimental",
+      "apiBasis": [
+        {
+          "kind": "os-undocumented",
+          "ref": "DisplayLink-specific DDC routing"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-005",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:qual/ddc/displaylink",
+      "claimGates": [
+        "opt-in",
+        "adapter-packaging",
+        "timeout",
+        "kill-switch",
+        "hardware-matrix"
+      ],
+      "notes": "DisplayLink hardware is not in the initial qualification matrix."
+    },
+    {
+      "id": "BD-DDC-011",
+      "capability": "Custom integration & DDC controls",
+      "comparatorTier": "pro",
+      "domain": "ddc-hardware-control",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "disposition": "experimental",
+      "apiBasis": [
+        {
+          "kind": "os-undocumented",
+          "ref": "Arbitrary VCP code access"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-005",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:qual/ddc/custom-vcp",
+      "claimGates": [
+        "opt-in",
+        "adapter-packaging",
+        "timeout",
+        "kill-switch",
+        "hardware-matrix",
+        "security-review"
+      ],
+      "notes": "Typed, allow-listed VCP access only; no raw passthrough by default."
+    },
+    {
+      "id": "BD-HIDPI-002",
+      "capability": "Flexible HiDPI scaling",
+      "comparatorTier": "pro",
+      "domain": "hidpi-custom-modes",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "disposition": "experimental",
+      "apiBasis": [
+        {
+          "kind": "os-undocumented",
+          "ref": "Non-reported scaled mode injection"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-006",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:qual/hidpi/flexible-scaling",
+      "claimGates": [
+        "opt-in",
+        "adapter-packaging",
+        "rollback-proof",
+        "hardware-matrix"
+      ]
+    },
+    {
+      "id": "BD-DISC-001",
+      "capability": "Disconnect/connect displays",
+      "comparatorTier": "pro",
+      "domain": "disconnect-reconnect",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "disposition": "experimental",
+      "apiBasis": [
+        {
+          "kind": "os-undocumented",
+          "ref": "Soft display detach/attach mechanisms"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-007",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:qual/disconnect/soft-detach",
+      "claimGates": [
+        "opt-in",
+        "adapter-packaging",
+        "rollback-proof",
+        "owner-decision"
+      ],
+      "notes": "Must never leave the user with zero usable displays; recovery path mandatory."
+    },
+    {
+      "id": "BD-VIRT-003",
+      "capability": "Custom virtual screens",
+      "comparatorTier": "pro",
+      "domain": "virtual-displays",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "disposition": "experimental",
+      "apiBasis": [
+        {
+          "kind": "private-spi-risk",
+          "ref": "Virtual display creation relies on non-public interfaces"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-007",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:qual/virtual/custom",
+      "claimGates": [
+        "opt-in",
+        "adapter-packaging",
+        "owner-decision"
+      ]
+    },
+    {
+      "id": "BD-VIRT-004",
+      "capability": "HDR virtual screens",
+      "comparatorTier": "pro",
+      "domain": "virtual-displays",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "disposition": "experimental",
+      "apiBasis": [
+        {
+          "kind": "private-spi-risk",
+          "ref": "Depends on virtual display creation"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-007",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:qual/virtual/hdr",
+      "claimGates": [
+        "opt-in",
+        "adapter-packaging",
+        "owner-decision"
+      ]
+    },
+    {
+      "id": "BD-PIP-001",
+      "capability": "Picture in Picture",
+      "comparatorTier": "pro",
+      "domain": "pip-streaming",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "disposition": "supported",
+      "apiBasis": [
+        {
+          "kind": "public-apple-api",
+          "ref": "ScreenCaptureKit (APPLE-SCK)"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-008",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:tests/pip/basic",
+      "claimGates": [
+        "consent",
+        "screen-recording-permission",
+        "privacy-review",
+        "m4-resource"
+      ],
+      "notes": "Visible capture indicator required; stop/release on sleep/wake verified."
+    },
+    {
+      "id": "BD-PIP-002",
+      "capability": "Video filter window",
+      "comparatorTier": "pro",
+      "domain": "pip-streaming",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "disposition": "supported",
+      "apiBasis": [
+        {
+          "kind": "public-apple-api",
+          "ref": "ScreenCaptureKit + CoreImage filters"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-008",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:tests/pip/filter-window",
+      "claimGates": [
+        "consent",
+        "screen-recording-permission",
+        "m4-resource"
+      ]
+    },
+    {
+      "id": "BD-PIP-003",
+      "capability": "Full screen video filters",
+      "comparatorTier": "pro",
+      "domain": "pip-streaming",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "disposition": "supported",
+      "apiBasis": [
+        {
+          "kind": "public-apple-api",
+          "ref": "ScreenCaptureKit self-stream + filter pipeline"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-008",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:tests/pip/fullscreen-filters",
+      "claimGates": [
+        "consent",
+        "screen-recording-permission",
+        "m4-resource"
+      ]
+    },
+    {
+      "id": "BD-PIP-004",
+      "capability": "Full screen streaming (local)",
+      "comparatorTier": "pro",
+      "domain": "pip-streaming",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "disposition": "supported",
+      "apiBasis": [
+        {
+          "kind": "public-apple-api",
+          "ref": "ScreenCaptureKit local redirection (APPLE-SCK)"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-008",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:tests/pip/local-streaming",
+      "claimGates": [
+        "consent",
+        "screen-recording-permission",
+        "privacy-review",
+        "m4-resource"
+      ],
+      "notes": "Local machine only; remote streaming is BD-PIP-009 and is blocked."
+    },
+    {
+      "id": "BD-PIP-005",
+      "capability": "Stream/PIP, stretching, off-centering",
+      "comparatorTier": "pro",
+      "domain": "pip-streaming",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "disposition": "supported",
+      "apiBasis": [
+        {
+          "kind": "app-local",
+          "ref": "Render-side transform of captured stream"
+        },
+        {
+          "kind": "public-apple-api",
+          "ref": "APPLE-SCK"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-008",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:tests/pip/stretch-offcenter",
+      "claimGates": [
+        "consent",
+        "screen-recording-permission"
+      ]
+    },
+    {
+      "id": "BD-PIP-006",
+      "capability": "Stream/PIP rotation, portrait Sidecar",
+      "comparatorTier": "pro",
+      "domain": "pip-streaming",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "disposition": "supported",
+      "apiBasis": [
+        {
+          "kind": "app-local",
+          "ref": "Render-side rotation of captured stream"
+        },
+        {
+          "kind": "public-apple-api",
+          "ref": "APPLE-SCK"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-008",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:tests/pip/rotation",
+      "claimGates": [
+        "consent",
+        "screen-recording-permission"
+      ],
+      "notes": "Stream rotation is app-local; the portrait-Sidecar pairing depends on virtual/Sidecar rows and inherits their gates."
+    },
+    {
+      "id": "BD-PIP-007",
+      "capability": "Stream/PIP crop feature",
+      "comparatorTier": "pro",
+      "domain": "pip-streaming",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "disposition": "supported",
+      "apiBasis": [
+        {
+          "kind": "app-local",
+          "ref": "Render-side crop of captured stream"
+        },
+        {
+          "kind": "public-apple-api",
+          "ref": "APPLE-SCK"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-008",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:tests/pip/crop",
+      "claimGates": [
+        "consent",
+        "screen-recording-permission"
+      ]
+    },
+    {
+      "id": "BD-PIP-008",
+      "capability": "Teleprompter mode (stream flipping)",
+      "comparatorTier": "pro",
+      "domain": "pip-streaming",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "disposition": "supported",
+      "apiBasis": [
+        {
+          "kind": "app-local",
+          "ref": "Render-side mirror/flip of captured stream"
+        },
+        {
+          "kind": "public-apple-api",
+          "ref": "APPLE-SCK"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-008",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:tests/pip/teleprompter",
+      "claimGates": [
+        "consent",
+        "screen-recording-permission"
+      ]
+    },
+    {
+      "id": "BD-MODE-006",
+      "capability": "Mirror configuration",
+      "comparatorTier": "pro",
+      "domain": "mode-transactions",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "disposition": "supported",
+      "apiBasis": [
+        {
+          "kind": "public-apple-api",
+          "ref": "CGConfigureDisplayMirrorOfDisplay (APPLE-CG)"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-003",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:tests/modes/mirroring",
+      "claimGates": [
+        "rollback-proof"
+      ]
+    },
+    {
+      "id": "BD-MODE-007",
+      "capability": "Mirror protection",
+      "comparatorTier": "pro",
+      "domain": "mode-transactions",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "disposition": "supported",
+      "apiBasis": [
+        {
+          "kind": "app-local",
+          "ref": "Reassert desired mirror state on topology events, with confirmation"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-003",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:tests/modes/mirror-protection",
+      "claimGates": [],
+      "notes": "Reassertion requires prior explicit user opt-in per policy BD-POL-002."
+    },
+    {
+      "id": "BD-COLOR-004",
+      "capability": "Color adjustments",
+      "comparatorTier": "pro",
+      "domain": "color-management",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "disposition": "supported",
+      "apiBasis": [
+        {
+          "kind": "public-apple-api",
+          "ref": "CGSetDisplayTransferByTable channel curves (APPLE-CG)"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-004",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:tests/color/adjustments",
+      "claimGates": [
+        "rollback-proof"
+      ]
+    },
+    {
+      "id": "BD-COLOR-005",
+      "capability": "Color temperature control",
+      "comparatorTier": "pro",
+      "domain": "color-management",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "disposition": "supported",
+      "apiBasis": [
+        {
+          "kind": "public-apple-api",
+          "ref": "Gamma-based white point adjustment (APPLE-CG)"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-004",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:tests/color/temperature",
+      "claimGates": [
+        "rollback-proof"
+      ]
+    },
+    {
+      "id": "BD-HDR-005",
+      "capability": "HDR extra brightness calibration",
+      "comparatorTier": "pro",
+      "domain": "hdr-xdr",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "disposition": "experimental",
+      "apiBasis": [
+        {
+          "kind": "os-undocumented",
+          "ref": "Per-display EDR calibration behavior"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-006",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:qual/hdr/extra-brightness-cal",
+      "claimGates": [
+        "opt-in",
+        "adapter-packaging",
+        "hardware-matrix"
+      ]
+    },
+    {
+      "id": "BD-HDR-006",
+      "capability": "Third party HDR extra brightness",
+      "comparatorTier": "pro",
+      "domain": "hdr-xdr",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "disposition": "experimental",
+      "apiBasis": [
+        {
+          "kind": "os-undocumented",
+          "ref": "Third-party display EDR unlock behavior"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-006",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:qual/hdr/thirdparty-extra",
+      "claimGates": [
+        "opt-in",
+        "adapter-packaging",
+        "hardware-matrix"
+      ],
+      "notes": "MSI OLED and Dell U2723QE are the initial qualification targets."
+    },
+    {
+      "id": "BD-SET-001",
+      "capability": "Display config protection",
+      "comparatorTier": "pro",
+      "domain": "settings-recovery",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "disposition": "supported",
+      "apiBasis": [
+        {
+          "kind": "app-local",
+          "ref": "Guarded reassertion of resolution/refresh/rotation/profile with confirmation"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-003",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:tests/recovery/config-protection",
+      "claimGates": [],
+      "notes": "Automatic reassertion only for previously user-approved configurations (BD-POL-002)."
+    },
+    {
+      "id": "BD-EDID-002",
+      "capability": "EDID override (Apple Silicon)",
+      "comparatorTier": "pro",
+      "domain": "edid",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "disposition": "blocked",
+      "apiBasis": [
+        {
+          "kind": "private-spi-risk",
+          "ref": "EDID override injection"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-007",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:docs/blocked/edid-override",
+      "claimGates": [
+        "owner-decision",
+        "rollback-proof"
+      ],
+      "notes": "Mis-applied overrides can render a display unusable; owner decision required before any feasibility work beyond research."
+    },
+    {
+      "id": "BD-EDID-003",
+      "capability": "EDID override (Intel)",
+      "comparatorTier": "pro",
+      "domain": "edid",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "disposition": "blocked",
+      "apiBasis": [
+        {
+          "kind": "private-spi-risk",
+          "ref": "Intel platform EDID override"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-007",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:docs/blocked/edid-override-intel",
+      "claimGates": [
+        "owner-decision"
+      ],
+      "notes": "Intel hardware is additionally out of the initial qualification matrix."
+    },
+    {
+      "id": "BD-COLOR-007",
+      "capability": "SDR/HDR color profile auto-switch",
+      "comparatorTier": "pro",
+      "domain": "color-management",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "disposition": "experimental",
+      "apiBasis": [
+        {
+          "kind": "os-undocumented",
+          "ref": "Profile assignment on HDR state change"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-006",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:qual/color/sdr-hdr-autoswitch",
+      "claimGates": [
+        "opt-in",
+        "adapter-packaging",
+        "rollback-proof"
+      ]
+    },
+    {
+      "id": "BD-HDR-007",
+      "capability": "Forced-HDR mode to unlock resolution limitations",
+      "comparatorTier": "pro",
+      "domain": "hdr-xdr",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "disposition": "experimental",
+      "apiBasis": [
+        {
+          "kind": "os-undocumented",
+          "ref": "Forced HDR pipeline switch"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-006",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:qual/hdr/forced-hdr",
+      "claimGates": [
+        "opt-in",
+        "adapter-packaging",
+        "rollback-proof",
+        "owner-decision"
+      ]
+    },
+    {
+      "id": "BD-SET-002",
+      "capability": "Prevent sleep while connected for display",
+      "comparatorTier": "pro",
+      "domain": "settings-recovery",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "disposition": "supported",
+      "apiBasis": [
+        {
+          "kind": "public-apple-api",
+          "ref": "IOPMAssertionCreateWithName"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-004",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:tests/power/prevent-sleep",
+      "claimGates": [],
+      "notes": "Assertion released deterministically on disconnect/quit."
+    },
+    {
+      "id": "BD-SYNC-002",
+      "capability": "Custom display groups",
+      "comparatorTier": "pro",
+      "domain": "groups-sync-presets",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "disposition": "supported",
+      "apiBasis": [
+        {
+          "kind": "app-local",
+          "ref": "Group model over stable display identity"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-004",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:tests/sync/groups",
+      "claimGates": []
+    },
+    {
+      "id": "BD-SYNC-003",
+      "capability": "Advanced brightness & image adjustments syncing",
+      "comparatorTier": "pro",
+      "domain": "groups-sync-presets",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "disposition": "supported",
+      "apiBasis": [
+        {
+          "kind": "app-local",
+          "ref": "Software adjustment propagation with loop prevention"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-004",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:tests/sync/advanced",
+      "claimGates": [],
+      "notes": "Hardware channel participation requires the DDC adapter and inherits its gates."
+    },
+    {
+      "id": "BD-SYNC-004",
+      "capability": "Nits-based normalized brightness syncing",
+      "comparatorTier": "pro",
+      "domain": "groups-sync-presets",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "disposition": "experimental",
+      "apiBasis": [
+        {
+          "kind": "os-undocumented",
+          "ref": "Trustworthy per-display nits telemetry"
+        },
+        {
+          "kind": "mit-licensed-oss",
+          "ref": "OSS-MC"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-004",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:qual/sync/nits-normalized",
+      "claimGates": [
+        "opt-in",
+        "adapter-packaging",
+        "hardware-matrix"
+      ]
+    },
+    {
+      "id": "BD-SYNC-005",
+      "capability": "Resolution syncing / UI scale matching",
+      "comparatorTier": "pro",
+      "domain": "groups-sync-presets",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "disposition": "supported",
+      "apiBasis": [
+        {
+          "kind": "public-apple-api",
+          "ref": "Reported-mode selection per display (APPLE-CG)"
+        },
+        {
+          "kind": "app-local",
+          "ref": "Scale matching logic"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-004",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:tests/sync/ui-scale-matching",
+      "claimGates": []
+    },
+    {
+      "id": "BD-SYNC-006",
+      "capability": "Advanced layout management",
+      "comparatorTier": "pro",
+      "domain": "groups-sync-presets",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "disposition": "supported",
+      "apiBasis": [
+        {
+          "kind": "public-apple-api",
+          "ref": "CGConfigureDisplayOrigin arrangement transactions (APPLE-CG)"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-003",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:tests/layout/advanced",
+      "claimGates": [
+        "rollback-proof"
+      ],
+      "notes": "Layout protection reassertion is consent-gated per BD-POL-002."
+    },
+    {
+      "id": "BD-DIS-001",
+      "capability": "Display discovery and enumeration",
+      "comparatorTier": "cross-cutting",
+      "domain": "discovery-identity",
+      "evidenceRefs": [
+        "HANDOFF"
+      ],
+      "disposition": "supported",
+      "apiBasis": [
+        {
+          "kind": "public-apple-api",
+          "ref": "CGGetActiveDisplayList / NSScreen / IORegistry read"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-002",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:tests/identity/discovery",
+      "claimGates": [],
+      "notes": "Read-only; foundation for every other row."
+    },
+    {
+      "id": "BD-DIS-002",
+      "capability": "Stable display identity across reconnect, docks, KVMs, mirroring, sleep/wake",
+      "comparatorTier": "cross-cutting",
+      "domain": "discovery-identity",
+      "evidenceRefs": [
+        "HANDOFF"
+      ],
+      "disposition": "supported",
+      "apiBasis": [
+        {
+          "kind": "public-apple-api",
+          "ref": "EDID-derived identity + CG display metadata"
+        },
+        {
+          "kind": "app-local",
+          "ref": "Identity resolution with conservative ambiguity handling"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-002",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:tests/identity/churn-matrix",
+      "claimGates": [],
+      "notes": "Missing/duplicate serials resolve conservatively; never guess across ambiguous matches."
+    },
+    {
+      "id": "BD-DIS-003",
+      "capability": "Detailed display information",
+      "comparatorTier": "cross-cutting",
+      "domain": "discovery-identity",
+      "evidenceRefs": [
+        "README"
+      ],
+      "disposition": "supported",
+      "apiBasis": [
+        {
+          "kind": "public-apple-api",
+          "ref": "CG/NSScreen/IORegistry read + ColorSync inspection (APPLE-CS)"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-002",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:tests/identity/info-panel",
+      "claimGates": []
+    },
+    {
+      "id": "BD-MODE-008",
+      "capability": "Screen rotation",
+      "comparatorTier": "cross-cutting",
+      "domain": "mode-transactions",
+      "evidenceRefs": [
+        "README"
+      ],
+      "disposition": "supported",
+      "apiBasis": [
+        {
+          "kind": "public-apple-api",
+          "ref": "Rotation via display configuration (exact API verified in WS-DC-006 implementation)"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-006",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:tests/modes/rotation",
+      "claimGates": [
+        "rollback-proof"
+      ],
+      "notes": "Handoff classifies rotation as supported; implementation must verify the documented path and fail closed to manual-only if none exists."
+    },
+    {
+      "id": "BD-MODE-009",
+      "capability": "Display arrangement transactions",
+      "comparatorTier": "cross-cutting",
+      "domain": "mode-transactions",
+      "evidenceRefs": [
+        "HANDOFF"
+      ],
+      "disposition": "supported",
+      "apiBasis": [
+        {
+          "kind": "public-apple-api",
+          "ref": "CGBeginDisplayConfiguration / CGConfigureDisplayOrigin (APPLE-CG)"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-003",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:tests/layout/arrangement",
+      "claimGates": [
+        "rollback-proof"
+      ]
+    },
+    {
+      "id": "BD-MODE-010",
+      "capability": "Display transaction engine (preview, confirm, apply, verify, rollback)",
+      "comparatorTier": "cross-cutting",
+      "domain": "mode-transactions",
+      "evidenceRefs": [
+        "HANDOFF"
+      ],
+      "disposition": "supported",
+      "apiBasis": [
+        {
+          "kind": "public-apple-api",
+          "ref": "CG display configuration transactions (APPLE-CG)"
+        },
+        {
+          "kind": "app-local",
+          "ref": "Preview/confirm/verify state machine with independent last-known-good"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-003",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:tests/transactions/engine",
+      "claimGates": [
+        "rollback-proof"
+      ],
+      "notes": "Stale topology rejects before mutation. Failed apply on one display restores it without touching wallpaper state."
+    },
+    {
+      "id": "BD-HDR-008",
+      "capability": "EDR headroom awareness and reporting",
+      "comparatorTier": "cross-cutting",
+      "domain": "hdr-xdr",
+      "evidenceRefs": [
+        "HANDOFF"
+      ],
+      "disposition": "supported",
+      "apiBasis": [
+        {
+          "kind": "public-apple-api",
+          "ref": "NSScreen maximumExtendedDynamicRangeColorComponentValue"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-006",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:tests/hdr/edr-awareness",
+      "claimGates": [],
+      "notes": "Read-only."
+    },
+    {
+      "id": "BD-COLOR-006",
+      "capability": "ColorSync profile inspection",
+      "comparatorTier": "cross-cutting",
+      "domain": "color-management",
+      "evidenceRefs": [
+        "HANDOFF"
+      ],
+      "disposition": "supported",
+      "apiBasis": [
+        {
+          "kind": "public-apple-api",
+          "ref": "ColorSync device/profile APIs (APPLE-CS)"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-006",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:tests/color/profile-inspection",
+      "claimGates": [],
+      "notes": "Read-only inspection is supported; assignment is BD-COLOR-003 (experimental)."
+    },
+    {
+      "id": "BD-AUD-001",
+      "capability": "Audio output device targeting (volume/mute routing)",
+      "comparatorTier": "cross-cutting",
+      "domain": "audio",
+      "evidenceRefs": [
+        "HANDOFF"
+      ],
+      "disposition": "supported",
+      "apiBasis": [
+        {
+          "kind": "public-apple-api",
+          "ref": "CoreAudio device selection and volume APIs"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-004",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:tests/audio/targeting",
+      "claimGates": [],
+      "notes": "Wrong-target commands are rejected, not best-effort routed. DDC audio paths are BD-DDC-005."
+    },
+    {
+      "id": "BD-SYNC-007",
+      "capability": "Favorites and presets",
+      "comparatorTier": "cross-cutting",
+      "domain": "groups-sync-presets",
+      "evidenceRefs": [
+        "HANDOFF"
+      ],
+      "disposition": "supported",
+      "apiBasis": [
+        {
+          "kind": "app-local",
+          "ref": "Named preset store bound to stable display identity"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-004",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:tests/sync/presets",
+      "claimGates": []
+    },
+    {
+      "id": "BD-SET-003",
+      "capability": "Settings export, import, and remapping",
+      "comparatorTier": "cross-cutting",
+      "domain": "settings-recovery",
+      "evidenceRefs": [
+        "SAFEMODE"
+      ],
+      "disposition": "supported",
+      "apiBasis": [
+        {
+          "kind": "app-local",
+          "ref": "Versioned settings document with identity remapping"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-003",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:tests/recovery/export-import",
+      "claimGates": []
+    },
+    {
+      "id": "BD-SET-004",
+      "capability": "Safe mode, app reset, clean removal",
+      "comparatorTier": "cross-cutting",
+      "domain": "settings-recovery",
+      "evidenceRefs": [
+        "SAFEMODE"
+      ],
+      "disposition": "supported",
+      "apiBasis": [
+        {
+          "kind": "app-local",
+          "ref": "Safe launch that applies no stored configuration"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-003",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:tests/recovery/safe-mode",
+      "claimGates": [],
+      "notes": "A bad stored profile must never brick startup: safe mode is reachable without a working display config."
+    },
+    {
+      "id": "BD-SET-005",
+      "capability": "Independent last-known-good store and automatic restore",
+      "comparatorTier": "cross-cutting",
+      "domain": "settings-recovery",
+      "evidenceRefs": [
+        "HANDOFF"
+      ],
+      "disposition": "supported",
+      "apiBasis": [
+        {
+          "kind": "app-local",
+          "ref": "Last-known-good snapshots independent of wallpaper/engine state"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-003",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:tests/recovery/last-known-good",
+      "claimGates": [
+        "rollback-proof"
+      ]
+    },
+    {
+      "id": "BD-DISC-002",
+      "capability": "Auto-disconnect built-in display on external connect",
+      "comparatorTier": "cross-cutting",
+      "domain": "disconnect-reconnect",
+      "evidenceRefs": [
+        "README"
+      ],
+      "disposition": "experimental",
+      "apiBasis": [
+        {
+          "kind": "os-undocumented",
+          "ref": "Depends on soft disconnect (BD-DISC-001)"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-007",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:qual/disconnect/auto-builtin",
+      "claimGates": [
+        "opt-in",
+        "adapter-packaging",
+        "rollback-proof"
+      ],
+      "notes": "Automation of a hardware-affecting change; requires standing explicit opt-in (BD-POL-002)."
+    },
+    {
+      "id": "BD-VIRT-005",
+      "capability": "Headless Mac operation support",
+      "comparatorTier": "cross-cutting",
+      "domain": "virtual-displays",
+      "evidenceRefs": [
+        "README"
+      ],
+      "disposition": "experimental",
+      "apiBasis": [
+        {
+          "kind": "private-spi-risk",
+          "ref": "Depends on virtual display creation"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-007",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:qual/virtual/headless",
+      "claimGates": [
+        "opt-in",
+        "adapter-packaging",
+        "owner-decision"
+      ]
+    },
+    {
+      "id": "BD-DIM-009",
+      "capability": "Flicker (PWM/temporal dithering) mitigation guidance",
+      "comparatorTier": "cross-cutting",
+      "domain": "software-dimming-osd",
+      "evidenceRefs": [
+        "README"
+      ],
+      "disposition": "manual-only",
+      "apiBasis": [
+        {
+          "kind": "none",
+          "ref": "Documentation guidance; partially served by supported software dimming rows"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-004",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:docs/manual/flicker-guidance",
+      "claimGates": [],
+      "notes": "No verifiable automated flicker elimination claim is made."
+    },
+    {
+      "id": "BD-HIDPI-003",
+      "capability": "Better zoom and screenshot quality via HiDPI",
+      "comparatorTier": "cross-cutting",
+      "domain": "hidpi-custom-modes",
+      "evidenceRefs": [
+        "README"
+      ],
+      "disposition": "manual-only",
+      "apiBasis": [
+        {
+          "kind": "none",
+          "ref": "Byproduct of HiDPI modes; documented, not separately implemented"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-006",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:docs/manual/zoom-screenshot",
+      "claimGates": [],
+      "notes": "Follows the disposition of the HiDPI rows it depends on."
+    },
+    {
+      "id": "BD-CTL-008",
+      "capability": "Local MCP control surface",
+      "comparatorTier": "cross-cutting",
+      "domain": "control-plane",
+      "evidenceRefs": [
+        "HANDOFF"
+      ],
+      "disposition": "supported",
+      "apiBasis": [
+        {
+          "kind": "app-local",
+          "ref": "Typed command bus exposed over local MCP"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-009",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:tests/control/mcp-contract",
+      "claimGates": [
+        "local-auth",
+        "security-review"
+      ],
+      "notes": "Contract-identical with UI/CLI/App Intents results."
+    },
+    {
+      "id": "BD-CTL-009",
+      "capability": "Local in-app chat control surface",
+      "comparatorTier": "cross-cutting",
+      "domain": "control-plane",
+      "evidenceRefs": [
+        "HANDOFF"
+      ],
+      "disposition": "supported",
+      "apiBasis": [
+        {
+          "kind": "app-local",
+          "ref": "Chat intents resolve to the same typed commands"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-009",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:tests/control/chat-contract",
+      "claimGates": [
+        "local-auth"
+      ],
+      "notes": "Depends on issue #29 local-first chat contract; no free-form command bypass."
+    },
+    {
+      "id": "BD-CTL-010",
+      "capability": "Paired-device / remote-device result parity",
+      "comparatorTier": "cross-cutting",
+      "domain": "control-plane",
+      "evidenceRefs": [
+        "HANDOFF"
+      ],
+      "disposition": "supported",
+      "apiBasis": [
+        {
+          "kind": "app-local",
+          "ref": "Same typed command bus over authenticated local pairing"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-009",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:tests/control/paired-device",
+      "claimGates": [
+        "local-auth",
+        "security-review"
+      ],
+      "notes": "No unauthenticated network control."
+    },
+    {
+      "id": "BD-PIP-009",
+      "capability": "Remote streaming",
+      "comparatorTier": "cross-cutting",
+      "domain": "pip-streaming",
+      "evidenceRefs": [
+        "HANDOFF"
+      ],
+      "disposition": "blocked",
+      "apiBasis": [
+        {
+          "kind": "public-apple-api",
+          "ref": "APPLE-SCK capture side only; transport undefined"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-008",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:docs/blocked/remote-streaming",
+      "claimGates": [
+        "owner-decision",
+        "security-review",
+        "privacy-review"
+      ],
+      "notes": "Separate threat model and release gate; deferred by decision."
+    },
+    {
+      "id": "BD-PRIV-001",
+      "capability": "Local-only data and telemetry policy for display control",
+      "comparatorTier": "cross-cutting",
+      "domain": "privacy-security",
+      "evidenceRefs": [
+        "TERMS"
+      ],
+      "disposition": "supported",
+      "apiBasis": [
+        {
+          "kind": "app-local",
+          "ref": "No display topology/EDID/usage data leaves the machine"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-010",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:qual/privacy/payload-tests",
+      "claimGates": [
+        "privacy-review"
+      ],
+      "notes": "Comparator privacy terms used as the floor, not the ceiling."
+    },
+    {
+      "id": "BD-UPD-001",
+      "capability": "Updater with rollback",
+      "comparatorTier": "cross-cutting",
+      "domain": "updater-support",
+      "evidenceRefs": [
+        "HANDOFF"
+      ],
+      "disposition": "supported",
+      "apiBasis": [
+        {
+          "kind": "app-local",
+          "ref": "Signed update channel with previous-version rollback"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-011",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:qual/packaging/update-rollback",
+      "claimGates": [
+        "rollback-proof",
+        "security-review"
+      ]
+    },
+    {
+      "id": "BD-UPD-002",
+      "capability": "Support diagnostics bundle",
+      "comparatorTier": "cross-cutting",
+      "domain": "updater-support",
+      "evidenceRefs": [
+        "HANDOFF"
+      ],
+      "disposition": "supported",
+      "apiBasis": [
+        {
+          "kind": "app-local",
+          "ref": "User-initiated, locally reviewed diagnostics export"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-010",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:tests/support/diagnostics",
+      "claimGates": [
+        "privacy-review"
+      ]
+    },
+    {
+      "id": "BD-AXL-001",
+      "capability": "Accessibility conformance (OSD, controls, VoiceOver, contrast)",
+      "comparatorTier": "cross-cutting",
+      "domain": "accessibility-localization",
+      "evidenceRefs": [
+        "HANDOFF"
+      ],
+      "disposition": "supported",
+      "apiBasis": [
+        {
+          "kind": "public-apple-api",
+          "ref": "AppKit/SwiftUI accessibility APIs"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-010",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:qual/a11y/audit",
+      "claimGates": [
+        "a11y-review"
+      ]
+    },
+    {
+      "id": "BD-AXL-002",
+      "capability": "Localization",
+      "comparatorTier": "cross-cutting",
+      "domain": "accessibility-localization",
+      "evidenceRefs": [
+        "HANDOFF"
+      ],
+      "disposition": "supported",
+      "apiBasis": [
+        {
+          "kind": "public-apple-api",
+          "ref": "Standard localization tooling"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-010",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:qual/l10n/coverage",
+      "claimGates": []
+    },
+    {
+      "id": "BD-QUAL-001",
+      "capability": "Base M4 Mac mini (16GB/256GB) resource qualification and 48-72h soak",
+      "comparatorTier": "cross-cutting",
+      "domain": "qualification",
+      "evidenceRefs": [
+        "HANDOFF"
+      ],
+      "disposition": "manual-only",
+      "apiBasis": [
+        {
+          "kind": "physical-process",
+          "ref": "Physical device measurement per issue #28 contract"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-010",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:qual/m4/soak-report",
+      "claimGates": [
+        "m4-resource",
+        "soak"
+      ],
+      "notes": "CPU, memory, wakeup, GPU, network, storage evidence with exact machine/macOS/firmware identifiers."
+    },
+    {
+      "id": "BD-QUAL-002",
+      "capability": "MSI MAG321UX / MAG 321UPX OLED hardware qualification",
+      "comparatorTier": "cross-cutting",
+      "domain": "qualification",
+      "evidenceRefs": [
+        "HANDOFF"
+      ],
+      "disposition": "manual-only",
+      "apiBasis": [
+        {
+          "kind": "physical-process",
+          "ref": "Physical display matrix testing"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-010",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:qual/hardware/msi-matrix",
+      "claimGates": [
+        "hardware-matrix"
+      ],
+      "notes": "Exact cable, port, dock/KVM, firmware, and mode evidence required."
+    },
+    {
+      "id": "BD-QUAL-003",
+      "capability": "Dell U2723QE hardware qualification",
+      "comparatorTier": "cross-cutting",
+      "domain": "qualification",
+      "evidenceRefs": [
+        "HANDOFF"
+      ],
+      "disposition": "manual-only",
+      "apiBasis": [
+        {
+          "kind": "physical-process",
+          "ref": "Physical display matrix testing"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-010",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:qual/hardware/dell-matrix",
+      "claimGates": [
+        "hardware-matrix"
+      ]
+    },
+    {
+      "id": "BD-QUAL-004",
+      "capability": "Cable, dock, KVM, and firmware inventory",
+      "comparatorTier": "cross-cutting",
+      "domain": "qualification",
+      "evidenceRefs": [
+        "HANDOFF"
+      ],
+      "disposition": "manual-only",
+      "apiBasis": [
+        {
+          "kind": "physical-process",
+          "ref": "Owner-performed physical inventory"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-010",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:qual/hardware/inventory",
+      "claimGates": [
+        "hardware-matrix"
+      ],
+      "notes": "Listed as a manual-only blocker in the handoff."
+    },
+    {
+      "id": "BD-PKG-001",
+      "capability": "Supported Core vs experimental adapter packaging split",
+      "comparatorTier": "cross-cutting",
+      "domain": "packaging-claims",
+      "evidenceRefs": [
+        "HANDOFF"
+      ],
+      "disposition": "supported",
+      "apiBasis": [
+        {
+          "kind": "app-local",
+          "ref": "Separate artifacts; adapters individually installable and removable"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-011",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:qual/packaging/split",
+      "claimGates": [
+        "security-review"
+      ],
+      "notes": "Direct distribution never places private SPI in the Supported Core binary (BD-POL-004)."
+    },
+    {
+      "id": "BD-PKG-002",
+      "capability": "Signed capability manifests",
+      "comparatorTier": "cross-cutting",
+      "domain": "packaging-claims",
+      "evidenceRefs": [
+        "HANDOFF"
+      ],
+      "disposition": "supported",
+      "apiBasis": [
+        {
+          "kind": "app-local",
+          "ref": "Per-artifact signed manifest of shipped capability rows and dispositions"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-011",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:qual/packaging/manifests",
+      "claimGates": [
+        "security-review"
+      ],
+      "notes": "Signing identities are a manual-only owner blocker."
+    },
+    {
+      "id": "BD-PKG-003",
+      "capability": "Clean install, update, rollback, uninstall evidence",
+      "comparatorTier": "cross-cutting",
+      "domain": "packaging-claims",
+      "evidenceRefs": [
+        "HANDOFF"
+      ],
+      "disposition": "supported",
+      "apiBasis": [
+        {
+          "kind": "app-local",
+          "ref": "Scripted install-lifecycle verification on clean machines"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-011",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:qual/packaging/lifecycle",
+      "claimGates": [
+        "rollback-proof"
+      ]
+    },
+    {
+      "id": "BD-PKG-004",
+      "capability": "Public 'full BetterDisplay replacement' marketing claim",
+      "comparatorTier": "cross-cutting",
+      "domain": "packaging-claims",
+      "evidenceRefs": [
+        "HANDOFF"
+      ],
+      "disposition": "blocked",
+      "apiBasis": [
+        {
+          "kind": "none",
+          "ref": "Claim, not a capability"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-011",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:qual/claims/full-replacement-gate",
+      "claimGates": [
+        "owner-decision"
+      ],
+      "notes": "Blocked while any required parity row is unqualified; enforced by meta.full_replacement_claim and the validator."
+    },
+    {
+      "id": "BD-POL-001",
+      "capability": "Arbitrary shell display-control escape hatch",
+      "comparatorTier": "cross-cutting",
+      "domain": "policy",
+      "evidenceRefs": [
+        "HANDOFF"
+      ],
+      "disposition": "blocked",
+      "apiBasis": [
+        {
+          "kind": "none",
+          "ref": "Rejected by design"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-009",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:tests/policy/no-shell-escape",
+      "claimGates": [],
+      "notes": "Permanently rejected: no free-form command may bypass preview, confirmation, policy, verification, or undo."
+    },
+    {
+      "id": "BD-POL-002",
+      "capability": "Automatic unconfirmed hardware changes on wake/lock/thermal/power/topology events",
+      "comparatorTier": "cross-cutting",
+      "domain": "policy",
+      "evidenceRefs": [
+        "HANDOFF"
+      ],
+      "disposition": "blocked",
+      "apiBasis": [
+        {
+          "kind": "none",
+          "ref": "Rejected by design"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-003",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:tests/policy/no-unconfirmed-automation",
+      "claimGates": [],
+      "notes": "Automated reassertion is permitted only for configurations the user previously and explicitly approved for automation."
+    },
+    {
+      "id": "BD-POL-003",
+      "capability": "Privileged helper tool",
+      "comparatorTier": "cross-cutting",
+      "domain": "policy",
+      "evidenceRefs": [
+        "HANDOFF"
+      ],
+      "disposition": "blocked",
+      "apiBasis": [
+        {
+          "kind": "none",
+          "ref": "No proposal exists"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-001",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:docs/blocked/privileged-helper",
+      "claimGates": [
+        "owner-decision",
+        "security-review"
+      ],
+      "notes": "Any privileged helper proposal is a manual-only owner decision."
+    },
+    {
+      "id": "BD-POL-004",
+      "capability": "Private Apple SPI inside the Supported Core binary",
+      "comparatorTier": "cross-cutting",
+      "domain": "policy",
+      "evidenceRefs": [
+        "HANDOFF"
+      ],
+      "disposition": "blocked",
+      "apiBasis": [
+        {
+          "kind": "none",
+          "ref": "Rejected by design"
+        }
+      ],
+      "ownerWorkstream": "WS-DC-001",
+      "implementationStatus": "unimplemented",
+      "testBinding": "planned:tests/policy/no-spi-in-core",
+      "claimGates": [],
+      "notes": "Direct distribution is not permission to ship private SPI in the supported product."
+    }
+  ]
+}
