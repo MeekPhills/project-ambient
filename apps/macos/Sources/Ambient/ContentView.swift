@@ -28,6 +28,17 @@ struct ContentView: View {
                 NewRuleSheet(model: model, initialChannelID: channel.id)
             }
         }
+        .confirmationDialog(
+            "How should Ambient use your media?",
+            isPresented: $model.showingImportOptions,
+            titleVisibility: .visible
+        ) {
+            Button("Copy into Ambient") { model.chooseImportFolder(mode: .copy) }
+            Button("Use files in place") { model.chooseImportFolder(mode: .reference) }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Copy is portable and leaves originals untouched. Reference uses no extra storage and leaves files where they are.")
+        }
         .alert("Project Ambient", isPresented: Binding(
             get: { model.errorMessage != nil },
             set: { if !$0 { model.errorMessage = nil } }
@@ -171,7 +182,7 @@ private struct Sidebar: View {
                 }
                 .font(.callout)
                 Button {
-                    model.chooseImportFolder()
+                    model.requestImport()
                 } label: {
                     Label("Import folder", systemImage: "folder.badge.plus")
                         .frame(maxWidth: .infinity)
@@ -241,8 +252,8 @@ private struct EmptyLibraryView: View {
                     .multilineTextAlignment(.center)
                     .frame(maxWidth: 620)
             }
-            Button("Choose a background folder") {
-                model.chooseImportFolder()
+            Button("Choose how to add backgrounds") {
+                model.requestImport()
             }
             .buttonStyle(.borderedProminent)
             .controlSize(.large)
@@ -251,7 +262,7 @@ private struct EmptyLibraryView: View {
             HStack(spacing: 28) {
                 OnboardingPoint(symbol: "lock.shield", title: "Stays local", detail: "No uploads")
                 OnboardingPoint(symbol: "bolt", title: "Power aware", detail: "Still-first")
-                OnboardingPoint(symbol: "wand.and.stars", title: "Auto organized", detail: "On-device")
+                OnboardingPoint(symbol: "doc.on.doc", title: "Originals safe", detail: "Copy or reference")
             }
             .padding(.top, 8)
         }

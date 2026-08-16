@@ -5,6 +5,60 @@ public enum AmbientAssetKind: String, Codable, CaseIterable, Sendable {
     case video
 }
 
+public enum AmbientImportMode: String, Codable, CaseIterable, Sendable {
+    case copy
+    case reference
+
+    public var title: String {
+        switch self {
+        case .copy: return "Copy into Ambient"
+        case .reference: return "Use files in place"
+        }
+    }
+}
+
+public struct AmbientAssetProvenance: Codable, Hashable, Sendable {
+    public var importMode: AmbientImportMode
+    public var sourcePath: String
+    public var sourceSHA256: String
+    public var sourceByteCount: Int64
+    public var sourceModifiedAt: Date?
+
+    public init(
+        importMode: AmbientImportMode,
+        sourcePath: String,
+        sourceSHA256: String,
+        sourceByteCount: Int64,
+        sourceModifiedAt: Date?
+    ) {
+        self.importMode = importMode
+        self.sourcePath = sourcePath
+        self.sourceSHA256 = sourceSHA256
+        self.sourceByteCount = sourceByteCount
+        self.sourceModifiedAt = sourceModifiedAt
+    }
+}
+
+public struct AmbientAssetRights: Codable, Hashable, Sendable {
+    public enum Basis: String, Codable, Sendable {
+        case privateReference
+    }
+
+    public var basis: Basis
+    public var redistributionAllowed: Bool
+    public var commercialUseVerified: Bool
+
+    public init(
+        basis: Basis = .privateReference,
+        redistributionAllowed: Bool = false,
+        commercialUseVerified: Bool = false
+    ) {
+        self.basis = basis
+        self.redistributionAllowed = redistributionAllowed
+        self.commercialUseVerified = commercialUseVerified
+    }
+}
+
 public struct AmbientAsset: Codable, Identifiable, Hashable, Sendable {
     public var id: UUID
     public var path: String
@@ -13,6 +67,10 @@ public struct AmbientAsset: Codable, Identifiable, Hashable, Sendable {
     public var tags: [String]
     public var importedAt: Date
     public var modifiedAt: Date?
+    /// Optional for backward compatibility with schema-v1 catalogs.
+    public var provenance: AmbientAssetProvenance?
+    /// Local private-reference is the fail-closed default for personal imports.
+    public var rights: AmbientAssetRights?
 
     public init(
         id: UUID = UUID(),
@@ -21,7 +79,9 @@ public struct AmbientAsset: Codable, Identifiable, Hashable, Sendable {
         fileName: String,
         tags: [String] = [],
         importedAt: Date = Date(),
-        modifiedAt: Date? = nil
+        modifiedAt: Date? = nil,
+        provenance: AmbientAssetProvenance? = nil,
+        rights: AmbientAssetRights? = nil
     ) {
         self.id = id
         self.path = path
@@ -30,6 +90,8 @@ public struct AmbientAsset: Codable, Identifiable, Hashable, Sendable {
         self.tags = Array(Set(tags.map { $0.lowercased() })).sorted()
         self.importedAt = importedAt
         self.modifiedAt = modifiedAt
+        self.provenance = provenance
+        self.rights = rights
     }
 
     public var url: URL { URL(fileURLWithPath: path) }

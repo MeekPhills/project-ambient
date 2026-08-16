@@ -13,6 +13,8 @@ public struct AmbientScanResult: Sendable {
 }
 
 public final class AmbientCatalogScanner {
+    private let usesVisionClassification: Bool
+
     public static let imageExtensions: Set<String> = [
         "avif", "bmp", "gif", "heic", "heif", "jpeg", "jpg", "png", "tif", "tiff", "webp"
     ]
@@ -29,7 +31,11 @@ public final class AmbientCatalogScanner {
         ("abstract", ["abstract", "gradient", "geometry", "geometric", "pattern", "texture"])
     ]
 
-    public init() {}
+    /// Vision classification is opt-in because importing a large library must
+    /// remain bounded and predictable on the base M4/16 GB tier.
+    public init(usesVisionClassification: Bool = false) {
+        self.usesVisionClassification = usesVisionClassification
+    }
 
     public func scan(folders: [URL], existing: [AmbientAsset] = []) -> AmbientScanResult {
         let existingByPath = Dictionary(uniqueKeysWithValues: existing.map { ($0.path, $0) })
@@ -68,7 +74,7 @@ public final class AmbientCatalogScanner {
                 }
 
                 var tags = Self.filenameTags(for: fileURL.deletingPathExtension().lastPathComponent)
-                if kind == .image {
+                if kind == .image, usesVisionClassification {
                     tags.formUnion(visionTags(for: fileURL))
                 } else {
                     tags.insert("video")
