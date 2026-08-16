@@ -1,0 +1,1227 @@
+{
+  "schemaVersion": "1.0.0",
+  "register": "docs/product/display-control-capability-register.json",
+  "registerVersion": "0.1.0-draft",
+  "generatedAt": "2026-08-16",
+  "baseline": {
+    "product": "BetterDisplay",
+    "version": "4.3.6",
+    "tagCommit": "046b59f8c04e8b46872ee270f5cee76cc1ef1803",
+    "landingCommit": "c71b73d5e024c793e8df7be2742017a81599b0cc"
+  },
+  "rowCount": 115,
+  "catalogUsage": {
+    "FREEPRO": {
+      "rowEvidenceRefs": 76,
+      "rowApiBasisCitations": 0,
+      "baselineSource": false
+    },
+    "README": {
+      "rowEvidenceRefs": 6,
+      "rowApiBasisCitations": 0,
+      "baselineSource": false
+    },
+    "CLI": {
+      "rowEvidenceRefs": 1,
+      "rowApiBasisCitations": 0,
+      "baselineSource": false
+    },
+    "SAFEMODE": {
+      "rowEvidenceRefs": 2,
+      "rowApiBasisCitations": 0,
+      "baselineSource": false
+    },
+    "TERMS": {
+      "rowEvidenceRefs": 1,
+      "rowApiBasisCitations": 0,
+      "baselineSource": false
+    },
+    "RELEASE": {
+      "rowEvidenceRefs": 0,
+      "rowApiBasisCitations": 0,
+      "baselineSource": true
+    },
+    "HANDOFF": {
+      "rowEvidenceRefs": 29,
+      "rowApiBasisCitations": 0,
+      "baselineSource": false
+    },
+    "APPLE-CG": {
+      "rowEvidenceRefs": 0,
+      "rowApiBasisCitations": 13,
+      "baselineSource": false
+    },
+    "APPLE-CS": {
+      "rowEvidenceRefs": 0,
+      "rowApiBasisCitations": 2,
+      "baselineSource": false
+    },
+    "APPLE-SCK": {
+      "rowEvidenceRefs": 0,
+      "rowApiBasisCitations": 7,
+      "baselineSource": false
+    },
+    "OSS-MC": {
+      "rowEvidenceRefs": 0,
+      "rowApiBasisCitations": 4,
+      "baselineSource": false
+    },
+    "OSS-M1DDC": {
+      "rowEvidenceRefs": 0,
+      "rowApiBasisCitations": 2,
+      "baselineSource": false
+    }
+  },
+  "entries": [
+    {
+      "rowId": "BD-CTL-001",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "primaryEvidence": "FREEPRO",
+      "pinnedBy": {
+        "FREEPRO": "git-commit:5418778f9d3297977d21364104c4a0ef5f430626"
+      }
+    },
+    {
+      "rowId": "BD-DIM-001",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "primaryEvidence": "FREEPRO",
+      "pinnedBy": {
+        "FREEPRO": "git-commit:5418778f9d3297977d21364104c4a0ef5f430626"
+      }
+    },
+    {
+      "rowId": "BD-DIM-002",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "primaryEvidence": "FREEPRO",
+      "pinnedBy": {
+        "FREEPRO": "git-commit:5418778f9d3297977d21364104c4a0ef5f430626"
+      }
+    },
+    {
+      "rowId": "BD-CTL-002",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "primaryEvidence": "FREEPRO",
+      "pinnedBy": {
+        "FREEPRO": "git-commit:5418778f9d3297977d21364104c4a0ef5f430626"
+      }
+    },
+    {
+      "rowId": "BD-DIM-003",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "primaryEvidence": "FREEPRO",
+      "pinnedBy": {
+        "FREEPRO": "git-commit:5418778f9d3297977d21364104c4a0ef5f430626"
+      }
+    },
+    {
+      "rowId": "BD-DIM-004",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "primaryEvidence": "FREEPRO",
+      "pinnedBy": {
+        "FREEPRO": "git-commit:5418778f9d3297977d21364104c4a0ef5f430626"
+      }
+    },
+    {
+      "rowId": "BD-DIM-005",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "primaryEvidence": "FREEPRO",
+      "pinnedBy": {
+        "FREEPRO": "git-commit:5418778f9d3297977d21364104c4a0ef5f430626"
+      }
+    },
+    {
+      "rowId": "BD-DIM-006",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "primaryEvidence": "FREEPRO",
+      "pinnedBy": {
+        "FREEPRO": "git-commit:5418778f9d3297977d21364104c4a0ef5f430626"
+      }
+    },
+    {
+      "rowId": "BD-DIM-007",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "primaryEvidence": "FREEPRO",
+      "pinnedBy": {
+        "FREEPRO": "git-commit:5418778f9d3297977d21364104c4a0ef5f430626"
+      }
+    },
+    {
+      "rowId": "BD-NET-001",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "primaryEvidence": "FREEPRO",
+      "pinnedBy": {
+        "FREEPRO": "git-commit:5418778f9d3297977d21364104c4a0ef5f430626"
+      }
+    },
+    {
+      "rowId": "BD-NET-002",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "primaryEvidence": "FREEPRO",
+      "pinnedBy": {
+        "FREEPRO": "git-commit:5418778f9d3297977d21364104c4a0ef5f430626"
+      }
+    },
+    {
+      "rowId": "BD-NET-003",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "primaryEvidence": "FREEPRO",
+      "pinnedBy": {
+        "FREEPRO": "git-commit:5418778f9d3297977d21364104c4a0ef5f430626"
+      }
+    },
+    {
+      "rowId": "BD-NET-004",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "primaryEvidence": "FREEPRO",
+      "pinnedBy": {
+        "FREEPRO": "git-commit:5418778f9d3297977d21364104c4a0ef5f430626"
+      }
+    },
+    {
+      "rowId": "BD-DDC-001",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "primaryEvidence": "FREEPRO",
+      "pinnedBy": {
+        "FREEPRO": "git-commit:5418778f9d3297977d21364104c4a0ef5f430626"
+      }
+    },
+    {
+      "rowId": "BD-DDC-002",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "primaryEvidence": "FREEPRO",
+      "pinnedBy": {
+        "FREEPRO": "git-commit:5418778f9d3297977d21364104c4a0ef5f430626"
+      }
+    },
+    {
+      "rowId": "BD-DDC-003",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "primaryEvidence": "FREEPRO",
+      "pinnedBy": {
+        "FREEPRO": "git-commit:5418778f9d3297977d21364104c4a0ef5f430626"
+      }
+    },
+    {
+      "rowId": "BD-DDC-004",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "primaryEvidence": "FREEPRO",
+      "pinnedBy": {
+        "FREEPRO": "git-commit:5418778f9d3297977d21364104c4a0ef5f430626"
+      }
+    },
+    {
+      "rowId": "BD-DDC-005",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "primaryEvidence": "FREEPRO",
+      "pinnedBy": {
+        "FREEPRO": "git-commit:5418778f9d3297977d21364104c4a0ef5f430626"
+      }
+    },
+    {
+      "rowId": "BD-DDC-006",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "primaryEvidence": "FREEPRO",
+      "pinnedBy": {
+        "FREEPRO": "git-commit:5418778f9d3297977d21364104c4a0ef5f430626"
+      }
+    },
+    {
+      "rowId": "BD-DDC-007",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "primaryEvidence": "FREEPRO",
+      "pinnedBy": {
+        "FREEPRO": "git-commit:5418778f9d3297977d21364104c4a0ef5f430626"
+      }
+    },
+    {
+      "rowId": "BD-DDC-008",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "primaryEvidence": "FREEPRO",
+      "pinnedBy": {
+        "FREEPRO": "git-commit:5418778f9d3297977d21364104c4a0ef5f430626"
+      }
+    },
+    {
+      "rowId": "BD-CTL-003",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "primaryEvidence": "FREEPRO",
+      "pinnedBy": {
+        "FREEPRO": "git-commit:5418778f9d3297977d21364104c4a0ef5f430626"
+      }
+    },
+    {
+      "rowId": "BD-HIDPI-001",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "primaryEvidence": "FREEPRO",
+      "pinnedBy": {
+        "FREEPRO": "git-commit:5418778f9d3297977d21364104c4a0ef5f430626"
+      }
+    },
+    {
+      "rowId": "BD-COLOR-001",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "primaryEvidence": "FREEPRO",
+      "pinnedBy": {
+        "FREEPRO": "git-commit:5418778f9d3297977d21364104c4a0ef5f430626"
+      }
+    },
+    {
+      "rowId": "BD-DIS-004",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "primaryEvidence": "FREEPRO",
+      "pinnedBy": {
+        "FREEPRO": "git-commit:5418778f9d3297977d21364104c4a0ef5f430626"
+      }
+    },
+    {
+      "rowId": "BD-MODE-001",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "primaryEvidence": "FREEPRO",
+      "pinnedBy": {
+        "FREEPRO": "git-commit:5418778f9d3297977d21364104c4a0ef5f430626"
+      }
+    },
+    {
+      "rowId": "BD-VIRT-001",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "primaryEvidence": "FREEPRO",
+      "pinnedBy": {
+        "FREEPRO": "git-commit:5418778f9d3297977d21364104c4a0ef5f430626"
+      }
+    },
+    {
+      "rowId": "BD-VIRT-002",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "primaryEvidence": "FREEPRO",
+      "pinnedBy": {
+        "FREEPRO": "git-commit:5418778f9d3297977d21364104c4a0ef5f430626"
+      }
+    },
+    {
+      "rowId": "BD-MODE-002",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "primaryEvidence": "FREEPRO",
+      "pinnedBy": {
+        "FREEPRO": "git-commit:5418778f9d3297977d21364104c4a0ef5f430626"
+      }
+    },
+    {
+      "rowId": "BD-MODE-003",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "primaryEvidence": "FREEPRO",
+      "pinnedBy": {
+        "FREEPRO": "git-commit:5418778f9d3297977d21364104c4a0ef5f430626"
+      }
+    },
+    {
+      "rowId": "BD-MODE-004",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "primaryEvidence": "FREEPRO",
+      "pinnedBy": {
+        "FREEPRO": "git-commit:5418778f9d3297977d21364104c4a0ef5f430626"
+      }
+    },
+    {
+      "rowId": "BD-COLOR-002",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "primaryEvidence": "FREEPRO",
+      "pinnedBy": {
+        "FREEPRO": "git-commit:5418778f9d3297977d21364104c4a0ef5f430626"
+      }
+    },
+    {
+      "rowId": "BD-MODE-005",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "primaryEvidence": "FREEPRO",
+      "pinnedBy": {
+        "FREEPRO": "git-commit:5418778f9d3297977d21364104c4a0ef5f430626"
+      }
+    },
+    {
+      "rowId": "BD-EDID-001",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "primaryEvidence": "FREEPRO",
+      "pinnedBy": {
+        "FREEPRO": "git-commit:5418778f9d3297977d21364104c4a0ef5f430626"
+      }
+    },
+    {
+      "rowId": "BD-COLOR-003",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "primaryEvidence": "FREEPRO",
+      "pinnedBy": {
+        "FREEPRO": "git-commit:5418778f9d3297977d21364104c4a0ef5f430626"
+      }
+    },
+    {
+      "rowId": "BD-CTL-004",
+      "evidenceRefs": [
+        "CLI"
+      ],
+      "primaryEvidence": "CLI",
+      "pinnedBy": {
+        "CLI": "git-commit:5418778f9d3297977d21364104c4a0ef5f430626"
+      }
+    },
+    {
+      "rowId": "BD-CTL-005",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "primaryEvidence": "FREEPRO",
+      "pinnedBy": {
+        "FREEPRO": "git-commit:5418778f9d3297977d21364104c4a0ef5f430626"
+      }
+    },
+    {
+      "rowId": "BD-CTL-006",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "primaryEvidence": "FREEPRO",
+      "pinnedBy": {
+        "FREEPRO": "git-commit:5418778f9d3297977d21364104c4a0ef5f430626"
+      }
+    },
+    {
+      "rowId": "BD-CTL-007",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "primaryEvidence": "FREEPRO",
+      "pinnedBy": {
+        "FREEPRO": "git-commit:5418778f9d3297977d21364104c4a0ef5f430626"
+      }
+    },
+    {
+      "rowId": "BD-SYNC-001",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "primaryEvidence": "FREEPRO",
+      "pinnedBy": {
+        "FREEPRO": "git-commit:5418778f9d3297977d21364104c4a0ef5f430626"
+      }
+    },
+    {
+      "rowId": "BD-HDR-001",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "primaryEvidence": "FREEPRO",
+      "pinnedBy": {
+        "FREEPRO": "git-commit:5418778f9d3297977d21364104c4a0ef5f430626"
+      }
+    },
+    {
+      "rowId": "BD-HDR-002",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "primaryEvidence": "FREEPRO",
+      "pinnedBy": {
+        "FREEPRO": "git-commit:5418778f9d3297977d21364104c4a0ef5f430626"
+      }
+    },
+    {
+      "rowId": "BD-HDR-003",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "primaryEvidence": "FREEPRO",
+      "pinnedBy": {
+        "FREEPRO": "git-commit:5418778f9d3297977d21364104c4a0ef5f430626"
+      }
+    },
+    {
+      "rowId": "BD-HDR-004",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "primaryEvidence": "FREEPRO",
+      "pinnedBy": {
+        "FREEPRO": "git-commit:5418778f9d3297977d21364104c4a0ef5f430626"
+      }
+    },
+    {
+      "rowId": "BD-DIM-008",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "primaryEvidence": "FREEPRO",
+      "pinnedBy": {
+        "FREEPRO": "git-commit:5418778f9d3297977d21364104c4a0ef5f430626"
+      }
+    },
+    {
+      "rowId": "BD-DDC-009",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "primaryEvidence": "FREEPRO",
+      "pinnedBy": {
+        "FREEPRO": "git-commit:5418778f9d3297977d21364104c4a0ef5f430626"
+      }
+    },
+    {
+      "rowId": "BD-DDC-010",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "primaryEvidence": "FREEPRO",
+      "pinnedBy": {
+        "FREEPRO": "git-commit:5418778f9d3297977d21364104c4a0ef5f430626"
+      }
+    },
+    {
+      "rowId": "BD-DDC-011",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "primaryEvidence": "FREEPRO",
+      "pinnedBy": {
+        "FREEPRO": "git-commit:5418778f9d3297977d21364104c4a0ef5f430626"
+      }
+    },
+    {
+      "rowId": "BD-HIDPI-002",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "primaryEvidence": "FREEPRO",
+      "pinnedBy": {
+        "FREEPRO": "git-commit:5418778f9d3297977d21364104c4a0ef5f430626"
+      }
+    },
+    {
+      "rowId": "BD-DISC-001",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "primaryEvidence": "FREEPRO",
+      "pinnedBy": {
+        "FREEPRO": "git-commit:5418778f9d3297977d21364104c4a0ef5f430626"
+      }
+    },
+    {
+      "rowId": "BD-VIRT-003",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "primaryEvidence": "FREEPRO",
+      "pinnedBy": {
+        "FREEPRO": "git-commit:5418778f9d3297977d21364104c4a0ef5f430626"
+      }
+    },
+    {
+      "rowId": "BD-VIRT-004",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "primaryEvidence": "FREEPRO",
+      "pinnedBy": {
+        "FREEPRO": "git-commit:5418778f9d3297977d21364104c4a0ef5f430626"
+      }
+    },
+    {
+      "rowId": "BD-PIP-001",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "primaryEvidence": "FREEPRO",
+      "pinnedBy": {
+        "FREEPRO": "git-commit:5418778f9d3297977d21364104c4a0ef5f430626"
+      }
+    },
+    {
+      "rowId": "BD-PIP-002",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "primaryEvidence": "FREEPRO",
+      "pinnedBy": {
+        "FREEPRO": "git-commit:5418778f9d3297977d21364104c4a0ef5f430626"
+      }
+    },
+    {
+      "rowId": "BD-PIP-003",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "primaryEvidence": "FREEPRO",
+      "pinnedBy": {
+        "FREEPRO": "git-commit:5418778f9d3297977d21364104c4a0ef5f430626"
+      }
+    },
+    {
+      "rowId": "BD-PIP-004",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "primaryEvidence": "FREEPRO",
+      "pinnedBy": {
+        "FREEPRO": "git-commit:5418778f9d3297977d21364104c4a0ef5f430626"
+      }
+    },
+    {
+      "rowId": "BD-PIP-005",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "primaryEvidence": "FREEPRO",
+      "pinnedBy": {
+        "FREEPRO": "git-commit:5418778f9d3297977d21364104c4a0ef5f430626"
+      }
+    },
+    {
+      "rowId": "BD-PIP-006",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "primaryEvidence": "FREEPRO",
+      "pinnedBy": {
+        "FREEPRO": "git-commit:5418778f9d3297977d21364104c4a0ef5f430626"
+      }
+    },
+    {
+      "rowId": "BD-PIP-007",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "primaryEvidence": "FREEPRO",
+      "pinnedBy": {
+        "FREEPRO": "git-commit:5418778f9d3297977d21364104c4a0ef5f430626"
+      }
+    },
+    {
+      "rowId": "BD-PIP-008",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "primaryEvidence": "FREEPRO",
+      "pinnedBy": {
+        "FREEPRO": "git-commit:5418778f9d3297977d21364104c4a0ef5f430626"
+      }
+    },
+    {
+      "rowId": "BD-MODE-006",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "primaryEvidence": "FREEPRO",
+      "pinnedBy": {
+        "FREEPRO": "git-commit:5418778f9d3297977d21364104c4a0ef5f430626"
+      }
+    },
+    {
+      "rowId": "BD-MODE-007",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "primaryEvidence": "FREEPRO",
+      "pinnedBy": {
+        "FREEPRO": "git-commit:5418778f9d3297977d21364104c4a0ef5f430626"
+      }
+    },
+    {
+      "rowId": "BD-COLOR-004",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "primaryEvidence": "FREEPRO",
+      "pinnedBy": {
+        "FREEPRO": "git-commit:5418778f9d3297977d21364104c4a0ef5f430626"
+      }
+    },
+    {
+      "rowId": "BD-COLOR-005",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "primaryEvidence": "FREEPRO",
+      "pinnedBy": {
+        "FREEPRO": "git-commit:5418778f9d3297977d21364104c4a0ef5f430626"
+      }
+    },
+    {
+      "rowId": "BD-HDR-005",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "primaryEvidence": "FREEPRO",
+      "pinnedBy": {
+        "FREEPRO": "git-commit:5418778f9d3297977d21364104c4a0ef5f430626"
+      }
+    },
+    {
+      "rowId": "BD-HDR-006",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "primaryEvidence": "FREEPRO",
+      "pinnedBy": {
+        "FREEPRO": "git-commit:5418778f9d3297977d21364104c4a0ef5f430626"
+      }
+    },
+    {
+      "rowId": "BD-SET-001",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "primaryEvidence": "FREEPRO",
+      "pinnedBy": {
+        "FREEPRO": "git-commit:5418778f9d3297977d21364104c4a0ef5f430626"
+      }
+    },
+    {
+      "rowId": "BD-EDID-002",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "primaryEvidence": "FREEPRO",
+      "pinnedBy": {
+        "FREEPRO": "git-commit:5418778f9d3297977d21364104c4a0ef5f430626"
+      }
+    },
+    {
+      "rowId": "BD-EDID-003",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "primaryEvidence": "FREEPRO",
+      "pinnedBy": {
+        "FREEPRO": "git-commit:5418778f9d3297977d21364104c4a0ef5f430626"
+      }
+    },
+    {
+      "rowId": "BD-COLOR-007",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "primaryEvidence": "FREEPRO",
+      "pinnedBy": {
+        "FREEPRO": "git-commit:5418778f9d3297977d21364104c4a0ef5f430626"
+      }
+    },
+    {
+      "rowId": "BD-HDR-007",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "primaryEvidence": "FREEPRO",
+      "pinnedBy": {
+        "FREEPRO": "git-commit:5418778f9d3297977d21364104c4a0ef5f430626"
+      }
+    },
+    {
+      "rowId": "BD-SET-002",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "primaryEvidence": "FREEPRO",
+      "pinnedBy": {
+        "FREEPRO": "git-commit:5418778f9d3297977d21364104c4a0ef5f430626"
+      }
+    },
+    {
+      "rowId": "BD-SYNC-002",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "primaryEvidence": "FREEPRO",
+      "pinnedBy": {
+        "FREEPRO": "git-commit:5418778f9d3297977d21364104c4a0ef5f430626"
+      }
+    },
+    {
+      "rowId": "BD-SYNC-003",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "primaryEvidence": "FREEPRO",
+      "pinnedBy": {
+        "FREEPRO": "git-commit:5418778f9d3297977d21364104c4a0ef5f430626"
+      }
+    },
+    {
+      "rowId": "BD-SYNC-004",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "primaryEvidence": "FREEPRO",
+      "pinnedBy": {
+        "FREEPRO": "git-commit:5418778f9d3297977d21364104c4a0ef5f430626"
+      }
+    },
+    {
+      "rowId": "BD-SYNC-005",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "primaryEvidence": "FREEPRO",
+      "pinnedBy": {
+        "FREEPRO": "git-commit:5418778f9d3297977d21364104c4a0ef5f430626"
+      }
+    },
+    {
+      "rowId": "BD-SYNC-006",
+      "evidenceRefs": [
+        "FREEPRO"
+      ],
+      "primaryEvidence": "FREEPRO",
+      "pinnedBy": {
+        "FREEPRO": "git-commit:5418778f9d3297977d21364104c4a0ef5f430626"
+      }
+    },
+    {
+      "rowId": "BD-DIS-001",
+      "evidenceRefs": [
+        "HANDOFF"
+      ],
+      "primaryEvidence": "HANDOFF",
+      "pinnedBy": {
+        "HANDOFF": "unpinnable-live"
+      }
+    },
+    {
+      "rowId": "BD-DIS-002",
+      "evidenceRefs": [
+        "HANDOFF"
+      ],
+      "primaryEvidence": "HANDOFF",
+      "pinnedBy": {
+        "HANDOFF": "unpinnable-live"
+      }
+    },
+    {
+      "rowId": "BD-DIS-003",
+      "evidenceRefs": [
+        "README"
+      ],
+      "primaryEvidence": "README",
+      "pinnedBy": {
+        "README": "git-commit:046b59f8c04e8b46872ee270f5cee76cc1ef1803"
+      }
+    },
+    {
+      "rowId": "BD-MODE-008",
+      "evidenceRefs": [
+        "README"
+      ],
+      "primaryEvidence": "README",
+      "pinnedBy": {
+        "README": "git-commit:046b59f8c04e8b46872ee270f5cee76cc1ef1803"
+      }
+    },
+    {
+      "rowId": "BD-MODE-009",
+      "evidenceRefs": [
+        "HANDOFF"
+      ],
+      "primaryEvidence": "HANDOFF",
+      "pinnedBy": {
+        "HANDOFF": "unpinnable-live"
+      }
+    },
+    {
+      "rowId": "BD-MODE-010",
+      "evidenceRefs": [
+        "HANDOFF"
+      ],
+      "primaryEvidence": "HANDOFF",
+      "pinnedBy": {
+        "HANDOFF": "unpinnable-live"
+      }
+    },
+    {
+      "rowId": "BD-HDR-008",
+      "evidenceRefs": [
+        "HANDOFF"
+      ],
+      "primaryEvidence": "HANDOFF",
+      "pinnedBy": {
+        "HANDOFF": "unpinnable-live"
+      }
+    },
+    {
+      "rowId": "BD-COLOR-006",
+      "evidenceRefs": [
+        "HANDOFF"
+      ],
+      "primaryEvidence": "HANDOFF",
+      "pinnedBy": {
+        "HANDOFF": "unpinnable-live"
+      }
+    },
+    {
+      "rowId": "BD-AUD-001",
+      "evidenceRefs": [
+        "HANDOFF"
+      ],
+      "primaryEvidence": "HANDOFF",
+      "pinnedBy": {
+        "HANDOFF": "unpinnable-live"
+      }
+    },
+    {
+      "rowId": "BD-SYNC-007",
+      "evidenceRefs": [
+        "HANDOFF"
+      ],
+      "primaryEvidence": "HANDOFF",
+      "pinnedBy": {
+        "HANDOFF": "unpinnable-live"
+      }
+    },
+    {
+      "rowId": "BD-SET-003",
+      "evidenceRefs": [
+        "SAFEMODE"
+      ],
+      "primaryEvidence": "SAFEMODE",
+      "pinnedBy": {
+        "SAFEMODE": "git-commit:5418778f9d3297977d21364104c4a0ef5f430626"
+      }
+    },
+    {
+      "rowId": "BD-SET-004",
+      "evidenceRefs": [
+        "SAFEMODE"
+      ],
+      "primaryEvidence": "SAFEMODE",
+      "pinnedBy": {
+        "SAFEMODE": "git-commit:5418778f9d3297977d21364104c4a0ef5f430626"
+      }
+    },
+    {
+      "rowId": "BD-SET-005",
+      "evidenceRefs": [
+        "HANDOFF"
+      ],
+      "primaryEvidence": "HANDOFF",
+      "pinnedBy": {
+        "HANDOFF": "unpinnable-live"
+      }
+    },
+    {
+      "rowId": "BD-DISC-002",
+      "evidenceRefs": [
+        "README"
+      ],
+      "primaryEvidence": "README",
+      "pinnedBy": {
+        "README": "git-commit:046b59f8c04e8b46872ee270f5cee76cc1ef1803"
+      }
+    },
+    {
+      "rowId": "BD-VIRT-005",
+      "evidenceRefs": [
+        "README"
+      ],
+      "primaryEvidence": "README",
+      "pinnedBy": {
+        "README": "git-commit:046b59f8c04e8b46872ee270f5cee76cc1ef1803"
+      }
+    },
+    {
+      "rowId": "BD-DIM-009",
+      "evidenceRefs": [
+        "README"
+      ],
+      "primaryEvidence": "README",
+      "pinnedBy": {
+        "README": "git-commit:046b59f8c04e8b46872ee270f5cee76cc1ef1803"
+      }
+    },
+    {
+      "rowId": "BD-HIDPI-003",
+      "evidenceRefs": [
+        "README"
+      ],
+      "primaryEvidence": "README",
+      "pinnedBy": {
+        "README": "git-commit:046b59f8c04e8b46872ee270f5cee76cc1ef1803"
+      }
+    },
+    {
+      "rowId": "BD-CTL-008",
+      "evidenceRefs": [
+        "HANDOFF"
+      ],
+      "primaryEvidence": "HANDOFF",
+      "pinnedBy": {
+        "HANDOFF": "unpinnable-live"
+      }
+    },
+    {
+      "rowId": "BD-CTL-009",
+      "evidenceRefs": [
+        "HANDOFF"
+      ],
+      "primaryEvidence": "HANDOFF",
+      "pinnedBy": {
+        "HANDOFF": "unpinnable-live"
+      }
+    },
+    {
+      "rowId": "BD-CTL-010",
+      "evidenceRefs": [
+        "HANDOFF"
+      ],
+      "primaryEvidence": "HANDOFF",
+      "pinnedBy": {
+        "HANDOFF": "unpinnable-live"
+      }
+    },
+    {
+      "rowId": "BD-PIP-009",
+      "evidenceRefs": [
+        "HANDOFF"
+      ],
+      "primaryEvidence": "HANDOFF",
+      "pinnedBy": {
+        "HANDOFF": "unpinnable-live"
+      }
+    },
+    {
+      "rowId": "BD-PRIV-001",
+      "evidenceRefs": [
+        "TERMS"
+      ],
+      "primaryEvidence": "TERMS",
+      "pinnedBy": {
+        "TERMS": "content-hash:sha256:ff8b59867487811e1d79fff913754a69905def6e69a036673a91df05246478a6"
+      }
+    },
+    {
+      "rowId": "BD-UPD-001",
+      "evidenceRefs": [
+        "HANDOFF"
+      ],
+      "primaryEvidence": "HANDOFF",
+      "pinnedBy": {
+        "HANDOFF": "unpinnable-live"
+      }
+    },
+    {
+      "rowId": "BD-UPD-002",
+      "evidenceRefs": [
+        "HANDOFF"
+      ],
+      "primaryEvidence": "HANDOFF",
+      "pinnedBy": {
+        "HANDOFF": "unpinnable-live"
+      }
+    },
+    {
+      "rowId": "BD-AXL-001",
+      "evidenceRefs": [
+        "HANDOFF"
+      ],
+      "primaryEvidence": "HANDOFF",
+      "pinnedBy": {
+        "HANDOFF": "unpinnable-live"
+      }
+    },
+    {
+      "rowId": "BD-AXL-002",
+      "evidenceRefs": [
+        "HANDOFF"
+      ],
+      "primaryEvidence": "HANDOFF",
+      "pinnedBy": {
+        "HANDOFF": "unpinnable-live"
+      }
+    },
+    {
+      "rowId": "BD-QUAL-001",
+      "evidenceRefs": [
+        "HANDOFF"
+      ],
+      "primaryEvidence": "HANDOFF",
+      "pinnedBy": {
+        "HANDOFF": "unpinnable-live"
+      }
+    },
+    {
+      "rowId": "BD-QUAL-002",
+      "evidenceRefs": [
+        "HANDOFF"
+      ],
+      "primaryEvidence": "HANDOFF",
+      "pinnedBy": {
+        "HANDOFF": "unpinnable-live"
+      }
+    },
+    {
+      "rowId": "BD-QUAL-003",
+      "evidenceRefs": [
+        "HANDOFF"
+      ],
+      "primaryEvidence": "HANDOFF",
+      "pinnedBy": {
+        "HANDOFF": "unpinnable-live"
+      }
+    },
+    {
+      "rowId": "BD-QUAL-004",
+      "evidenceRefs": [
+        "HANDOFF"
+      ],
+      "primaryEvidence": "HANDOFF",
+      "pinnedBy": {
+        "HANDOFF": "unpinnable-live"
+      }
+    },
+    {
+      "rowId": "BD-PKG-001",
+      "evidenceRefs": [
+        "HANDOFF"
+      ],
+      "primaryEvidence": "HANDOFF",
+      "pinnedBy": {
+        "HANDOFF": "unpinnable-live"
+      }
+    },
+    {
+      "rowId": "BD-PKG-002",
+      "evidenceRefs": [
+        "HANDOFF"
+      ],
+      "primaryEvidence": "HANDOFF",
+      "pinnedBy": {
+        "HANDOFF": "unpinnable-live"
+      }
+    },
+    {
+      "rowId": "BD-PKG-003",
+      "evidenceRefs": [
+        "HANDOFF"
+      ],
+      "primaryEvidence": "HANDOFF",
+      "pinnedBy": {
+        "HANDOFF": "unpinnable-live"
+      }
+    },
+    {
+      "rowId": "BD-PKG-004",
+      "evidenceRefs": [
+        "HANDOFF"
+      ],
+      "primaryEvidence": "HANDOFF",
+      "pinnedBy": {
+        "HANDOFF": "unpinnable-live"
+      }
+    },
+    {
+      "rowId": "BD-POL-001",
+      "evidenceRefs": [
+        "HANDOFF"
+      ],
+      "primaryEvidence": "HANDOFF",
+      "pinnedBy": {
+        "HANDOFF": "unpinnable-live"
+      }
+    },
+    {
+      "rowId": "BD-POL-002",
+      "evidenceRefs": [
+        "HANDOFF"
+      ],
+      "primaryEvidence": "HANDOFF",
+      "pinnedBy": {
+        "HANDOFF": "unpinnable-live"
+      }
+    },
+    {
+      "rowId": "BD-POL-003",
+      "evidenceRefs": [
+        "HANDOFF"
+      ],
+      "primaryEvidence": "HANDOFF",
+      "pinnedBy": {
+        "HANDOFF": "unpinnable-live"
+      }
+    },
+    {
+      "rowId": "BD-POL-004",
+      "evidenceRefs": [
+        "HANDOFF"
+      ],
+      "primaryEvidence": "HANDOFF",
+      "pinnedBy": {
+        "HANDOFF": "unpinnable-live"
+      }
+    }
+  ]
+}

@@ -10,6 +10,22 @@ The canonical register is `docs/product/display-control-capability-register.json
 - **unavailable** — no safe implementation path currently exists.
 - **blocked** — requires an explicit owner decision or is rejected by policy (EDID override, native/direct XDR, remote streaming, privileged helpers, shell escape hatches, unconfirmed automatic hardware changes).
 
-Run `node script/validate_display_control.mjs`. Validation is fail-closed: the frozen baseline, domain list, tier counts, evidence catalog, disposition/basis rules, and safety gates are all enforced; unknown fields and any score/weight/credit field are rejected; and `launchGate.fullReplacementClaim` must remain `false` while any row is unqualified. The validator also runs thirteen tamper self-tests proving each rule actually rejects.
+## Immutable source pins
+
+Every `evidenceCatalog` entry must carry a `pin` object with exactly one of three shapes:
+
+- **git-commit** — `{ "type": "git-commit", "commit": <40-hex sha>, "immutableURI": <commit-addressed URL> }`. Used for wiki pages (pinned to one wiki snapshot commit), repository files (pinned to the frozen 4.3.6 tag commit `046b59f8c04e8b46872ee270f5cee76cc1ef1803`), the release tag, and MIT-licensed reference repositories.
+- **content-hash** — `{ "type": "content-hash", "contentSha256": <64-hex sha256 of the raw retrieved body>, "retrievedAt": <ISO date> }`. Used for live pages with no commit history (GitHub discussions, Apple documentation). The hash is a point-in-time fingerprint of the exact bytes retrieved; nothing is normalized.
+- **unpinnable-live** — `{ "type": "unpinnable-live", "reason": <explicit reason> }`. Used only when no commit exists and no content body could be retrieved (for example an internal handoff record, or a URI that returned a stable HTTP 404 at pin time). A hash is never invented.
+
+## Source crosswalk contract
+
+`docs/product/display-control-source-crosswalk.json` binds every register row to its pinned evidence, exactly once:
+
+- The header binds `registerVersion` and the frozen BetterDisplay 4.3.6 `tagCommit`/`landingCommit` baseline.
+- `entries` carries exactly one entry per register row — no missing, extra, or duplicate rows — with `rowId`, the row's `evidenceRefs` copied verbatim, `primaryEvidence` (the first reference), and `pinnedBy` mapping each reference to its resolved catalog pin summary (`git-commit:<sha>`, `content-hash:sha256:<hash>`, or `unpinnable-live`).
+- `catalogUsage` records, for every catalog entry, how many rows cite it via `evidenceRefs`, how many cite it inside `apiBasis` references, and whether it is bound as the frozen baseline source. Every catalog entry must be used at least once; the validator recomputes this from the register and requires exact equality.
+
+Run `node script/validate_display_control.mjs`. Validation is fail-closed: the frozen baseline, domain list, tier counts, evidence catalog, immutable pins, source crosswalk, disposition/basis rules, and safety gates are all enforced; unknown fields and any score/weight/credit field are rejected; and `launchGate.fullReplacementClaim` must remain `false` while any row is unqualified. A missing or unparsable crosswalk fails the run. The validator also runs twenty-three tamper self-tests proving each rule actually rejects, including dropped/duplicated crosswalk rows, crosswalk/evidence mismatches, malformed or missing pins, pin-summary drift, unused catalog entries, and crosswalk baseline or register-version drift.
 
 No public "full BetterDisplay replacement" claim may ship while the launch gate is false. BetterDisplay v5.0.2 remains a prerelease watchlist item, not the parity baseline.

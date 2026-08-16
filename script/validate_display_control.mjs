@@ -7,6 +7,8 @@ import { fileURLToPath } from "node:url";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const registerPath = path.join(root, "docs/product/display-control-capability-register.json");
 const schemaPath = path.join(root, "schemas/display-control/v1/capability-register.schema.json");
+const crosswalkPath = path.join(root, "docs/product/display-control-source-crosswalk.json");
+const crosswalkRegisterRef = "docs/product/display-control-capability-register.json";
 
 const frozenBaseline = {
   label: "stable",
@@ -85,6 +87,107 @@ function schemaErrors(value, rule, at = "$", rootSchema = rule) {
   return errors;
 }
 
+const commitPattern = /^[0-9a-f]{40}$/;
+const sha256Pattern = /^[0-9a-f]{64}$/;
+const datePattern = /^\d{4}-\d{2}-\d{2}$/;
+const pinTypes = new Set(["git-commit", "content-hash", "unpinnable-live"]);
+
+function pinErrors(evidence) {
+  const at = evidence.id ?? "(missing id)";
+  const pin = evidence.pin;
+  if (!isObject(pin)) return [`${at}: evidence entry is missing its immutable pin object`];
+  const errors = [];
+  if (!pinTypes.has(pin.type)) errors.push(`${at}: pin type ${pin.type} is not git-commit, content-hash, or unpinnable-live`);
+  if (pin.type === "git-commit") {
+    if (!commitPattern.test(pin.commit ?? "")) errors.push(`${at}: git-commit pin must carry a 40-hex lowercase commit`);
+    if (typeof pin.immutableURI !== "string" || pin.immutableURI.length < 12) errors.push(`${at}: git-commit pin must carry an immutableURI`);
+  }
+  if (pin.type === "content-hash") {
+    if (!sha256Pattern.test(pin.contentSha256 ?? "")) errors.push(`${at}: content-hash pin must carry a 64-hex lowercase sha256`);
+    if (!datePattern.test(pin.retrievedAt ?? "")) errors.push(`${at}: content-hash pin must carry its retrievedAt date`);
+  }
+  if (pin.type === "unpinnable-live" && (typeof pin.reason !== "string" || pin.reason.length < 40)) errors.push(`${at}: unpinnable-live pin must carry an explicit reason`);
+  return errors;
+}
+
+function pinSummary(pin) {
+  if (!isObject(pin)) return null;
+  if (pin.type === "git-commit") return `git-commit:${pin.commit}`;
+  if (pin.type === "content-hash") return `content-hash:sha256:${pin.contentSha256}`;
+  if (pin.type === "unpinnable-live") return "unpinnable-live";
+  return null;
+}
+
+function computeCatalogUsage(register) {
+  const usage = {};
+  for (const evidence of register.evidenceCatalog ?? []) {
+    usage[evidence.id] = { rowEvidenceRefs: 0, rowApiBasisCitations: 0, baselineSource: evidence.uri === register.baselines?.[0]?.sourceURL };
+  }
+  for (const row of register.rows ?? []) {
+    for (const reference of row.evidenceRefs ?? []) if (usage[reference]) usage[reference].rowEvidenceRefs += 1;
+    const basisText = (row.apiBasis ?? []).map((basis) => basis.ref).join(" \n ");
+    for (const id of Object.keys(usage)) {
+      if (new RegExp(`(^|[^A-Z0-9-])${id}([^A-Z0-9-]|$)`).test(basisText)) usage[id].rowApiBasisCitations += 1;
+    }
+  }
+  return usage;
+}
+
+function validateCrosswalk(register, crosswalk) {
+  const errors = [];
+  if (!isObject(crosswalk)) return [`crosswalk: root must be an object`];
+
+  const banned = findBannedKey(crosswalk);
+  if (banned.length) errors.push(`crosswalk must not carry tracker credit fields: ${banned.join(", ")}`);
+
+  if (crosswalk.schemaVersion !== "1.0.0") errors.push("crosswalk: schemaVersion must be 1.0.0");
+  if (crosswalk.register !== crosswalkRegisterRef) errors.push(`crosswalk: register must bind ${crosswalkRegisterRef}`);
+  if (crosswalk.registerVersion !== register.registerVersion) errors.push(`crosswalk: registerVersion ${crosswalk.registerVersion} does not bind register version ${register.registerVersion}`);
+  if (typeof crosswalk.generatedAt !== "string" || !datePattern.test(crosswalk.generatedAt)) errors.push("crosswalk: generatedAt must be an ISO date");
+  const baseline = crosswalk.baseline;
+  if (!isObject(baseline) || baseline.product !== frozenBaseline.product || baseline.version !== frozenBaseline.version || baseline.tagCommit !== frozenBaseline.tagCommit || baseline.landingCommit !== frozenBaseline.landingCommit) {
+    errors.push("crosswalk: baseline must exactly bind the frozen BetterDisplay 4.3.6 tag and landing commits");
+  }
+
+  const rows = register.rows ?? [];
+  const entries = Array.isArray(crosswalk.entries) ? crosswalk.entries : [];
+  if (!Array.isArray(crosswalk.entries)) errors.push("crosswalk: entries must be an array");
+  if (crosswalk.rowCount !== rows.length) errors.push(`crosswalk: rowCount (${crosswalk.rowCount}) does not equal register rows (${rows.length})`);
+  if (entries.length !== rows.length) errors.push(`crosswalk: ${entries.length} entries do not map the ${rows.length} register rows exactly once`);
+
+  const catalogPins = new Map((register.evidenceCatalog ?? []).map((evidence) => [evidence.id, pinSummary(evidence.pin)]));
+  const rowById = new Map(rows.map((row) => [row.id, row]));
+  const seen = new Set();
+  for (const entry of entries) {
+    const at = `crosswalk ${entry?.rowId ?? "(missing rowId)"}`;
+    if (!isObject(entry)) { errors.push("crosswalk: entry must be an object"); continue; }
+    if (seen.has(entry.rowId)) errors.push(`${at}: duplicate crosswalk entry`);
+    seen.add(entry.rowId);
+    const row = rowById.get(entry.rowId);
+    if (!row) { errors.push(`${at}: does not match any register row`); continue; }
+    if (!jsonEqual(entry.evidenceRefs, row.evidenceRefs)) errors.push(`${at}: evidenceRefs do not exactly equal the register row's evidenceRefs`);
+    if (entry.primaryEvidence !== row.evidenceRefs?.[0]) errors.push(`${at}: primaryEvidence must be the row's first evidence reference`);
+    const pinnedBy = entry.pinnedBy;
+    if (!isObject(pinnedBy)) { errors.push(`${at}: pinnedBy must be an object`); continue; }
+    const expectedKeys = row.evidenceRefs ?? [];
+    if (!jsonEqual(Object.keys(pinnedBy).sort(), [...expectedKeys].sort())) errors.push(`${at}: pinnedBy must cover exactly the row's evidence references`);
+    for (const [reference, summary] of Object.entries(pinnedBy)) {
+      const expected = catalogPins.get(reference);
+      if (!expected) errors.push(`${at}: pinnedBy references ${reference}, which has no valid catalog pin`);
+      else if (summary !== expected) errors.push(`${at}: pinnedBy.${reference} (${summary}) does not equal the resolved catalog pin (${expected})`);
+    }
+  }
+  for (const row of rows) if (!seen.has(row.id)) errors.push(`crosswalk: register row ${row.id} has no crosswalk entry`);
+
+  const usage = computeCatalogUsage(register);
+  if (!jsonEqual(crosswalk.catalogUsage, usage)) errors.push("crosswalk: catalogUsage does not exactly equal the usage recomputed from the register");
+  for (const [id, use] of Object.entries(usage)) {
+    if (use.rowEvidenceRefs + use.rowApiBasisCitations + (use.baselineSource ? 1 : 0) < 1) errors.push(`crosswalk: catalog entry ${id} is not used by any register row or baseline binding`);
+  }
+
+  return errors;
+}
+
 function findBannedKey(value, at = "$", findings = []) {
   if (Array.isArray(value)) value.forEach((item, index) => findBannedKey(item, `${at}[${index}]`, findings));
   else if (isObject(value)) for (const [key, child] of Object.entries(value)) {
@@ -109,6 +212,7 @@ function validateRegister(register, schema) {
     if (evidenceIds.has(evidence.id)) errors.push(`duplicate evidence ID ${evidence.id}`);
     evidenceIds.add(evidence.id);
     if (evidence.retrievedAt !== register.retrievedAt) errors.push(`${evidence.id}: retrieval date differs from register`);
+    errors.push(...pinErrors(evidence));
   }
 
   const rowIds = new Set();
@@ -154,7 +258,7 @@ function validateRegister(register, schema) {
   return { errors, summary: { rows: register.rows?.length ?? 0, tierCounts, dispositionCounts, unqualified } };
 }
 
-function selfTest(register, schema) {
+function selfTest(register, schema, crosswalk) {
   const cases = [
     ["baseline drift", (r) => { r.baselines[0].version = "4.3.4"; }],
     ["rowCount drift", (r) => { r.rowCount += 1; }],
@@ -169,19 +273,39 @@ function selfTest(register, schema) {
     ["premature full-replacement claim", (r) => { r.launchGate.fullReplacementClaim = true; }],
     ["qualified without evidence", (r) => { r.rows[0].implementationStatus = "qualified"; }],
     ["dropped free-tier row", (r) => { const index = r.rows.findIndex((x) => x.comparatorTier === "free"); r.rows.splice(index, 1); r.rowCount -= 1; }],
+    ["dropped crosswalk row", (r, c) => { c.entries.splice(0, 1); }],
+    ["duplicated crosswalk row", (r, c) => { c.entries.push(clone(c.entries[0])); }],
+    ["crosswalk evidence mismatch", (r, c) => { const other = c.entries.find((e) => !jsonEqual(e.evidenceRefs, c.entries[0].evidenceRefs)); c.entries[0].evidenceRefs = clone(other.evidenceRefs); }],
+    ["crosswalk primary-evidence drift", (r, c) => { const other = r.evidenceCatalog.find((e) => e.id !== c.entries[0].primaryEvidence); c.entries[0].primaryEvidence = other.id; }],
+    ["malformed pin", (r) => { r.evidenceCatalog.find((e) => e.pin.type === "git-commit").pin.commit = "not-a-sha"; }],
+    ["missing pin", (r) => { delete r.evidenceCatalog[0].pin; }],
+    ["crosswalk pin-summary drift", (r, c) => { const entry = c.entries[0]; entry.pinnedBy[entry.evidenceRefs[0]] = `git-commit:${"0".repeat(40)}`; }],
+    ["unused catalog entry", (r) => { r.evidenceCatalog.push({ id: "UNUSED", kind: "official-documentation", uri: "https://example.invalid/unused", retrievedAt: r.retrievedAt, pin: { type: "unpinnable-live", reason: "synthetic unused catalog entry injected by the tamper self-test; it must be rejected" } }); }],
+    ["crosswalk baseline drift", (r, c) => { c.baseline.tagCommit = "0".repeat(40); }],
+    ["crosswalk register-version drift", (r, c) => { c.registerVersion = "9.9.9-tampered"; }],
   ];
   const failures = [];
   for (const [name, tamper] of cases) {
-    const tampered = clone(register);
-    tamper(tampered);
-    if (validateRegister(tampered, schema).errors.length === 0) failures.push(name);
+    const tamperedRegister = clone(register);
+    const tamperedCrosswalk = clone(crosswalk);
+    tamper(tamperedRegister, tamperedCrosswalk);
+    const combined = [...validateRegister(tamperedRegister, schema).errors, ...validateCrosswalk(tamperedRegister, tamperedCrosswalk)];
+    if (combined.length === 0) failures.push(name);
     else console.log(`self-test ok: ${name} rejected`);
   }
-  return failures;
+  return { failures, total: cases.length };
 }
 
 const register = await readJson(registerPath);
 const schema = await readJson(schemaPath);
+
+let crosswalk;
+try {
+  crosswalk = await readJson(crosswalkPath);
+} catch (error) {
+  console.error(`FAIL: crosswalk ${path.relative(root, crosswalkPath)} is missing or unparsable: ${error.message}`);
+  process.exit(1);
+}
 
 const schemaAudit = auditSchema(schema);
 if (schemaAudit.length) {
@@ -191,18 +315,22 @@ if (schemaAudit.length) {
 }
 
 const { errors, summary } = validateRegister(register, schema);
-if (errors.length) {
-  console.error(`FAIL: ${errors.length} finding(s) in ${path.relative(root, registerPath)}`);
-  for (const finding of errors) console.error(`  - ${finding}`);
+const crosswalkErrors = validateCrosswalk(register, crosswalk);
+if (errors.length || crosswalkErrors.length) {
+  console.error(`FAIL: ${errors.length + crosswalkErrors.length} finding(s) in ${path.relative(root, registerPath)} + ${path.relative(root, crosswalkPath)}`);
+  for (const finding of [...errors, ...crosswalkErrors]) console.error(`  - ${finding}`);
   process.exit(1);
 }
 
 console.log(`OK: ${path.relative(root, registerPath)}`);
 console.log(JSON.stringify(summary, null, 2));
+const pinCounts = {};
+for (const evidence of register.evidenceCatalog) pinCounts[evidence.pin.type] = (pinCounts[evidence.pin.type] ?? 0) + 1;
+console.log(`OK: ${path.relative(root, crosswalkPath)} maps ${crosswalk.entries.length} rows exactly once across ${register.evidenceCatalog.length} pinned sources ${JSON.stringify(pinCounts)}`);
 
-const failures = selfTest(register, schema);
+const { failures, total } = selfTest(register, schema, crosswalk);
 if (failures.length) {
   console.error(`FAIL: self-test tamper cases not rejected: ${failures.join(", ")}`);
   process.exit(1);
 }
-console.log(`self-test: all 13 tamper cases rejected; validation is fail-closed`);
+console.log(`self-test: all ${total} tamper cases rejected; validation is fail-closed`);

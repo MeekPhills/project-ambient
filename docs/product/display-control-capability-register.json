@@ -51,73 +51,131 @@
       "id": "FREEPRO",
       "kind": "official-documentation",
       "uri": "https://github.com/waydabber/BetterDisplay/wiki/List-of-free-and-Pro-features",
-      "retrievedAt": "2026-08-15"
+      "retrievedAt": "2026-08-15",
+      "pin": {
+        "type": "git-commit",
+        "commit": "5418778f9d3297977d21364104c4a0ef5f430626",
+        "immutableURI": "https://github.com/waydabber/BetterDisplay/wiki/List-of-free-and-Pro-features/5418778f9d3297977d21364104c4a0ef5f430626"
+      }
     },
     {
       "id": "README",
       "kind": "official-documentation",
       "uri": "https://github.com/waydabber/BetterDisplay",
-      "retrievedAt": "2026-08-15"
+      "retrievedAt": "2026-08-15",
+      "pin": {
+        "type": "git-commit",
+        "commit": "046b59f8c04e8b46872ee270f5cee76cc1ef1803",
+        "immutableURI": "https://github.com/waydabber/BetterDisplay/blob/046b59f8c04e8b46872ee270f5cee76cc1ef1803/README.md"
+      }
     },
     {
       "id": "CLI",
       "kind": "official-documentation",
       "uri": "https://github.com/waydabber/BetterDisplay/wiki/Integration-features%2C-CLI",
-      "retrievedAt": "2026-08-15"
+      "retrievedAt": "2026-08-15",
+      "pin": {
+        "type": "git-commit",
+        "commit": "5418778f9d3297977d21364104c4a0ef5f430626",
+        "immutableURI": "https://github.com/waydabber/BetterDisplay/wiki/Integration-features%2C-CLI/5418778f9d3297977d21364104c4a0ef5f430626"
+      }
     },
     {
       "id": "SAFEMODE",
       "kind": "official-documentation",
       "uri": "https://github.com/waydabber/BetterDisplay/wiki/Safe-mode%2C-app-reset%2C-app-removal",
-      "retrievedAt": "2026-08-15"
+      "retrievedAt": "2026-08-15",
+      "pin": {
+        "type": "git-commit",
+        "commit": "5418778f9d3297977d21364104c4a0ef5f430626",
+        "immutableURI": "https://github.com/waydabber/BetterDisplay/wiki/Safe-mode%2C-app-reset%2C-app-removal/5418778f9d3297977d21364104c4a0ef5f430626"
+      }
     },
     {
       "id": "TERMS",
       "kind": "official-documentation",
       "uri": "https://github.com/waydabber/BetterDisplay/discussions/739",
-      "retrievedAt": "2026-08-15"
+      "retrievedAt": "2026-08-15",
+      "pin": {
+        "type": "content-hash",
+        "contentSha256": "ff8b59867487811e1d79fff913754a69905def6e69a036673a91df05246478a6",
+        "retrievedAt": "2026-08-16"
+      }
     },
     {
       "id": "RELEASE",
       "kind": "official-documentation",
       "uri": "https://github.com/waydabber/BetterDisplay/releases/tag/v4.3.6",
-      "retrievedAt": "2026-08-15"
+      "retrievedAt": "2026-08-15",
+      "pin": {
+        "type": "git-commit",
+        "commit": "046b59f8c04e8b46872ee270f5cee76cc1ef1803",
+        "immutableURI": "https://github.com/waydabber/BetterDisplay/tree/046b59f8c04e8b46872ee270f5cee76cc1ef1803"
+      }
     },
     {
       "id": "HANDOFF",
       "kind": "handoff",
       "uri": "SOL parent orchestrator verified research handoff, 2026-08-15",
-      "retrievedAt": "2026-08-15"
+      "retrievedAt": "2026-08-15",
+      "pin": {
+        "type": "unpinnable-live",
+        "reason": "Internal verified research handoff record from the 2026-08-15 WS-DC-001 drafting session; it is not a fetchable network artifact, so no commit or content hash exists to pin."
+      }
     },
     {
       "id": "APPLE-CG",
       "kind": "apple-documentation",
       "uri": "https://developer.apple.com/documentation/coregraphics/cgconfiguredisplaywithdisplaymode",
-      "retrievedAt": "2026-08-15"
+      "retrievedAt": "2026-08-15",
+      "pin": {
+        "type": "unpinnable-live",
+        "reason": "Cataloged URI returned a stable HTTP 404 on 2026-08-16 (retried, including the parameterized canonical path); no retrievable content body exists to hash and Apple documentation exposes no immutable revision URL."
+      }
     },
     {
       "id": "APPLE-CS",
       "kind": "apple-documentation",
       "uri": "https://developer.apple.com/documentation/colorsync/color-devices",
-      "retrievedAt": "2026-08-15"
+      "retrievedAt": "2026-08-15",
+      "pin": {
+        "type": "content-hash",
+        "contentSha256": "5cafc0894c803eb0b0bddebabe30a3484687005b3577e121a67abbbe5a05283b",
+        "retrievedAt": "2026-08-16"
+      }
     },
     {
       "id": "APPLE-SCK",
       "kind": "apple-documentation",
       "uri": "https://developer.apple.com/documentation/screencapturekit",
-      "retrievedAt": "2026-08-15"
+      "retrievedAt": "2026-08-15",
+      "pin": {
+        "type": "content-hash",
+        "contentSha256": "d4b451b38d9a39212b7d02a1ef1d2dd0a849623902fd6dc051e64e7a7eb1e5ff",
+        "retrievedAt": "2026-08-16"
+      }
     },
     {
       "id": "OSS-MC",
       "kind": "open-source",
       "uri": "https://github.com/MonitorControl/MonitorControl (MIT)",
-      "retrievedAt": "2026-08-15"
+      "retrievedAt": "2026-08-15",
+      "pin": {
+        "type": "git-commit",
+        "commit": "f16d90f29cefbd9fff47e26fc8f99fe7a5280deb",
+        "immutableURI": "https://github.com/MonitorControl/MonitorControl/tree/f16d90f29cefbd9fff47e26fc8f99fe7a5280deb"
+      }
     },
     {
       "id": "OSS-M1DDC",
       "kind": "open-source",
       "uri": "https://github.com/waydabber/m1ddc (MIT)",
-      "retrievedAt": "2026-08-15"
+      "retrievedAt": "2026-08-15",
+      "pin": {
+        "type": "git-commit",
+        "commit": "04d949794102eb8df01ad3681afff6464a3eede2",
+        "immutableURI": "https://github.com/waydabber/m1ddc/tree/04d949794102eb8df01ad3681afff6464a3eede2"
+      }
     }
   ],
   "rowCount": 115,
