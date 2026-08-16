@@ -10,4 +10,4 @@ Decision records capture accepted product, architecture, privacy, licensing, and
 
 - [0001 — M0 launch boundaries](0001-m0-launch-boundaries.md) — Accepted 2026-08-13
 - [0002 — Community, commercial, model, and media-rights boundaries](0002-commercial-rights.md) — Proposed 2026-08-13
-- [0003 — Display-control expansion boundaries](0003-display-control-expansion.md) — Proposed 2026-08-15
+- [0003 — Display-control expansion boundaries](0003-display-control-expansion.md) — Accepted 2026-08-16

@@ -1,12 +1,12 @@
 # 0003 — Display-control expansion boundaries
 
-**Status:** Proposed
+**Status:** Accepted (2026-08-16, at merge of PR #40 as `fde6b21ec8138e8f0a0fd2eb43cb562fc1cab15e`)
 
 **Date:** 2026-08-15
 
 **Decision owner:** Project Ambient maintainer
 
-**Tracks:** display-control governance issue (create-before-start; publication was gated on explicit owner approval and the issue does not exist yet)
+**Tracks:** display-control governance issue #41 (published with explicit owner approval on 2026-08-15; closed by PR #40)
 
 ## Context
 
