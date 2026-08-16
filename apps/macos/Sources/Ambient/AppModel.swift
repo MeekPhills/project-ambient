@@ -20,6 +20,8 @@ final class AppModel: ObservableObject {
     @Published var errorMessage: String?
     @Published var showingNewChannel = false
     @Published var showingNewRule = false
+    @Published var showingImportOptions = false
+    @Published private(set) var lastImportReport: AmbientImportReport?
 
     private var engine: AmbientEngine?
     private var rotationCoordinator: AmbientRotationCoordinator?
@@ -80,18 +82,30 @@ final class AppModel: ObservableObject {
         }
     }
 
-    func chooseImportFolder() {
+    func requestImport() {
+        showingImportOptions = true
+    }
+
+    func chooseImportFolder(mode: AmbientImportMode) {
+        showingImportOptions = false
         let panel = NSOpenPanel()
         panel.title = "Choose your background library"
-        panel.message = "Project Ambient scans compatible images and videos locally."
-        panel.prompt = "Import folder"
+        panel.message = mode == .copy
+            ? "Ambient copies supported media into its private local library. Originals stay untouched."
+            : "Ambient references supported media in this folder. Originals stay in place and untouched."
+        panel.prompt = mode == .copy ? "Copy media" : "Use folder"
         panel.canChooseDirectories = true
         panel.canChooseFiles = false
         panel.allowsMultipleSelection = false
         guard panel.runModal() == .OK, let url = panel.url else { return }
 
-        perform("Scanning \(url.lastPathComponent)…") { engine in
-            try engine.importFolder(url)
+        perform("Importing \(url.lastPathComponent)…") { engine in
+            let result = try engine.execute(.importMedia(AmbientImportCommand(
+                folderPath: url.path,
+                mode: mode
+            )))
+            self.lastImportReport = result.importReport
+            return result
         }
     }
 

@@ -60,6 +60,7 @@ private enum CLIError: LocalizedError {
     case unknownChannel(String)
     case invalidPolicy(String)
     case invalidScope(String)
+    case invalidImportMode(String)
 
     var errorDescription: String? {
         switch self {
@@ -67,6 +68,7 @@ private enum CLIError: LocalizedError {
         case .unknownChannel(let value): return "No channel matches “\(value)”."
         case .invalidPolicy(let value): return "Unknown power policy “\(value)”. Use automatic, efficiency, or quality."
         case .invalidScope(let value): return "Unknown display scope “\(value)”. Use all or primary."
+        case .invalidImportMode(let value): return "Unknown import mode “\(value)”. Use copy or reference."
         }
     }
 }
@@ -165,7 +167,11 @@ private struct AmbientCLI {
         case "import":
             guard arguments.count >= 2 else { throw CLIError.usage("import requires a folder path.") }
             writeMutation(
-                try engine.importFolder(URL(fileURLWithPath: arguments[1], isDirectory: true)),
+                try engine.execute(.importMedia(AmbientImportCommand(
+                    folderPath: arguments[1],
+                    mode: try importMode(in: arguments),
+                    requestID: value(after: "--request-id", in: arguments) ?? UUID().uuidString
+                ))),
                 engine: engine
             )
 
@@ -230,6 +236,14 @@ private struct AmbientCLI {
         }
     }
 
+    private static func importMode(in arguments: [String]) throws -> AmbientImportMode {
+        guard let raw = value(after: "--mode", in: arguments) else { return .reference }
+        guard let mode = AmbientImportMode(rawValue: raw.lowercased()) else {
+            throw CLIError.invalidImportMode(raw)
+        }
+        return mode
+    }
+
     private static func writeJSON<T: Encodable>(_ value: T, to handle: FileHandle = .standardOutput) {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
@@ -268,7 +282,7 @@ private struct AmbientCLI {
       power-policy set <automatic|efficiency|quality> [--request-id <id>] --json
       history [--limit <count>] --json
       restore [--request-id <id>] --json
-      import <folder> --json
+      import <folder> [--mode copy|reference] [--request-id <id>] --json
       scan --json
       export-aerial <channel> --destination <folder> --json
     """

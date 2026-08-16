@@ -8,6 +8,7 @@ public struct AmbientMutationResult: Codable, Sendable {
     public var channel: AmbientChannel?
     public var asset: AmbientAsset?
     public var expiresAt: Date?
+    public var importReport: AmbientImportReport?
 
     public init(
         ok: Bool = true,
@@ -16,7 +17,8 @@ public struct AmbientMutationResult: Codable, Sendable {
         message: String,
         channel: AmbientChannel? = nil,
         asset: AmbientAsset? = nil,
-        expiresAt: Date? = nil
+        expiresAt: Date? = nil,
+        importReport: AmbientImportReport? = nil
     ) {
         self.ok = ok
         self.action = action
@@ -25,6 +27,7 @@ public struct AmbientMutationResult: Codable, Sendable {
         self.channel = channel
         self.asset = asset
         self.expiresAt = expiresAt
+        self.importReport = importReport
     }
 }
 
@@ -59,6 +62,7 @@ public final class AmbientEngine {
     public let scanner: AmbientCatalogScanner
     public let wallpaper: any AmbientWallpaperApplying
     public let aerialExporter: AmbientAerialExporter
+    public let importer: AmbientMediaImporter
 
     public private(set) var state: AmbientState
 
@@ -66,12 +70,14 @@ public final class AmbientEngine {
         store: AmbientStateStore = AmbientStateStore(),
         scanner: AmbientCatalogScanner = AmbientCatalogScanner(),
         wallpaper: any AmbientWallpaperApplying = AmbientWallpaperService(),
-        aerialExporter: AmbientAerialExporter = AmbientAerialExporter()
+        aerialExporter: AmbientAerialExporter = AmbientAerialExporter(),
+        importer: AmbientMediaImporter = AmbientMediaImporter()
     ) throws {
         self.store = store
         self.scanner = scanner
         self.wallpaper = wallpaper
         self.aerialExporter = aerialExporter
+        self.importer = importer
         self.state = try store.load()
         let transaction = try store.withExclusiveState { storedState in
             let changed = Self.normalizeExpirations(in: &storedState, now: Date())
@@ -85,25 +91,61 @@ public final class AmbientEngine {
         _ = Self.normalizeExpirations(in: &state, now: date)
     }
 
-    public func importFolder(_ url: URL) throws -> AmbientMutationResult {
-        try serializedMutation { [self] in
-            var isDirectory: ObjCBool = false
-            guard FileManager.default.fileExists(atPath: url.path, isDirectory: &isDirectory), isDirectory.boolValue else {
-                throw CocoaError(.fileNoSuchFile, userInfo: [NSFilePathErrorKey: url.path])
-            }
-            let path = url.standardizedFileURL.path
-            if !state.libraryFolders.contains(path) {
-                state.libraryFolders.append(path)
-                state.libraryFolders.sort()
-            }
-            let count = scanLibrariesUnlocked(at: Date())
-            return (
-                AmbientMutationResult(
-                    action: "import",
-                    message: "Imported \(count) compatible backgrounds from \(url.lastPathComponent)."
-                ),
-                true
+    public func execute(_ command: AmbientCommand) throws -> AmbientMutationResult {
+        switch command {
+        case .importMedia(let input):
+            return try importFolder(
+                URL(fileURLWithPath: input.folderPath, isDirectory: true),
+                mode: input.mode,
+                requestID: input.requestID
             )
+        }
+    }
+
+    public func importFolder(
+        _ url: URL,
+        mode: AmbientImportMode = .reference,
+        requestID: String? = nil
+    ) throws -> AmbientMutationResult {
+        var createdFiles: [URL] = []
+        do {
+            return try idempotentMutation(
+                requestID: requestID,
+                fingerprint: fingerprint("import", url.standardizedFileURL.path, mode.rawValue)
+            ) { [self] in
+                let managedDirectory = store.directoryURL.appendingPathComponent("Media", isDirectory: true)
+                let prepared = try importer.prepare(
+                    folder: url,
+                    mode: mode,
+                    existing: state.assets,
+                    managedDirectory: managedDirectory
+                )
+                createdFiles = prepared.createdFiles
+                state.assets.append(contentsOf: prepared.assets)
+                state.assets.sort { $0.path.localizedStandardCompare($1.path) == .orderedAscending }
+                state.lastScanAt = Date()
+
+                if !prepared.assets.isEmpty {
+                    let libraryPath = (mode == .copy ? managedDirectory : url.standardizedFileURL).path
+                    if !state.libraryFolders.contains(libraryPath) {
+                        state.libraryFolders.append(libraryPath)
+                        state.libraryFolders.sort()
+                    }
+                }
+
+                return (
+                    AmbientMutationResult(
+                        action: "import",
+                        requestID: requestID,
+                        message: prepared.report.summary,
+                        importReport: prepared.report
+                    ),
+                    !prepared.assets.isEmpty
+                )
+            }
+        } catch {
+            importer.rollback(createdFiles: createdFiles)
+            throw error
         }
     }
 

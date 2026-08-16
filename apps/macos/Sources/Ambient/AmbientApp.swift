@@ -22,7 +22,7 @@ struct AmbientApp: App {
         .windowStyle(.hiddenTitleBar)
         .commands {
             CommandGroup(after: .newItem) {
-                Button("Import Background Folder…") { model.chooseImportFolder() }
+                Button("Import Background Folder…") { model.requestImport() }
                     .keyboardShortcut("o", modifiers: [.command, .shift])
                 Button("Next Background") { model.next() }
                     .keyboardShortcut(.rightArrow, modifiers: [.command])
