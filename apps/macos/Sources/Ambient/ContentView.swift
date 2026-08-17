@@ -300,6 +300,9 @@ private struct DashboardView: View {
                     NowNextCard(model: model)
                         .frame(width: 310)
                 }
+                if let report = model.lastImportReport {
+                    ImportReportCard(report: report) { model.dismissImportReport() }
+                }
                 BackgroundGrid(model: model)
                 RulesCard(model: model)
                 PowerCard(model: model)
@@ -386,6 +389,65 @@ private struct CurrentBackgroundCard: View {
     }
 }
 
+private struct ImportReportCard: View {
+    var report: AmbientImportReport
+    var dismiss: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Label("Import report", systemImage: report.hasIssues ? "exclamationmark.triangle.fill" : "checkmark.circle.fill")
+                    .font(.headline)
+                    .foregroundStyle(report.hasIssues ? Color.orange : Color.green)
+                Spacer()
+                Button("Dismiss", action: dismiss)
+                    .buttonStyle(.borderless)
+                    .accessibilityLabel("Dismiss import report")
+            }
+            Text(report.summary)
+                .font(.callout)
+            Text(report.mode == .copy
+                ? "Files were copied into Ambient's private library. Your originals are untouched."
+                : "Files are referenced in place. Your originals are untouched.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            if report.hasIssues {
+                Divider()
+                ForEach(report.issues, id: \.self) { issue in
+                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                        Image(systemName: symbol(for: issue.kind))
+                            .foregroundStyle(.secondary)
+                            .accessibilityHidden(true)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(issue.fileName)
+                                .font(.callout.weight(.medium))
+                            Text(issue.message)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                    .accessibilityElement(children: .combine)
+                }
+            }
+        }
+        .padding(18)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 18).stroke(.white.opacity(0.08)))
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Import report")
+        .accessibilityValue(report.accessibleSummary)
+    }
+
+    private func symbol(for kind: AmbientImportIssue.Kind) -> String {
+        switch kind {
+        case .duplicate: return "doc.on.doc"
+        case .unsupported: return "questionmark.square.dashed"
+        case .unreadable: return "lock.doc"
+        }
+    }
+}
+
 private struct NowNextCard: View {
     @ObservedObject var model: AppModel
 
@@ -428,6 +490,9 @@ private struct NowNextCard: View {
         .frame(maxHeight: .infinity, alignment: .top)
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 18).stroke(.white.opacity(0.08)))
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Now, next and why")
+        .accessibilityValue(model.nowNext.accessibleSummary)
     }
 }
 

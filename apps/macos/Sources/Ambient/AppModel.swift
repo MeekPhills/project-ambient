@@ -1,3 +1,4 @@
+import Accessibility
 import AmbientCore
 import AppKit
 import Combine
@@ -105,8 +106,15 @@ final class AppModel: ObservableObject {
                 mode: mode
             )))
             self.lastImportReport = result.importReport
+            if let report = result.importReport {
+                AccessibilityNotification.Announcement(report.accessibleSummary).post()
+            }
             return result
         }
+    }
+
+    func dismissImportReport() {
+        lastImportReport = nil
     }
 
     func rescan() {

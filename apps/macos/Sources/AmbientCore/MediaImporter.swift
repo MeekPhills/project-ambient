@@ -43,6 +43,22 @@ public struct AmbientImportReport: Codable, Sendable {
         if unreadableCount > 0 { parts.append("\(unreadableCount) unreadable") }
         return parts.joined(separator: "; ") + "."
     }
+
+    public var hasIssues: Bool { !issues.isEmpty }
+
+    /// A complete spoken-first sentence for assistive technology: import mode,
+    /// counts, the untouched-originals guarantee, and how many items need review.
+    public var accessibleSummary: String {
+        let modePhrase = mode == .copy
+            ? "copied into Ambient's private library"
+            : "referenced in place"
+        var sentences = ["Imported \(importedCount) background\(importedCount == 1 ? "" : "s"), \(modePhrase)."]
+        sentences.append("Original files remain untouched.")
+        if hasIssues {
+            sentences.append("\(issues.count) item\(issues.count == 1 ? " needs" : "s need") review; each has an actionable message in the import report.")
+        }
+        return sentences.joined(separator: " ")
+    }
 }
 
 struct AmbientPreparedImport {

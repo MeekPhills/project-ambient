@@ -325,4 +325,18 @@ public struct AmbientNowNext: Codable, Sendable {
         self.isLowPowerModeEnabled = isLowPowerModeEnabled
         self.effectiveMode = effectiveMode
     }
+
+    /// One spoken-first sentence covering the whole Now / Next / Why state,
+    /// so assistive technology reads the card as a single coherent element.
+    public var accessibleSummary: String {
+        var sentences: [String] = []
+        sentences.append(now.map { "Now showing \($0.fileName)." } ?? "No background is applied yet.")
+        sentences.append("Channel: \(channel?.name ?? "none").")
+        sentences.append(next.map { "Up next: \($0.fileName)." } ?? "Up next: no matching still.")
+        sentences.append("Why: \(why)")
+        var modeSentence = "Mode: \(effectiveMode)."
+        if isLowPowerModeEnabled { modeSentence += " Low Power Mode is on." }
+        sentences.append(modeSentence)
+        return sentences.joined(separator: " ")
+    }
 }
