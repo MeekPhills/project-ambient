@@ -35,7 +35,7 @@ Importing is an explicit copy-or-reference choice (`File > Import Background Fol
 
 ## Accessibility
 
-The dashboard's Now / Next / Why card exposes a single combined VoiceOver element whose value narrates the applied background, channel, upcoming still, the "why" explanation, and the effective power mode. Each import posts an assistive-technology announcement summarizing the result, and the dashboard's import report card lists every skipped file with its reason as a combined, focusable element with an explicitly labeled dismiss control. Core menu commands carry keyboard shortcuts (import Cmd-Shift-O, next background Cmd-Right, pause/resume Cmd-Shift-P). The spoken summaries are plain API (`AmbientImportReport.accessibleSummary`, `AmbientNowNext.accessibleSummary`) covered by unit tests.
+The dashboard's Now / Next / Why card exposes a single combined VoiceOver element whose value narrates the applied background, channel, upcoming still, the "why" explanation, and the effective power mode. Each completed import posts an assistive-technology announcement summarizing the result (failures surface through the standard error alert), and the import report card — shown on the dashboard, or on the onboarding screen when an import added nothing — lists skipped files with their reasons as combined, focusable elements, a spoken summary element, and an explicitly labeled dismiss control. Reports longer than 50 items are truncated on screen with an explicit count. Core menu commands carry keyboard shortcuts (import Cmd-Shift-O, next background Cmd-Right, pause/resume Cmd-Shift-P). The spoken summaries are plain API (`AmbientImportReport.accessibleSummary`, `AmbientNowNext.accessibleSummary`) covered by unit tests.
 
 ## Public API boundary
 

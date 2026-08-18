@@ -335,7 +335,11 @@ public struct AmbientNowNext: Codable, Sendable {
         sentences.append(next.map { "Up next: \($0.fileName)." } ?? "Up next: no matching still.")
         sentences.append("Why: \(why)")
         var modeSentence = "Mode: \(effectiveMode)."
-        if isLowPowerModeEnabled { modeSentence += " Low Power Mode is on." }
+        // The engine's effectiveMode may already embed "(Low Power Mode)";
+        // only add the sentence when it doesn't, or VoiceOver says it twice.
+        if isLowPowerModeEnabled && !effectiveMode.localizedCaseInsensitiveContains("low power") {
+            modeSentence += " Low Power Mode is on."
+        }
         sentences.append(modeSentence)
         return sentences.joined(separator: " ")
     }

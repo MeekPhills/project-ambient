@@ -265,6 +265,13 @@ private struct EmptyLibraryView: View {
                 OnboardingPoint(symbol: "doc.on.doc", title: "Originals safe", detail: "Copy or reference")
             }
             .padding(.top, 8)
+
+            // An import that added nothing leaves the library empty, so this view
+            // stays on screen — the report must be reachable here or not at all.
+            if let report = model.lastImportReport {
+                ImportReportCard(report: report) { model.dismissImportReport() }
+                    .frame(maxWidth: 620)
+            }
         }
         .padding(40)
     }
@@ -396,24 +403,33 @@ private struct ImportReportCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Label("Import report", systemImage: report.hasIssues ? "exclamationmark.triangle.fill" : "checkmark.circle.fill")
+                Label("Import report", systemImage: needsAttention ? "exclamationmark.triangle.fill" : "checkmark.circle.fill")
                     .font(.headline)
-                    .foregroundStyle(report.hasIssues ? Color.orange : Color.green)
+                    .foregroundStyle(needsAttention ? Color.orange : Color.green)
                 Spacer()
                 Button("Dismiss", action: dismiss)
                     .buttonStyle(.borderless)
                     .accessibilityLabel("Dismiss import report")
             }
-            Text(report.summary)
-                .font(.callout)
-            Text(report.mode == .copy
-                ? "Files were copied into Ambient's private library. Your originals are untouched."
-                : "Files are referenced in place. Your originals are untouched.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+            // The summary is its own accessibility element: a value on the
+            // .contain container below is treated as a group and never spoken.
+            VStack(alignment: .leading, spacing: 4) {
+                Text(report.summary)
+                    .font(.callout)
+                Text(report.mode == .copy
+                    ? "Files were copied into Ambient's private library. Your originals are untouched."
+                    : "Files are referenced in place. Your originals are untouched.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("Import summary")
+            .accessibilityValue(report.accessibleSummary)
             if report.hasIssues {
                 Divider()
-                ForEach(report.issues, id: \.self) { issue in
+                // Index-keyed: issues from same-named files in different folders
+                // are byte-identical, and value identity would collapse their rows.
+                ForEach(Array(report.issues.prefix(Self.maxVisibleIssues).enumerated()), id: \.offset) { _, issue in
                     HStack(alignment: .firstTextBaseline, spacing: 8) {
                         Image(systemName: symbol(for: issue.kind))
                             .foregroundStyle(.secondary)
@@ -429,6 +445,11 @@ private struct ImportReportCard: View {
                     }
                     .accessibilityElement(children: .combine)
                 }
+                if report.issues.count > Self.maxVisibleIssues {
+                    Text("And \(report.issues.count - Self.maxVisibleIssues) more items not shown.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
             }
         }
         .padding(18)
@@ -436,8 +457,11 @@ private struct ImportReportCard: View {
         .overlay(RoundedRectangle(cornerRadius: 18).stroke(.white.opacity(0.08)))
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Import report")
-        .accessibilityValue(report.accessibleSummary)
     }
+
+    private static let maxVisibleIssues = 50
+
+    private var needsAttention: Bool { report.hasIssues || report.importedCount == 0 }
 
     private func symbol(for kind: AmbientImportIssue.Kind) -> String {
         switch kind {

@@ -37,6 +37,9 @@ public struct AmbientImportReport: Codable, Sendable {
     }
 
     public var summary: String {
+        if foundNothing {
+            return "No supported backgrounds were found in that folder."
+        }
         var parts = ["Imported \(importedCount) background\(importedCount == 1 ? "" : "s")"]
         if duplicateCount > 0 { parts.append("\(duplicateCount) duplicate\(duplicateCount == 1 ? "" : "s") skipped") }
         if unsupportedCount > 0 { parts.append("\(unsupportedCount) unsupported") }
@@ -46,13 +49,22 @@ public struct AmbientImportReport: Codable, Sendable {
 
     public var hasIssues: Bool { !issues.isEmpty }
 
+    /// True when the folder yielded nothing at all — no imports and no
+    /// skipped files. Presenting that as success would be misleading.
+    public var foundNothing: Bool { importedCount == 0 && issues.isEmpty }
+
     /// A complete spoken-first sentence for assistive technology: import mode,
     /// counts, the untouched-originals guarantee, and how many items need review.
     public var accessibleSummary: String {
         let modePhrase = mode == .copy
             ? "copied into Ambient's private library"
             : "referenced in place"
-        var sentences = ["Imported \(importedCount) background\(importedCount == 1 ? "" : "s"), \(modePhrase)."]
+        var sentences: [String]
+        if foundNothing {
+            sentences = ["No supported backgrounds were found in that folder."]
+        } else {
+            sentences = ["Imported \(importedCount) background\(importedCount == 1 ? "" : "s"), \(modePhrase)."]
+        }
         sentences.append("Original files remain untouched.")
         if hasIssues {
             sentences.append("\(issues.count) item\(issues.count == 1 ? " needs" : "s need") review; each has an actionable message in the import report.")
