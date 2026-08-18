@@ -104,6 +104,80 @@ final class MediaImporterTests: XCTestCase {
         XCTAssertNil(asset.rights)
     }
 
+    func testImportSkipsAssetsAlreadyCatalogedByPathWithoutProvenance() throws {
+        let source = try temporaryDirectory()
+        let file = source.appendingPathComponent("Legacy.jpg")
+        try Data("legacy-bytes".utf8).write(to: file)
+        // A scanner-discovered asset: same path, no provenance hash.
+        let legacy = AmbientAsset(path: file.standardizedFileURL.path, kind: .image, fileName: "Legacy.jpg")
+
+        let importer = AmbientMediaImporter()
+        let prepared = try importer.prepare(
+            folder: source,
+            mode: .reference,
+            existing: [legacy],
+            managedDirectory: try temporaryDirectory()
+        )
+
+        XCTAssertTrue(prepared.assets.isEmpty)
+        XCTAssertEqual(prepared.report.duplicateCount, 1)
+    }
+
+    func testScannerToleratesDuplicatePathsInStoredState() throws {
+        let asset = AmbientAsset(path: "/Pictures/x.jpg", kind: .image, fileName: "x.jpg")
+        // Must not trap on duplicate keys — corrupted historical state would
+        // otherwise crash every rescan.
+        let result = AmbientCatalogScanner().scan(folders: [], existing: [asset, asset])
+        XCTAssertTrue(result.assets.isEmpty)
+    }
+
+    func testRescanDoesNotTagImagesAsVideo() throws {
+        let folder = try temporaryDirectory()
+        try Data("img".utf8).write(to: folder.appendingPathComponent("Beach.jpg"))
+        try Data("vid".utf8).write(to: folder.appendingPathComponent("Clip.mov"))
+
+        let result = AmbientCatalogScanner().scan(folders: [folder])
+
+        let image = try XCTUnwrap(result.assets.first(where: { $0.kind == .image }))
+        let video = try XCTUnwrap(result.assets.first(where: { $0.kind == .video }))
+        XCTAssertFalse(image.tags.contains("video"))
+        XCTAssertTrue(video.tags.contains("video"))
+    }
+
+    func testImportedVideoCarriesVideoTagLikeScannedVideos() throws {
+        let source = try temporaryDirectory()
+        try Data("vid".utf8).write(to: source.appendingPathComponent("Sunset.mov"))
+
+        let prepared = try AmbientMediaImporter().prepare(
+            folder: source,
+            mode: .reference,
+            existing: [],
+            managedDirectory: try temporaryDirectory()
+        )
+
+        let asset = try XCTUnwrap(prepared.assets.first)
+        XCTAssertTrue(asset.tags.contains("video"))
+    }
+
+    func testReferenceImportRegistersFolderEvenWhenNothingImported() throws {
+        let source = try temporaryDirectory()
+        try Data("notes".utf8).write(to: source.appendingPathComponent("Read Me.txt"))
+        let engine = try AmbientEngine(store: AmbientStateStore(directoryURL: try temporaryDirectory()))
+
+        let result = try engine.execute(.importMedia(AmbientImportCommand(
+            folderPath: source.path,
+            mode: .reference,
+            requestID: "register-empty-0001"
+        )))
+
+        XCTAssertEqual(result.importReport?.importedCount, 0)
+        XCTAssertTrue(engine.state.libraryFolders.contains(source.standardizedFileURL.path))
+
+        // The registration must survive a restart (state persisted).
+        let restarted = try AmbientEngine(store: AmbientStateStore(directoryURL: engine.store.directoryURL))
+        XCTAssertTrue(restarted.state.libraryFolders.contains(source.standardizedFileURL.path))
+    }
+
     private func temporaryDirectory() throws -> URL {
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent("ambient-import-tests-\(UUID().uuidString)", isDirectory: true)

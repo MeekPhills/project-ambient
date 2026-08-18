@@ -6,6 +6,7 @@ public struct AmbientImportIssue: Codable, Hashable, Sendable {
         case duplicate
         case unsupported
         case unreadable
+        case copyFailed = "copy-failed"
     }
 
     public var kind: Kind
@@ -36,12 +37,44 @@ public struct AmbientImportReport: Codable, Sendable {
         self.unreadableCount = issues.filter { $0.kind == .unreadable }.count
     }
 
+    /// Computed (not encoded) so old persisted reports still decode.
+    public var copyFailedCount: Int { issues.filter { $0.kind == .copyFailed }.count }
+
     public var summary: String {
+        if foundNothing {
+            return "No supported backgrounds were found in that folder."
+        }
         var parts = ["Imported \(importedCount) background\(importedCount == 1 ? "" : "s")"]
         if duplicateCount > 0 { parts.append("\(duplicateCount) duplicate\(duplicateCount == 1 ? "" : "s") skipped") }
         if unsupportedCount > 0 { parts.append("\(unsupportedCount) unsupported") }
         if unreadableCount > 0 { parts.append("\(unreadableCount) unreadable") }
+        if copyFailedCount > 0 { parts.append("\(copyFailedCount) could not be copied") }
         return parts.joined(separator: "; ") + "."
+    }
+
+    public var hasIssues: Bool { !issues.isEmpty }
+
+    /// True when the folder yielded nothing at all — no imports and no
+    /// skipped files. Presenting that as success would be misleading.
+    public var foundNothing: Bool { importedCount == 0 && issues.isEmpty }
+
+    /// A complete spoken-first sentence for assistive technology: import mode,
+    /// counts, the untouched-originals guarantee, and how many items need review.
+    public var accessibleSummary: String {
+        let modePhrase = mode == .copy
+            ? "copied into Ambient's private library"
+            : "referenced in place"
+        var sentences: [String]
+        if foundNothing {
+            sentences = ["No supported backgrounds were found in that folder."]
+        } else {
+            sentences = ["Imported \(importedCount) background\(importedCount == 1 ? "" : "s"), \(modePhrase)."]
+        }
+        sentences.append("Original files remain untouched.")
+        if hasIssues {
+            sentences.append("\(issues.count) item\(issues.count == 1 ? " needs" : "s need") review; each has an actionable message in the import report.")
+        }
+        return sentences.joined(separator: " ")
     }
 }
 
@@ -74,6 +107,10 @@ public final class AmbientMediaImporter {
         }
 
         var knownHashes = Set(existing.compactMap { $0.provenance?.sourceSHA256 })
+        // Legacy assets discovered by the scanner have no provenance hash, so
+        // hash dedupe alone would re-append them under the same path — and a
+        // duplicate path corrupts the stored catalog.
+        var knownPaths = Set(existing.map { $0.path })
         var assets: [AmbientAsset] = []
         var issues: [AmbientImportIssue] = []
         var createdFiles: [URL] = []
@@ -131,16 +168,44 @@ public final class AmbientMediaImporter {
                         "\(digest.prefix(12))-\(safeFileName(fileName))",
                         isDirectory: false
                     )
-                    if !fileManager.fileExists(atPath: destination.path) {
-                        try fileManager.copyItem(at: source, to: destination)
-                        createdFiles.append(destination)
-                    }
                 } else {
                     destination = source.standardizedFileURL
                 }
 
+                guard knownPaths.insert(destination.path).inserted else {
+                    issues.append(AmbientImportIssue(
+                        kind: .duplicate,
+                        fileName: fileName,
+                        message: "\(fileName) is already in the library."
+                    ))
+                    continue
+                }
+
+                if mode == .copy, !fileManager.fileExists(atPath: destination.path) {
+                    do {
+                        try fileManager.copyItem(at: source, to: destination)
+                        createdFiles.append(destination)
+                    } catch {
+                        // A copy failure is a destination problem, not a source
+                        // problem — do not blame the (readable) original.
+                        issues.append(AmbientImportIssue(
+                            kind: .copyFailed,
+                            fileName: fileName,
+                            message: "\(fileName) could not be copied into Ambient's library: \(error.localizedDescription)"
+                        ))
+                        knownHashes.remove(digest)
+                        knownPaths.remove(destination.path)
+                        continue
+                    }
+                }
+
                 let byteCount = Int64(values?.fileSize ?? 0)
-                let tags = AmbientCatalogScanner.filenameTags(for: source.deletingPathExtension().lastPathComponent)
+                var tags = AmbientCatalogScanner.filenameTags(for: source.deletingPathExtension().lastPathComponent)
+                if kind == .video {
+                    // The scanner guarantees this tag for videos; imports must
+                    // not create assets whose channel membership differs.
+                    tags.insert("video")
+                }
                 assets.append(AmbientAsset(
                     path: destination.path,
                     kind: kind,

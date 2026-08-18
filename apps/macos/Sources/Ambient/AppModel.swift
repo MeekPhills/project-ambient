@@ -1,3 +1,4 @@
+import Accessibility
 import AmbientCore
 import AppKit
 import Combine
@@ -99,14 +100,28 @@ final class AppModel: ObservableObject {
         panel.allowsMultipleSelection = false
         guard panel.runModal() == .OK, let url = panel.url else { return }
 
+        // A failed import must not leave the previous import's report on
+        // screen attributed to this run.
+        lastImportReport = nil
         perform("Importing \(url.lastPathComponent)…") { engine in
             let result = try engine.execute(.importMedia(AmbientImportCommand(
                 folderPath: url.path,
                 mode: mode
             )))
             self.lastImportReport = result.importReport
+            if let report = result.importReport {
+                // Post after this turn's refresh() settles the view tree, or
+                // VoiceOver can drop the announcement under the layout change.
+                DispatchQueue.main.async {
+                    AccessibilityNotification.Announcement(report.accessibleSummary).post()
+                }
+            }
             return result
         }
+    }
+
+    func dismissImportReport() {
+        lastImportReport = nil
     }
 
     func rescan() {

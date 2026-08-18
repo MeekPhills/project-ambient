@@ -265,6 +265,13 @@ private struct EmptyLibraryView: View {
                 OnboardingPoint(symbol: "doc.on.doc", title: "Originals safe", detail: "Copy or reference")
             }
             .padding(.top, 8)
+
+            // An import that added nothing leaves the library empty, so this view
+            // stays on screen — the report must be reachable here or not at all.
+            if let report = model.lastImportReport {
+                ImportReportCard(report: report) { model.dismissImportReport() }
+                    .frame(maxWidth: 620)
+            }
         }
         .padding(40)
     }
@@ -299,6 +306,9 @@ private struct DashboardView: View {
                         .frame(maxWidth: .infinity)
                     NowNextCard(model: model)
                         .frame(width: 310)
+                }
+                if let report = model.lastImportReport {
+                    ImportReportCard(report: report) { model.dismissImportReport() }
                 }
                 BackgroundGrid(model: model)
                 RulesCard(model: model)
@@ -386,6 +396,83 @@ private struct CurrentBackgroundCard: View {
     }
 }
 
+private struct ImportReportCard: View {
+    var report: AmbientImportReport
+    var dismiss: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Label("Import report", systemImage: needsAttention ? "exclamationmark.triangle.fill" : "checkmark.circle.fill")
+                    .font(.headline)
+                    .foregroundStyle(needsAttention ? Color.orange : Color.green)
+                Spacer()
+                Button("Dismiss", action: dismiss)
+                    .buttonStyle(.borderless)
+                    .accessibilityLabel("Dismiss import report")
+            }
+            // The summary is its own accessibility element: a value on the
+            // .contain container below is treated as a group and never spoken.
+            VStack(alignment: .leading, spacing: 4) {
+                Text(report.summary)
+                    .font(.callout)
+                Text(report.mode == .copy
+                    ? "Files were copied into Ambient's private library. Your originals are untouched."
+                    : "Files are referenced in place. Your originals are untouched.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("Import summary")
+            .accessibilityValue(report.accessibleSummary)
+            if report.hasIssues {
+                Divider()
+                // Index-keyed: issues from same-named files in different folders
+                // are byte-identical, and value identity would collapse their rows.
+                ForEach(Array(report.issues.prefix(Self.maxVisibleIssues).enumerated()), id: \.offset) { _, issue in
+                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                        Image(systemName: symbol(for: issue.kind))
+                            .foregroundStyle(.secondary)
+                            .accessibilityHidden(true)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(issue.fileName)
+                                .font(.callout.weight(.medium))
+                            Text(issue.message)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                    .accessibilityElement(children: .combine)
+                }
+                if report.issues.count > Self.maxVisibleIssues {
+                    Text("And \(report.issues.count - Self.maxVisibleIssues) more items not shown.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+        .padding(18)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 18).stroke(.white.opacity(0.08)))
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Import report")
+    }
+
+    private static let maxVisibleIssues = 50
+
+    private var needsAttention: Bool { report.hasIssues || report.importedCount == 0 }
+
+    private func symbol(for kind: AmbientImportIssue.Kind) -> String {
+        switch kind {
+        case .duplicate: return "doc.on.doc"
+        case .unsupported: return "questionmark.square.dashed"
+        case .unreadable: return "lock.doc"
+        case .copyFailed: return "externaldrive.badge.exclamationmark"
+        }
+    }
+}
+
 private struct NowNextCard: View {
     @ObservedObject var model: AppModel
 
@@ -428,6 +515,9 @@ private struct NowNextCard: View {
         .frame(maxHeight: .infinity, alignment: .top)
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 18).stroke(.white.opacity(0.08)))
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Now, next and why")
+        .accessibilityValue(model.nowNext.accessibleSummary)
     }
 }
 
