@@ -468,6 +468,7 @@ private struct ImportReportCard: View {
         case .duplicate: return "doc.on.doc"
         case .unsupported: return "questionmark.square.dashed"
         case .unreadable: return "lock.doc"
+        case .copyFailed: return "externaldrive.badge.exclamationmark"
         }
     }
 }

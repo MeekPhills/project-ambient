@@ -125,12 +125,21 @@ public final class AmbientEngine {
                 state.assets.sort { $0.path.localizedStandardCompare($1.path) == .orderedAscending }
                 state.lastScanAt = Date()
 
-                if !prepared.assets.isEmpty {
-                    let libraryPath = (mode == .copy ? managedDirectory : url.standardizedFileURL).path
-                    if !state.libraryFolders.contains(libraryPath) {
-                        state.libraryFolders.append(libraryPath)
-                        state.libraryFolders.sort()
-                    }
+                // Reference mode always registers the chosen folder — even a
+                // zero-import run — so later additions appear on rescan, as the
+                // pre-import behavior guaranteed. Copy mode registers the
+                // managed directory only once it actually holds media.
+                let libraryPath: String?
+                if mode == .reference {
+                    libraryPath = url.standardizedFileURL.path
+                } else {
+                    libraryPath = prepared.assets.isEmpty ? nil : managedDirectory.path
+                }
+                var libraryChanged = false
+                if let libraryPath, !state.libraryFolders.contains(libraryPath) {
+                    state.libraryFolders.append(libraryPath)
+                    state.libraryFolders.sort()
+                    libraryChanged = true
                 }
 
                 return (
@@ -140,7 +149,7 @@ public final class AmbientEngine {
                         message: prepared.report.summary,
                         importReport: prepared.report
                     ),
-                    !prepared.assets.isEmpty
+                    !prepared.assets.isEmpty || libraryChanged
                 )
             }
         } catch {

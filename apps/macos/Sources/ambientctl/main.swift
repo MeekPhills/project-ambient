@@ -165,7 +165,9 @@ private struct AmbientCLI {
             writeMutation(try engine.restore(requestID: value(after: "--request-id", in: arguments)), engine: engine)
 
         case "import":
-            guard arguments.count >= 2 else { throw CLIError.usage("import requires a folder path.") }
+            guard arguments.count >= 2, !arguments[1].hasPrefix("--") else {
+                throw CLIError.usage("import requires a folder path before any flags.")
+            }
             writeMutation(
                 try engine.execute(.importMedia(AmbientImportCommand(
                     folderPath: arguments[1],

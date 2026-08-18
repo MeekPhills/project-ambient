@@ -38,7 +38,10 @@ public final class AmbientCatalogScanner {
     }
 
     public func scan(folders: [URL], existing: [AmbientAsset] = []) -> AmbientScanResult {
-        let existingByPath = Dictionary(uniqueKeysWithValues: existing.map { ($0.path, $0) })
+        // Tolerate duplicate paths in stored state (e.g. from historical import
+        // bugs): trapping here would make every rescan crash until state.json
+        // is hand-edited.
+        let existingByPath = Dictionary(existing.map { ($0.path, $0) }, uniquingKeysWith: { first, _ in first })
         var found: [AmbientAsset] = []
         var skipped = 0
 
@@ -74,8 +77,10 @@ public final class AmbientCatalogScanner {
                 }
 
                 var tags = Self.filenameTags(for: fileURL.deletingPathExtension().lastPathComponent)
-                if kind == .image, usesVisionClassification {
-                    tags.formUnion(visionTags(for: fileURL))
+                if kind == .image {
+                    if usesVisionClassification {
+                        tags.formUnion(visionTags(for: fileURL))
+                    }
                 } else {
                     tags.insert("video")
                 }
