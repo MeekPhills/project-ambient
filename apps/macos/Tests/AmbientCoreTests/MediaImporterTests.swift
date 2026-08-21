@@ -178,6 +178,127 @@ final class MediaImporterTests: XCTestCase {
         XCTAssertTrue(restarted.state.libraryFolders.contains(source.standardizedFileURL.path))
     }
 
+    func testRescanDoesNotResurrectContentDuplicateOfImportedAsset() throws {
+        let source = try temporaryDirectory()
+        let bytes = Data("identical-image-bytes".utf8)
+        try bytes.write(to: source.appendingPathComponent("Skyline.jpg"))
+        try bytes.write(to: source.appendingPathComponent("Skyline Copy.jpg"))
+        let engine = try AmbientEngine(store: AmbientStateStore(directoryURL: try temporaryDirectory()))
+
+        let result = try engine.execute(.importMedia(AmbientImportCommand(
+            folderPath: source.path,
+            mode: .reference,
+            requestID: "rescan-dedupe-0001"
+        )))
+        XCTAssertEqual(result.importReport?.importedCount, 1)
+        XCTAssertEqual(result.importReport?.duplicateCount, 1)
+
+        // Path-only reconciliation would re-add the skipped twin here, without
+        // provenance or rights.
+        XCTAssertEqual(engine.scanLibraries(), 1)
+        XCTAssertEqual(engine.state.assets.count, 1)
+        XCTAssertNotNil(engine.state.assets.first?.provenance)
+    }
+
+    func testLedgerKeepsBoundedIssueExcerptWithExactCounts() throws {
+        let source = try temporaryDirectory()
+        let unsupportedCount = AmbientEngine.maximumLedgerImportIssues * 2
+        for index in 0..<unsupportedCount {
+            try Data("notes".utf8).write(to: source.appendingPathComponent("Notes-\(index).txt"))
+        }
+        let engine = try AmbientEngine(store: AmbientStateStore(directoryURL: try temporaryDirectory()))
+
+        let live = try engine.execute(.importMedia(AmbientImportCommand(
+            folderPath: source.path,
+            mode: .reference,
+            requestID: "ledger-bound-0001"
+        )))
+        XCTAssertEqual(live.importReport?.issues.count, unsupportedCount)
+
+        let stored = try XCTUnwrap(engine.state.requestLedger?.last?.result.importReport)
+        XCTAssertEqual(stored.issues.count, AmbientEngine.maximumLedgerImportIssues)
+        XCTAssertEqual(stored.unsupportedCount, unsupportedCount)
+        XCTAssertEqual(stored.reviewItemCount, unsupportedCount)
+        XCTAssertTrue(stored.accessibleSummary.contains("\(unsupportedCount) items need review"))
+    }
+
+    func testInjectedImportFailureLeavesLastKnownGoodStateUnchanged() throws {
+        let dataDirectory = try temporaryDirectory()
+        let source = try temporaryDirectory()
+        try Data("image".utf8).write(to: source.appendingPathComponent("City.jpg"))
+        let engine = try AmbientEngine(store: AmbientStateStore(directoryURL: dataDirectory))
+        _ = try engine.execute(.importMedia(AmbientImportCommand(
+            folderPath: source.path,
+            mode: .reference,
+            requestID: "good-state-0001"
+        )))
+        // Compare identity, not whole structs: rolling back reloads state from
+        // disk, where ISO-8601 encoding drops sub-second date precision.
+        let goodAssetIDs = engine.state.assets.map(\.id)
+        let goodDigests = engine.state.assets.compactMap { $0.provenance?.sourceSHA256 }
+        let goodFolders = engine.state.libraryFolders
+
+        let missing = source.appendingPathComponent("does-not-exist", isDirectory: true)
+        XCTAssertThrowsError(try engine.execute(.importMedia(AmbientImportCommand(
+            folderPath: missing.path,
+            mode: .copy,
+            requestID: "failed-import-0001"
+        ))))
+
+        XCTAssertEqual(engine.state.assets.map(\.id), goodAssetIDs)
+        XCTAssertEqual(engine.state.assets.compactMap { $0.provenance?.sourceSHA256 }, goodDigests)
+        XCTAssertEqual(engine.state.libraryFolders, goodFolders)
+        XCTAssertNil(engine.state.requestLedger?.first(where: { $0.requestID == "failed-import-0001" }))
+
+        // The failure must not have been persisted either.
+        let restarted = try AmbientEngine(store: AmbientStateStore(directoryURL: dataDirectory))
+        XCTAssertEqual(restarted.state.assets.map(\.id), goodAssetIDs)
+        XCTAssertEqual(restarted.state.assets.compactMap { $0.provenance?.sourceSHA256 }, goodDigests)
+        XCTAssertEqual(restarted.state.libraryFolders, goodFolders)
+    }
+
+    func testInjectedApplyFailureRestoresLastKnownGoodState() throws {
+        let dataDirectory = try temporaryDirectory()
+        let source = try temporaryDirectory()
+        try Data("one".utf8).write(to: source.appendingPathComponent("One.jpg"))
+        try Data("two".utf8).write(to: source.appendingPathComponent("Two.jpg"))
+        let wallpaper = FailingWallpaperService()
+        let engine = try AmbientEngine(
+            store: AmbientStateStore(directoryURL: dataDirectory),
+            wallpaper: wallpaper
+        )
+        _ = try engine.execute(.importMedia(AmbientImportCommand(
+            folderPath: source.path,
+            mode: .reference,
+            requestID: "apply-good-0001"
+        )))
+        let applied = try engine.next(requestID: "apply-good-0002")
+        let goodAssetID = try XCTUnwrap(applied.asset?.id)
+        XCTAssertEqual(engine.state.currentAssetID, goodAssetID)
+        let goodHistory = engine.state.history
+
+        wallpaper.shouldFail = true
+        XCTAssertThrowsError(try engine.next(requestID: "apply-fail-0001"))
+
+        XCTAssertEqual(engine.state.currentAssetID, goodAssetID)
+        XCTAssertEqual(engine.state.history, goodHistory)
+        XCTAssertNil(engine.state.requestLedger?.first(where: { $0.requestID == "apply-fail-0001" }))
+
+        let restarted = try AmbientEngine(store: AmbientStateStore(directoryURL: dataDirectory))
+        XCTAssertEqual(restarted.state.currentAssetID, goodAssetID)
+        XCTAssertEqual(restarted.state.history, goodHistory)
+    }
+
+    func testRollbackRemovesFilesCreatedByAFailedCopyImport() throws {
+        let managed = try temporaryDirectory()
+        let created = managed.appendingPathComponent("partial-copy.jpg")
+        try Data("partial".utf8).write(to: created)
+
+        AmbientMediaImporter().rollback(createdFiles: [created])
+
+        XCTAssertFalse(FileManager.default.fileExists(atPath: created.path))
+    }
+
     private func temporaryDirectory() throws -> URL {
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent("ambient-import-tests-\(UUID().uuidString)", isDirectory: true)
@@ -190,4 +311,20 @@ final class MediaImporterTests: XCTestCase {
         let value = SHA256.hash(data: try Data(contentsOf: url))
         return value.map { String(format: "%02x", $0) }.joined()
     }
+}
+
+/// Applies successfully until `shouldFail` is set, then throws — the injected
+/// apply failure #37 requires last-known-good state to survive.
+private final class FailingWallpaperService: AmbientWallpaperApplying {
+    var shouldFail = false
+
+    func captureCurrentWallpapers() -> [String: String] { [:] }
+
+    func apply(asset: AmbientAsset, scope: AmbientDisplayScope) throws {
+        if shouldFail {
+            throw CocoaError(.fileWriteNoPermission, userInfo: [NSFilePathErrorKey: asset.path])
+        }
+    }
+
+    func restore(paths: [String: String]) throws {}
 }

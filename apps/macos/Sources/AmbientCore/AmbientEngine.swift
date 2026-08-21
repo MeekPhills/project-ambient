@@ -29,6 +29,15 @@ public struct AmbientMutationResult: Codable, Sendable {
         self.expiresAt = expiresAt
         self.importReport = importReport
     }
+
+    /// The persisted form of this result: identical except that an attached
+    /// import report keeps only a bounded excerpt of its per-file rows.
+    func boundedForStorage(importIssueLimit: Int) -> AmbientMutationResult {
+        guard let importReport else { return self }
+        var stored = self
+        stored.importReport = importReport.truncatingIssues(to: importIssueLimit)
+        return stored
+    }
 }
 
 public struct AmbientHistoryItem: Codable, Sendable {
@@ -57,6 +66,9 @@ public enum AmbientIdempotencyError: LocalizedError {
 
 public final class AmbientEngine {
     private static let maximumRequestLedgerEntries = 128
+    /// Per-file import rows kept in a persisted ledger entry. Counts stay exact;
+    /// only the row excerpt is bounded, so state.json cannot grow without limit.
+    static let maximumLedgerImportIssues = 20
 
     public let store: AmbientStateStore
     public let scanner: AmbientCatalogScanner
@@ -442,12 +454,12 @@ public final class AmbientEngine {
     private func scanLibrariesUnlocked(at date: Date) -> Int {
         let folders = state.libraryFolders.map { URL(fileURLWithPath: $0, isDirectory: true) }
         let result = scanner.scan(folders: folders, existing: state.assets)
-        state.assets = result.assets
+        state.assets = AmbientMediaImporter.removingContentDuplicates(from: result.assets)
         state.lastScanAt = date
         if let current = state.currentAssetID, !state.assets.contains(where: { $0.id == current }) {
             state.currentAssetID = nil
         }
-        return result.assets.count
+        return state.assets.count
     }
 
     private func advanceWallpaper(
@@ -541,7 +553,7 @@ public final class AmbientEngine {
             ledger.append(AmbientRequestLedgerEntry(
                 requestID: requestID,
                 fingerprint: fingerprint,
-                result: output.result,
+                result: output.result.boundedForStorage(importIssueLimit: Self.maximumLedgerImportIssues),
                 recordedAt: date
             ))
             if ledger.count > Self.maximumRequestLedgerEntries {
