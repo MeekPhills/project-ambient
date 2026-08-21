@@ -5,6 +5,9 @@ public enum AmbientRotationBoundaryReason: String, CaseIterable, Hashable, Senda
     case ruleSchedule
     case pauseExpiration
     case temporaryChannelExpiration
+    /// Event-driven rather than scheduled: the screen locked while the rotation
+    /// trigger was `screenLock`.
+    case screenLock
 }
 
 public struct AmbientRotationBoundary: Equatable, Sendable {
@@ -235,6 +238,8 @@ public enum AmbientRotationSchedulePlanner {
 public enum AmbientRuntimeEvent: Equatable, Sendable {
     case willSleep
     case didWake
+    case screenLocked
+    case screenUnlocked
     case displayConfigurationChanged
     case powerStateChanged
     case clockOrTimeZoneChanged
@@ -297,6 +302,7 @@ public final class AmbientRotationCoordinator {
     private var scheduledAction: (any AmbientScheduledAction)?
     private var generation = 0
     private var isSleeping = false
+    private var isScreenLocked = false
     private var suspendedBoundary: AmbientRotationBoundary?
     private var lastWakeHandledAt: Date?
     private var lastSeenStateRevision: UInt64 = 0
@@ -381,6 +387,21 @@ public final class AmbientRotationCoordinator {
             }
             scheduleNext(after: date)
 
+        case .screenLocked:
+            // Exactly one advance per lock cycle: macOS can deliver the lock
+            // notification more than once, and sleep emits it alongside its own.
+            guard !isScreenLocked else { return }
+            isScreenLocked = true
+            guard !isSleeping else { return }
+            let date = now()
+            guard rotationTrigger(at: date) == .screenLock else { return }
+            advance(at: date, boundary: AmbientRotationBoundary(date: date, reasons: [.screenLock]))
+
+        case .screenUnlocked:
+            // Unlocking only re-arms the next lock; it never rotates, so the
+            // background the user locked to is the one they come back to.
+            isScreenLocked = false
+
         case .displayConfigurationChanged:
             guard !isSleeping else { return }
             let date = now()
@@ -440,7 +461,12 @@ public final class AmbientRotationCoordinator {
             let state = try driver.rotationState(at: date)
             lastSeenStateRevision = max(lastSeenStateRevision, state.stateRevision ?? 0)
             let calendar = fixedCalendar ?? .current
-            let cadence = cadenceProvider(state)
+            // Lock-triggered rotation is event-driven by definition: no cadence
+            // boundary is planned, so no timer is armed. Rule boundaries still
+            // apply — they choose the channel, not when to advance within it.
+            let cadence = (state.rotationTrigger ?? .cadence) == .screenLock
+                ? AmbientRotationCadence.disabled
+                : cadenceProvider(state)
             guard let boundary = AmbientRotationSchedulePlanner.nextBoundary(
                 in: state,
                 after: date,
@@ -475,6 +501,19 @@ public final class AmbientRotationCoordinator {
 
         advance(at: date, boundary: boundary)
         scheduleNext(after: date)
+    }
+
+    /// Reads the trigger from current state. A read failure falls back to
+    /// cadence, which never rotates on lock — the safe direction.
+    private func rotationTrigger(at date: Date) -> AmbientRotationTrigger {
+        do {
+            let state = try driver.rotationState(at: date)
+            lastSeenStateRevision = max(lastSeenStateRevision, state.stateRevision ?? 0)
+            return state.rotationTrigger ?? .cadence
+        } catch {
+            onError(error)
+            return .cadence
+        }
     }
 
     private func advance(at date: Date, boundary: AmbientRotationBoundary) {

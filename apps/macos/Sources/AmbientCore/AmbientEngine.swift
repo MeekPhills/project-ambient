@@ -410,6 +410,27 @@ public final class AmbientEngine {
         }
     }
 
+    public func setRotationTrigger(
+        _ trigger: AmbientRotationTrigger,
+        requestID: String? = nil
+    ) throws -> AmbientMutationResult {
+        try idempotentMutation(
+            requestID: requestID,
+            fingerprint: fingerprint("set_rotation_trigger", trigger.rawValue)
+        ) { [self] in
+            let changed = (state.rotationTrigger ?? .cadence) != trigger
+            state.rotationTrigger = trigger
+            return (
+                AmbientMutationResult(
+                    action: "set_rotation_trigger",
+                    requestID: requestID,
+                    message: "Rotation trigger set to \(trigger.title.lowercased()). \(trigger.explanation)"
+                ),
+                changed
+            )
+        }
+    }
+
     public func history(limit: Int) -> [AmbientHistoryItem] {
         Array(state.history.prefix(max(0, min(limit, 100))).enumerated()).compactMap { index, id in
             guard let asset = state.assets.first(where: { $0.id == id }) else { return nil }

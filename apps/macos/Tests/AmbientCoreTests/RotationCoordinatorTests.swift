@@ -556,6 +556,122 @@ final class AmbientRotationCoordinatorTests: XCTestCase {
         XCTAssertEqual(changes, 2)
     }
 
+    func testScreenLockAdvancesOnceAndUnlockDoesNot() throws {
+        let calendar = utcCalendar()
+        let clock = TestClock(try date(hour: 9, minute: 30, calendar: calendar))
+        var state = try scheduledState()
+        state.rotationTrigger = .screenLock
+        let driver = TestRotationDriver(state: state)
+        let events = TestRuntimeEvents()
+        let coordinator = AmbientRotationCoordinator(
+            driver: driver,
+            scheduler: TestBoundaryScheduler(),
+            events: events,
+            calendar: calendar,
+            now: { clock.date }
+        )
+        coordinator.start()
+
+        events.send(.screenLocked)
+        XCTAssertEqual(driver.advances.count, 1)
+        XCTAssertEqual(driver.advances.first?.boundary.reasons, [.screenLock])
+
+        // macOS can repeat the lock notification within one lock cycle.
+        events.send(.screenLocked)
+        XCTAssertEqual(driver.advances.count, 1)
+
+        events.send(.screenUnlocked)
+        XCTAssertEqual(driver.advances.count, 1)
+
+        // Re-arms for the next lock.
+        events.send(.screenLocked)
+        XCTAssertEqual(driver.advances.count, 2)
+    }
+
+    func testScreenLockDoesNotRotateUnderCadenceTrigger() throws {
+        let calendar = utcCalendar()
+        let clock = TestClock(try date(hour: 9, minute: 30, calendar: calendar))
+        // Default state: rotationTrigger nil, i.e. the cadence behavior every
+        // existing install already has.
+        let driver = TestRotationDriver(state: try scheduledState())
+        let events = TestRuntimeEvents()
+        let coordinator = AmbientRotationCoordinator(
+            driver: driver,
+            scheduler: TestBoundaryScheduler(),
+            events: events,
+            calendar: calendar,
+            now: { clock.date }
+        )
+        coordinator.start()
+
+        events.send(.screenLocked)
+
+        XCTAssertTrue(driver.advances.isEmpty)
+    }
+
+    func testLockTriggerSchedulesNoCadenceTimer() throws {
+        let calendar = utcCalendar()
+        let clock = TestClock(try date(hour: 9, minute: 7, calendar: calendar))
+        // Two stills, so a cadence boundary is genuinely available to plan.
+        var rotatable = AmbientState()
+        rotatable.assets = [
+            AmbientAsset(path: "/first.jpg", kind: .image, fileName: "first.jpg"),
+            AmbientAsset(path: "/second.jpg", kind: .image, fileName: "second.jpg")
+        ]
+
+        let cadenceCoordinator = AmbientRotationCoordinator(
+            driver: TestRotationDriver(state: rotatable),
+            scheduler: TestBoundaryScheduler(),
+            events: TestRuntimeEvents(),
+            calendar: calendar,
+            cadenceProvider: { _ in .productionDefault },
+            now: { clock.date }
+        )
+        cadenceCoordinator.start()
+        XCTAssertEqual(cadenceCoordinator.nextBoundary?.reasons, [.recurringRotation])
+
+        var lockState = rotatable
+        lockState.rotationTrigger = .screenLock
+        let lockScheduler = TestBoundaryScheduler()
+        let lockCoordinator = AmbientRotationCoordinator(
+            driver: TestRotationDriver(state: lockState),
+            scheduler: lockScheduler,
+            events: TestRuntimeEvents(),
+            calendar: calendar,
+            cadenceProvider: { _ in .productionDefault },
+            now: { clock.date }
+        )
+        lockCoordinator.start()
+
+        // Same state, lock trigger: no cadence boundary, so no timer is armed.
+        XCTAssertNil(lockCoordinator.nextBoundary)
+        XCTAssertTrue(lockScheduler.entries.isEmpty)
+    }
+
+    func testScreenLockWhileSleepingDoesNotRotate() throws {
+        let calendar = utcCalendar()
+        let clock = TestClock(try date(hour: 9, minute: 30, calendar: calendar))
+        var state = try scheduledState()
+        state.rotationTrigger = .screenLock
+        let driver = TestRotationDriver(state: state)
+        let events = TestRuntimeEvents()
+        let coordinator = AmbientRotationCoordinator(
+            driver: driver,
+            scheduler: TestBoundaryScheduler(),
+            events: events,
+            calendar: calendar,
+            now: { clock.date }
+        )
+        coordinator.start()
+
+        // Sleep emits a lock notification of its own; the wake path owns that
+        // recovery, so it must not also rotate here.
+        events.send(.willSleep)
+        events.send(.screenLocked)
+
+        XCTAssertTrue(driver.advances.isEmpty)
+    }
+
     private func scheduledState() throws -> AmbientState {
         let beach = try XCTUnwrap(AmbientChannel.builtIns.first { $0.id == AmbientChannel.beachChannelID })
         let city = try XCTUnwrap(AmbientChannel.builtIns.first { $0.id == AmbientChannel.citiesChannelID })
