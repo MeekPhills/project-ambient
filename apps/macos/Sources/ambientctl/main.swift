@@ -59,6 +59,7 @@ private enum CLIError: LocalizedError {
     case usage(String)
     case unknownChannel(String)
     case invalidPolicy(String)
+    case invalidRotationTrigger(String)
     case invalidScope(String)
     case invalidImportMode(String)
 
@@ -67,6 +68,7 @@ private enum CLIError: LocalizedError {
         case .usage(let value): return value
         case .unknownChannel(let value): return "No channel matches “\(value)”."
         case .invalidPolicy(let value): return "Unknown power policy “\(value)”. Use automatic, efficiency, or quality."
+        case .invalidRotationTrigger(let value): return "Unknown rotation trigger “\(value)”. Use cadence or screen-lock."
         case .invalidScope(let value): return "Unknown display scope “\(value)”. Use all or primary."
         case .invalidImportMode(let value): return "Unknown import mode “\(value)”. Use copy or reference."
         }
@@ -157,6 +159,15 @@ private struct AmbientCLI {
                 requestID: value(after: "--request-id", in: arguments)
             ), engine: engine)
 
+        case "rotation-trigger":
+            guard arguments.count >= 3, arguments[1] == "set" else {
+                throw CLIError.usage("Use rotation-trigger set <cadence|screen-lock>.")
+            }
+            writeMutation(try engine.setRotationTrigger(
+                try rotationTrigger(arguments[2]),
+                requestID: value(after: "--request-id", in: arguments)
+            ), engine: engine)
+
         case "history":
             let limit = intValue(after: "--limit", in: arguments) ?? 20
             writeJSON(HistoryEnvelope(items: engine.history(limit: limit)))
@@ -229,6 +240,14 @@ private struct AmbientCLI {
         return scope
     }
 
+    private static func rotationTrigger(_ raw: String) throws -> AmbientRotationTrigger {
+        switch raw.lowercased().replacingOccurrences(of: "-", with: "_") {
+        case "cadence", "schedule", "interval", "timer": return .cadence
+        case "screen_lock", "lock", "on_lock", "lock_only": return .screenLock
+        default: throw CLIError.invalidRotationTrigger(raw)
+        }
+    }
+
     private static func powerPolicy(_ raw: String) throws -> AmbientPowerPolicy {
         switch raw.lowercased().replacingOccurrences(of: "-", with: "_") {
         case "automatic", "balanced": return .automatic
@@ -282,6 +301,7 @@ private struct AmbientCLI {
       pause [--duration <seconds>] [--request-id <id>] --json
       resume [--request-id <id>] --json
       power-policy set <automatic|efficiency|quality> [--request-id <id>] --json
+      rotation-trigger set <cadence|screen-lock> [--request-id <id>] --json
       history [--limit <count>] --json
       restore [--request-id <id>] --json
       import <folder> [--mode copy|reference] [--request-id <id>] --json

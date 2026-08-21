@@ -174,6 +174,27 @@ public enum AmbientPlaybackStatus: String, Codable, CaseIterable, Sendable {
     case paused
 }
 
+public enum AmbientRotationTrigger: String, Codable, CaseIterable, Sendable {
+    /// Advance on the scheduled cadence (the long-standing behavior).
+    case cadence
+    /// Advance once per screen lock and never on a timer.
+    case screenLock = "screen-lock"
+
+    public var title: String {
+        switch self {
+        case .cadence: return "On a schedule"
+        case .screenLock: return "Once per screen lock"
+        }
+    }
+
+    public var explanation: String {
+        switch self {
+        case .cadence: return "Backgrounds change on the rotation schedule."
+        case .screenLock: return "Backgrounds change when you lock the screen, never on a timer."
+        }
+    }
+}
+
 public enum AmbientPowerPolicy: String, Codable, CaseIterable, Sendable {
     /// Honor Low Power Mode and use stills while the desktop is mostly hidden.
     case automatic
@@ -238,6 +259,9 @@ public struct AmbientState: Codable, Sendable {
     public var lastRotationAt: Date?
     /// Bounded, restart-persistent native idempotency ledger.
     public var requestLedger: [AmbientRequestLedgerEntry]?
+    /// Optional so catalogs written before lock rotation existed keep decoding;
+    /// `nil` means the cadence behavior those installs already have.
+    public var rotationTrigger: AmbientRotationTrigger?
 
     public init(
         version: Int = AmbientState.schemaVersion,
@@ -258,7 +282,8 @@ public struct AmbientState: Codable, Sendable {
         stateRevision: UInt64? = nil,
         managedDisplayScope: AmbientDisplayScope? = nil,
         lastRotationAt: Date? = nil,
-        requestLedger: [AmbientRequestLedgerEntry]? = nil
+        requestLedger: [AmbientRequestLedgerEntry]? = nil,
+        rotationTrigger: AmbientRotationTrigger? = nil
     ) {
         self.version = version
         self.libraryFolders = libraryFolders
@@ -279,6 +304,7 @@ public struct AmbientState: Codable, Sendable {
         self.managedDisplayScope = managedDisplayScope
         self.lastRotationAt = lastRotationAt
         self.requestLedger = requestLedger
+        self.rotationTrigger = rotationTrigger
     }
 }
 

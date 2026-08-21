@@ -76,6 +76,22 @@ final class MacRuntimeEventSource: AmbientRuntimeEventObserving {
             handler: handler
         )
 
+        // Lock state is only published on the distributed center; there is no
+        // NSWorkspace equivalent.
+        let distributedCenter = DistributedNotificationCenter.default()
+        observe(
+            Notification.Name("com.apple.screenIsLocked"),
+            center: distributedCenter,
+            event: .screenLocked,
+            handler: handler
+        )
+        observe(
+            Notification.Name("com.apple.screenIsUnlocked"),
+            center: distributedCenter,
+            event: .screenUnlocked,
+            handler: handler
+        )
+
         let defaultCenter = NotificationCenter.default
         observe(
             NSApplication.didChangeScreenParametersNotification,

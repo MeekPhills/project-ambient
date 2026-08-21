@@ -299,6 +299,51 @@ final class MediaImporterTests: XCTestCase {
         XCTAssertFalse(FileManager.default.fileExists(atPath: created.path))
     }
 
+    func testRotationTriggerDefaultsToCadenceAndSurvivesRestart() throws {
+        let dataDirectory = try temporaryDirectory()
+        let engine = try AmbientEngine(store: AmbientStateStore(directoryURL: dataDirectory))
+        XCTAssertNil(engine.state.rotationTrigger)
+
+        let result = try engine.setRotationTrigger(.screenLock, requestID: "trigger-0001")
+        XCTAssertEqual(result.action, "set_rotation_trigger")
+        XCTAssertEqual(engine.state.rotationTrigger, .screenLock)
+
+        let restarted = try AmbientEngine(store: AmbientStateStore(directoryURL: dataDirectory))
+        XCTAssertEqual(restarted.state.rotationTrigger, .screenLock)
+
+        // Replaying the same request is idempotent, like every other command.
+        let replay = try restarted.setRotationTrigger(.screenLock, requestID: "trigger-0001")
+        XCTAssertEqual(replay.message, result.message)
+    }
+
+    @MainActor
+    func testPausedPlaybackSuppressesLockRotation() throws {
+        let source = try temporaryDirectory()
+        try Data("one".utf8).write(to: source.appendingPathComponent("One.jpg"))
+        try Data("two".utf8).write(to: source.appendingPathComponent("Two.jpg"))
+        let engine = try AmbientEngine(
+            store: AmbientStateStore(directoryURL: try temporaryDirectory()),
+            wallpaper: FailingWallpaperService()
+        )
+        _ = try engine.execute(.importMedia(AmbientImportCommand(
+            folderPath: source.path,
+            mode: .reference,
+            requestID: "pause-import-0001"
+        )))
+        _ = try engine.setRotationTrigger(.screenLock, requestID: "pause-trigger-0001")
+        _ = try engine.pause(requestID: "pause-0001")
+        let beforeAssetID = engine.state.currentAssetID
+
+        // The coordinator routes a lock through the same advance path a timer
+        // uses, so pause must suppress it there too.
+        try engine.advanceRotation(
+            at: Date(),
+            boundary: AmbientRotationBoundary(date: Date(), reasons: [.screenLock])
+        )
+
+        XCTAssertEqual(engine.state.currentAssetID, beforeAssetID)
+    }
+
     private func temporaryDirectory() throws -> URL {
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent("ambient-import-tests-\(UUID().uuidString)", isDirectory: true)
