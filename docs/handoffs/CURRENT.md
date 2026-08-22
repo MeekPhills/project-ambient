@@ -2,13 +2,13 @@
 
 **Updated:** 2026-08-22
 
-**Program state:** M0 is complete at 8/8. The canonical tracker remains publicly verified at 20/100 on schema v3; no M1 or M4 credit is awarded. Issue #37 remains open for its outstanding evidence, while issue #28 has a scoped base-M4 static-envelope evidence branch.
+**Program state:** M0 is complete at 8/8. The canonical tracker remains publicly verified at 20/100 on schema v3; no M1 or M4 credit is awarded. Issue #37 remains open for its outstanding evidence, while issue #28 has one merged but deliberately partial base-M4 static-envelope evidence slice.
 
 **Repository:** https://github.com/MeekPhills/project-ambient
 
-**Parent baseline for this handoff:** `f4441a165d57de9ade03aaa52b6281e174d6c455` on `main`, including merged PR #54.
+**Parent baseline for this handoff:** `a19bab4b000b8a47d8935f615e00db984d16dc5d` on `main`, including merged PR #55.
 
-**Working branch:** `feat/28-static-envelope-smoke` in `~/Developer/project-ambient`; the protected checkout is untouched. The historically specified #37 isolated worktree is not currently present or registered, so do not recreate or reconstruct it; its remaining product evidence is blocked pending an owner-directed safe workspace decision.
+**Working branch:** documentation checkpoint `docs/28-m4-handoff-merge` in `~/Developer/project-ambient`; the protected checkout is untouched. The historically specified #37 isolated worktree is not currently present or registered, so do not recreate or reconstruct it; its remaining product evidence is blocked pending an owner-directed safe workspace decision.
 
 **Current milestone:** M1 — Guided Static Foundation
 
@@ -37,11 +37,11 @@ Issue #51 merged through PR #53 as `cdf9074`: imported assets can carry the acce
 
 ## Base-M4 static-envelope checkpoint (2026-08-22)
 
-Issue #28 is being advanced on `feat/28-static-envelope-smoke` with a public-tool harness at `script/measure_m4_static_smoke.sh` and a deliberately non-qualifying report at `docs/reports/m4-base-m4-static-envelope-smoke.md`. On the Apple M4 / 16 GB reference host, a 60-second settled-static capture observed P95 CPU 0.0%, P95 RSS 7.95 MiB, and zero open network endpoints for the sampled Ambient process. Wakeups, decoder/GPU activity, frame pacing, storage churn, 1,000-item UI, required dual-display fixture, pressure/failure behavior, and the 48-72 hour soak are explicitly **unmeasured**. This is neither M4 certification nor tracker credit.
+PR #55 merged as `a19bab4` from `feat/28-static-envelope-smoke`, adding a public-tool harness at `script/measure_m4_static_smoke.sh` and a deliberately non-qualifying report at `docs/reports/m4-base-m4-static-envelope-smoke.md`. On the Apple M4 / 16 GB reference host, a 60-second settled-static capture observed P95 CPU 0.0%, P95 RSS 7.95 MiB, and zero open network endpoints for the sampled Ambient process. Wakeups, decoder/GPU activity, frame pacing, storage churn, 1,000-item UI, required dual-display fixture, pressure/failure behavior, and the 48-72 hour soak are explicitly **unmeasured**. This is neither M4 certification nor tracker credit; issue #28 remains open.
 
 ## Next exact action
 
-PR #44 and PR #48 delivered the first two #37 slices; PR #49 delivered import integrity and restore coverage; PR #50 delivered screen-lock-only rotation; PR #54 added an isolated clean-account smoke. Remaining #37 criteria are a real clean-account GUI smoke and the full base-M4 benchmark/dual-display/soak evidence. For #28, open the static-envelope evidence PR for non-author review, then add measured wakeup, decoder/GPU, display-topology, pressure, and long-soak collection before requesting any M4 qualification. No continuous renderer or model service; #37 closes only when every acceptance criterion has evidence.
+PR #44 and PR #48 delivered the first two #37 slices; PR #49 delivered import integrity and restore coverage; PR #50 delivered screen-lock-only rotation; PR #54 added an isolated clean-account smoke. Remaining #37 criteria are a real clean-account GUI smoke and the full base-M4 benchmark/dual-display/soak evidence. For #28, extend the merged static-envelope slice with measured wakeup, decoder/GPU, display-topology, pressure, and long-soak collection before requesting any M4 qualification. No continuous renderer or model service; issue #37 remains open until every acceptance criterion has evidence.
 
 ## Read in this order
 
