@@ -2,21 +2,22 @@
 
 **Updated:** 2026-08-22
 
-**Program state:** M0 is complete at 8/8. The canonical tracker is publicly verified at 20/100 on Sites version 19. M1 issue #37 is the sole integration-active work item; no M1 implementation credit has been awarded.
+**Program state:** M0 is complete at 8/8. The canonical tracker remains publicly verified at 20/100 on schema v3; no M1 or M4 credit is awarded. Issue #37 remains open for its outstanding evidence, while issue #28 has a scoped base-M4 static-envelope evidence branch.
 
 **Repository:** https://github.com/MeekPhills/project-ambient
 
-**Parent baseline for this handoff:** `bb184e9c9e34e5cbb0ae9bff3704386bd86b6ebb` on `main`, including merged PR #38.
+**Parent baseline for this handoff:** `f4441a165d57de9ade03aaa52b6281e174d6c455` on `main`, including merged PR #54.
 
-**Working branch:** documentation checkpoint `docs/37-m1-entry-handoff` in `../project-ambient-m0-integration`; implementation must use `feat/37-static-onboarding-import` in the clean isolated worktree `../project-ambient-m1-onboarding-import`
+**Working branch:** `feat/28-static-envelope-smoke` in `~/Developer/project-ambient`; the protected checkout is untouched. The historically specified #37 isolated worktree is not currently present or registered, so do not recreate or reconstruct it; its remaining product evidence is blocked pending an owner-directed safe workspace decision.
 
 **Current milestone:** M1 — Guided Static Foundation
 
 **Milestone epic:** #8 — https://github.com/MeekPhills/project-ambient/issues/8
 
-**Only integration-active issue:** #37 — https://github.com/MeekPhills/project-ambient/issues/37
+**Product integration issue:** #37 — https://github.com/MeekPhills/project-ambient/issues/37 (open; no accidental closure claim).
+**Cross-cutting evidence issue:** #28 — https://github.com/MeekPhills/project-ambient/issues/28 (base-M4 resource contract; zero credit).
 
-Issues #17 and #10 are closed after public tracker activation. Issue #37 has a complete entry gate and DoD but no implementation work yet. Issues #28 and #29 remain zero-weight cross-cutting contracts for the base-M4 performance gate and local-first chat control plane; issue #36 remains the uncredited release-security dependency follow-up.
+Issues #17 and #10 are closed after public tracker activation. Issue #37 has a complete entry gate, delivered implementation slices, and incomplete acceptance evidence. Issues #28 and #29 remain zero-weight cross-cutting contracts for the base-M4 performance gate and local-first chat control plane; issue #36 remains the uncredited release-security dependency follow-up.
 
 ## Display-control expansion checkpoint (2026-08-16)
 
@@ -32,11 +33,15 @@ The BetterDisplay-class display-management expansion's WS-DC-001 governance is m
 
 ## Asset attribution checkpoint (2026-08-22)
 
-Issue #51 is implemented on `feat/51-asset-attribution` from current `main` (`b908242`), with PR #53 open at commit `1599e07`: imported assets can carry the accepted rights vocabulary's private-reference, public-domain, or attributed-license basis; `photo-manifest.tsv` sidecars map filename, creator, license, and source URL; unmatched rows are actionable import issues; attribution is visible in the macOS UI and returned in `ambientctl` JSON. Legacy assets and absent rights records remain compatible and fail closed. No tracker credit changes.
+Issue #51 merged through PR #53 as `cdf9074`: imported assets can carry the accepted rights vocabulary's private-reference, public-domain, or attributed-license basis; `photo-manifest.tsv` sidecars map filename, creator, license, and source URL; unmatched rows are actionable import issues; attribution is visible in the macOS UI and returned in `ambientctl` JSON. Legacy assets and absent rights records remain compatible and fail closed. No tracker credit changes.
+
+## Base-M4 static-envelope checkpoint (2026-08-22)
+
+Issue #28 is being advanced on `feat/28-static-envelope-smoke` with a public-tool harness at `script/measure_m4_static_smoke.sh` and a deliberately non-qualifying report at `docs/reports/m4-base-m4-static-envelope-smoke.md`. On the Apple M4 / 16 GB reference host, a 60-second settled-static capture observed P95 CPU 0.0%, P95 RSS 7.95 MiB, and zero open network endpoints for the sampled Ambient process. Wakeups, decoder/GPU activity, frame pacing, storage churn, 1,000-item UI, required dual-display fixture, pressure/failure behavior, and the 48-72 hour soak are explicitly **unmeasured**. This is neither M4 certification nor tracker credit.
 
 ## Next exact action
 
-PR #44 and PR #48 delivered the first two #37 slices; PR #49 delivered import integrity and restore coverage; PR #50 delivered screen-lock-only rotation. Remaining #37 criteria are clean-account smoke and the base-M4 benchmark trace plus privacy report under `docs/reports/`. Issue #51 is the current attribution branch; no tracker credit changes. No continuous renderer or model service; #37 closes only when every acceptance criterion has evidence.
+PR #44 and PR #48 delivered the first two #37 slices; PR #49 delivered import integrity and restore coverage; PR #50 delivered screen-lock-only rotation; PR #54 added an isolated clean-account smoke. Remaining #37 criteria are a real clean-account GUI smoke and the full base-M4 benchmark/dual-display/soak evidence. For #28, open the static-envelope evidence PR for non-author review, then add measured wakeup, decoder/GPU, display-topology, pressure, and long-soak collection before requesting any M4 qualification. No continuous renderer or model service; #37 closes only when every acceptance criterion has evidence.
 
 ## Read in this order
 
