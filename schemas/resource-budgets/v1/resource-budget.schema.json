@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://project-ambient.meekphillies.chatgpt.site/schemas/resource-budgets/v1/resource-budget.schema.json",
+  "title": "Project Ambient resource-budget fixture",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "fixtureId", "claimScope", "qualificationStatus", "referenceMachine", "displayFixture", "budgets", "measurementCoverage", "evidence"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "fixtureId": { "const": "base-2024-m4-mac-mini-16gb-256gb" },
+    "claimScope": { "const": "contract_fixture" },
+    "qualificationStatus": { "enum": ["planned", "partial_evidence", "qualified"] },
+    "referenceMachine": { "$ref": "#/$defs/referenceMachine" },
+    "displayFixture": { "$ref": "#/$defs/displayFixture" },
+    "budgets": { "$ref": "#/$defs/budgets" },
+    "measurementCoverage": { "$ref": "#/$defs/measurementCoverage" },
+    "evidence": { "$ref": "#/$defs/evidence" }
+  },
+  "$defs": {
+    "referenceMachine": { "type": "object", "additionalProperties": false, "required": ["chip", "memoryGiB", "storageGiB"], "properties": { "chip": { "const": "Apple M4" }, "memoryGiB": { "const": 16 }, "storageGiB": { "const": 256 } } },
+    "displayFixture": { "type": "object", "additionalProperties": false, "required": ["required", "hdr"], "properties": { "required": { "const": true }, "hdr": { "const": "off" } } },
+    "budgets": { "type": "object", "additionalProperties": false, "required": ["staticSettled", "settingsCatalog", "dualDisplay8k", "sameSourceVideo", "chat", "soakHours"], "properties": { "staticSettled": { "type": "object" }, "settingsCatalog": { "type": "object" }, "dualDisplay8k": { "type": "object" }, "sameSourceVideo": { "type": "object" }, "chat": { "type": "object" }, "soakHours": { "enum": [48, 72] } } },
+    "measurementCoverage": { "type": "object", "additionalProperties": false, "required": ["cpu", "rss", "wakeups", "network", "decoder", "gpu", "framePacing", "storageChurn", "displayTopology", "pressure", "soak"], "properties": { "cpu": { "$ref": "#/$defs/coverageState" }, "rss": { "$ref": "#/$defs/coverageState" }, "wakeups": { "$ref": "#/$defs/coverageState" }, "network": { "$ref": "#/$defs/coverageState" }, "decoder": { "$ref": "#/$defs/coverageState" }, "gpu": { "$ref": "#/$defs/coverageState" }, "framePacing": { "$ref": "#/$defs/coverageState" }, "storageChurn": { "$ref": "#/$defs/coverageState" }, "displayTopology": { "$ref": "#/$defs/coverageState" }, "pressure": { "$ref": "#/$defs/coverageState" }, "soak": { "$ref": "#/$defs/coverageState" } } },
+    "coverageState": { "enum": ["unmeasured", "partial", "measured"] },
+    "evidence": { "type": "object", "additionalProperties": false, "required": ["source", "verifiedAt"], "properties": { "source": { "type": "string", "minLength": 12 }, "verifiedAt": { "type": "string", "format": "date-time" } } }
+  }
+}

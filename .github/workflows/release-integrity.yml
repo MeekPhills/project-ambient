@@ -58,6 +58,8 @@ jobs:
         run: node script/validate_capabilities.mjs
       - name: Validate media-rights and commercial-boundary contracts
         run: node script/validate_rights.mjs
+      - name: Validate base-M4 resource-budget contract
+        run: node script/validate_resource_budgets.mjs
       - name: Validate the exhaustive Aerial semantic-parity launch matrix
         run: node script/validate_aerial_parity.mjs
       - name: Enforce verified Aerial parity for GA tags

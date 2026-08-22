@@ -24,6 +24,7 @@ run node "$ROOT_DIR/script/validate_capabilities.mjs"
 run node "$ROOT_DIR/script/validate_rights.mjs"
 run node "$ROOT_DIR/script/validate_aerial_parity.mjs"
 run node "$ROOT_DIR/script/validate_display_control.mjs"
+run node "$ROOT_DIR/script/validate_resource_budgets.mjs"
 if [[ "${PROJECT_AMBIENT_GA:-0}" == "1" ]]; then
   run node "$ROOT_DIR/script/validate_aerial_parity.mjs" --ga
 fi

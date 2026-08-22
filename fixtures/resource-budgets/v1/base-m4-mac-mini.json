@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "fixtureId": "base-2024-m4-mac-mini-16gb-256gb",
+  "claimScope": "contract_fixture",
+  "qualificationStatus": "partial_evidence",
+  "referenceMachine": { "chip": "Apple M4", "memoryGiB": 16, "storageGiB": 256 },
+  "displayFixture": { "required": true, "hdr": "off" },
+  "budgets": {
+    "staticSettled": { "cpuPercentP95Max": 0.2, "wakeupsPerMinuteMax": 2, "rssMiBMax": 40, "continuousRenderer": false, "decoder": false, "network": false },
+    "settingsCatalog": { "items": 1000, "rssMiBP95Max": 180 },
+    "dualDisplay8k": { "rssMiBTransientMax": 350, "returnToSettledSecondsMax": 15 },
+    "sameSourceVideo": { "decoderSessionsMax": 1 },
+    "chat": { "incrementalRssMiBMax": 40, "listenerAfterClose": false },
+    "soakHours": 48
+  },
+  "measurementCoverage": { "cpu": "partial", "rss": "partial", "wakeups": "unmeasured", "network": "partial", "decoder": "unmeasured", "gpu": "unmeasured", "framePacing": "unmeasured", "storageChurn": "unmeasured", "displayTopology": "unmeasured", "pressure": "unmeasured", "soak": "unmeasured" },
+  "evidence": { "source": "docs/reports/m4-base-m4-static-envelope-smoke.md", "verifiedAt": "2026-08-22T13:16:37Z" }
+}
