@@ -9,6 +9,7 @@ public struct AmbientMutationResult: Codable, Sendable {
     public var asset: AmbientAsset?
     public var expiresAt: Date?
     public var importReport: AmbientImportReport?
+    public var importedAssets: [AmbientAsset]?
 
     public init(
         ok: Bool = true,
@@ -18,7 +19,8 @@ public struct AmbientMutationResult: Codable, Sendable {
         channel: AmbientChannel? = nil,
         asset: AmbientAsset? = nil,
         expiresAt: Date? = nil,
-        importReport: AmbientImportReport? = nil
+        importReport: AmbientImportReport? = nil,
+        importedAssets: [AmbientAsset]? = nil
     ) {
         self.ok = ok
         self.action = action
@@ -28,6 +30,7 @@ public struct AmbientMutationResult: Codable, Sendable {
         self.asset = asset
         self.expiresAt = expiresAt
         self.importReport = importReport
+        self.importedAssets = importedAssets
     }
 
     /// The persisted form of this result: identical except that an attached
@@ -109,7 +112,8 @@ public final class AmbientEngine {
             return try importFolder(
                 URL(fileURLWithPath: input.folderPath, isDirectory: true),
                 mode: input.mode,
-                requestID: input.requestID
+                requestID: input.requestID,
+                manifestURL: input.manifestPath.map { URL(fileURLWithPath: $0) }
             )
         }
     }
@@ -117,7 +121,8 @@ public final class AmbientEngine {
     public func importFolder(
         _ url: URL,
         mode: AmbientImportMode = .reference,
-        requestID: String? = nil
+        requestID: String? = nil,
+        manifestURL: URL? = nil
     ) throws -> AmbientMutationResult {
         var createdFiles: [URL] = []
         do {
@@ -126,11 +131,14 @@ public final class AmbientEngine {
                 fingerprint: fingerprint("import", url.standardizedFileURL.path, mode.rawValue)
             ) { [self] in
                 let managedDirectory = store.directoryURL.appendingPathComponent("Media", isDirectory: true)
+                let resolvedManifestURL = manifestURL ?? url.appendingPathComponent("photo-manifest.tsv")
                 let prepared = try importer.prepare(
                     folder: url,
                     mode: mode,
                     existing: state.assets,
-                    managedDirectory: managedDirectory
+                    managedDirectory: managedDirectory,
+                    attributionManifest: try Self.loadAttributionManifest(manifestURL, folder: url),
+                    attributionManifestURL: FileManager.default.fileExists(atPath: resolvedManifestURL.path) ? resolvedManifestURL : nil
                 )
                 createdFiles = prepared.createdFiles
                 state.assets.append(contentsOf: prepared.assets)
@@ -159,7 +167,8 @@ public final class AmbientEngine {
                         action: "import",
                         requestID: requestID,
                         message: prepared.report.summary,
-                        importReport: prepared.report
+                        importReport: prepared.report,
+                        importedAssets: prepared.assets
                     ),
                     !prepared.assets.isEmpty || libraryChanged
                 )
@@ -168,6 +177,12 @@ public final class AmbientEngine {
             importer.rollback(createdFiles: createdFiles)
             throw error
         }
+    }
+
+    private static func loadAttributionManifest(_ explicitURL: URL?, folder: URL) throws -> AmbientAttributionManifest? {
+        let url = explicitURL ?? folder.appendingPathComponent("photo-manifest.tsv")
+        guard FileManager.default.fileExists(atPath: url.path) else { return nil }
+        return try AmbientAttributionManifest.parseTSV(Data(contentsOf: url))
     }
 
     @discardableResult

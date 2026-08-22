@@ -7,6 +7,8 @@ public struct AmbientImportIssue: Codable, Hashable, Sendable {
         case unsupported
         case unreadable
         case copyFailed = "copy-failed"
+        /// An attribution manifest row that matched no imported file.
+        case unmatchedAttribution = "unmatched-attribution"
     }
 
     public var kind: Kind
@@ -27,13 +29,14 @@ public struct AmbientImportReport: Codable, Sendable {
     public var unsupportedCount: Int
     public var unreadableCount: Int
     public var copyFailedCount: Int
+    public var unmatchedAttributionCount: Int
     public var issues: [AmbientImportIssue]
 
     private enum CodingKeys: String, CodingKey {
-        case mode, importedCount, duplicateCount, unsupportedCount, unreadableCount, copyFailedCount, issues
+        case mode, importedCount, duplicateCount, unsupportedCount, unreadableCount, copyFailedCount, unmatchedAttributionCount, issues
     }
 
-    public init(mode: AmbientImportMode, importedCount: Int, issues: [AmbientImportIssue]) {
+    public init(mode: AmbientImportMode, importedCount: Int, issues: [AmbientImportIssue], unmatchedAttributionCount: Int = 0) {
         self.mode = mode
         self.importedCount = importedCount
         self.issues = issues
@@ -41,6 +44,7 @@ public struct AmbientImportReport: Codable, Sendable {
         self.unsupportedCount = issues.filter { $0.kind == .unsupported }.count
         self.unreadableCount = issues.filter { $0.kind == .unreadable }.count
         self.copyFailedCount = issues.filter { $0.kind == .copyFailed }.count
+        self.unmatchedAttributionCount = unmatchedAttributionCount
     }
 
     /// Reports persisted before copy-failure reporting existed omit the key;
@@ -53,13 +57,14 @@ public struct AmbientImportReport: Codable, Sendable {
         unsupportedCount = try container.decode(Int.self, forKey: .unsupportedCount)
         unreadableCount = try container.decode(Int.self, forKey: .unreadableCount)
         copyFailedCount = try container.decodeIfPresent(Int.self, forKey: .copyFailedCount) ?? 0
+        unmatchedAttributionCount = try container.decodeIfPresent(Int.self, forKey: .unmatchedAttributionCount) ?? 0
         issues = try container.decode([AmbientImportIssue].self, forKey: .issues)
     }
 
     /// Counts, never `issues.count`: a ledger-stored report keeps an excerpt of
     /// the per-file rows but must still state the true totals.
     public var reviewItemCount: Int {
-        duplicateCount + unsupportedCount + unreadableCount + copyFailedCount
+        duplicateCount + unsupportedCount + unreadableCount + copyFailedCount + unmatchedAttributionCount
     }
 
     /// A bounded excerpt for durable storage. The request ledger lives in
@@ -81,6 +86,7 @@ public struct AmbientImportReport: Codable, Sendable {
         if unsupportedCount > 0 { parts.append("\(unsupportedCount) unsupported") }
         if unreadableCount > 0 { parts.append("\(unreadableCount) unreadable") }
         if copyFailedCount > 0 { parts.append("\(copyFailedCount) could not be copied") }
+        if unmatchedAttributionCount > 0 { parts.append("\(unmatchedAttributionCount) attribution row\(unmatchedAttributionCount == 1 ? "" : "s") unmatched") }
         return parts.joined(separator: "; ") + "."
     }
 
@@ -127,7 +133,9 @@ public final class AmbientMediaImporter {
         folder: URL,
         mode: AmbientImportMode,
         existing: [AmbientAsset],
-        managedDirectory: URL
+        managedDirectory: URL,
+        attributionManifest: AmbientAttributionManifest? = nil,
+        attributionManifestURL: URL? = nil
     ) throws -> AmbientPreparedImport {
         var isDirectory: ObjCBool = false
         guard fileManager.fileExists(atPath: folder.path, isDirectory: &isDirectory), isDirectory.boolValue else {
@@ -146,6 +154,7 @@ public final class AmbientMediaImporter {
         var assets: [AmbientAsset] = []
         var issues: [AmbientImportIssue] = []
         var createdFiles: [URL] = []
+        var matchedAttributionFiles = Set<String>()
 
         let keys: [URLResourceKey] = [.isRegularFileKey, .fileSizeKey, .contentModificationDateKey]
         guard let enumerator = fileManager.enumerator(
@@ -165,6 +174,10 @@ public final class AmbientMediaImporter {
         candidates.sort { $0.path.localizedStandardCompare($1.path) == .orderedAscending }
 
         for source in candidates {
+            if let attributionManifestURL,
+               source.standardizedFileURL.path == attributionManifestURL.standardizedFileURL.path {
+                continue
+            }
             let values = try? source.resourceValues(forKeys: Set(keys))
             guard values?.isRegularFile == true else { continue }
             let fileName = source.lastPathComponent
@@ -238,6 +251,9 @@ public final class AmbientMediaImporter {
                     // not create assets whose channel membership differs.
                     tags.insert("video")
                 }
+                if let row = attributionManifest?.rows.first(where: { Self.normalizedManifestFilename($0.filename) == fileName }) {
+                    matchedAttributionFiles.insert(Self.normalizedManifestFilename(row.filename))
+                }
                 assets.append(AmbientAsset(
                     path: destination.path,
                     kind: kind,
@@ -251,7 +267,7 @@ public final class AmbientMediaImporter {
                         sourceByteCount: byteCount,
                         sourceModifiedAt: values?.contentModificationDate
                     ),
-                    rights: AmbientAssetRights()
+                    rights: Self.rights(for: attributionManifest?.rows.first(where: { Self.normalizedManifestFilename($0.filename) == fileName }))
                 ))
             } catch {
                 issues.append(AmbientImportIssue(
@@ -262,10 +278,38 @@ public final class AmbientMediaImporter {
             }
         }
 
+        let unmatched = attributionManifest?.rows.filter { !matchedAttributionFiles.contains(Self.normalizedManifestFilename($0.filename)) } ?? []
+        for row in unmatched {
+            issues.append(AmbientImportIssue(
+                kind: .unmatchedAttribution,
+                fileName: row.filename,
+                message: "No imported media matched attribution row \(row.filename). Check the filename and manifest folder."
+            ))
+        }
+
         return AmbientPreparedImport(
             assets: assets,
-            report: AmbientImportReport(mode: mode, importedCount: assets.count, issues: issues),
+            report: AmbientImportReport(mode: mode, importedCount: assets.count, issues: issues, unmatchedAttributionCount: unmatched.count),
             createdFiles: createdFiles
+        )
+    }
+
+    private static func normalizedManifestFilename(_ value: String) -> String {
+        URL(fileURLWithPath: value).lastPathComponent
+    }
+
+    private static func rights(for row: AmbientAttributionManifest.Row?) -> AmbientAssetRights {
+        guard let row else { return AmbientAssetRights() }
+        let normalized = row.license.lowercased()
+        let publicDomain = normalized == "public domain" || normalized == "cc0" || normalized.contains("cc0")
+        return AmbientAssetRights(
+            basis: publicDomain ? .publicDomain : .attributedLicense,
+            redistributionAllowed: publicDomain,
+            commercialUseVerified: publicDomain,
+            rightsholder: row.creator,
+            license: row.license,
+            sourceURL: row.sourceURL,
+            attributionRequired: !publicDomain && row.creator?.isEmpty == false
         )
     }
 
