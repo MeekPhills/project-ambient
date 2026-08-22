@@ -32,7 +32,7 @@ The BetterDisplay-class display-management expansion's WS-DC-001 governance is m
 
 ## Asset attribution checkpoint (2026-08-22)
 
-Issue #51 is implemented on `feat/51-asset-attribution` from current `main` (`b908242`): imported assets can carry the accepted rights vocabulary's private-reference, public-domain, or attributed-license basis; `photo-manifest.tsv` sidecars map filename, creator, license, and source URL; unmatched rows are actionable import issues; attribution is visible in the macOS UI and returned in `ambientctl` JSON. Legacy assets and absent rights records remain compatible and fail closed. No tracker credit changes.
+Issue #51 is implemented on `feat/51-asset-attribution` from current `main` (`b908242`), with PR #53 open at commit `1599e07`: imported assets can carry the accepted rights vocabulary's private-reference, public-domain, or attributed-license basis; `photo-manifest.tsv` sidecars map filename, creator, license, and source URL; unmatched rows are actionable import issues; attribution is visible in the macOS UI and returned in `ambientctl` JSON. Legacy assets and absent rights records remain compatible and fail closed. No tracker credit changes.
 
 ## Next exact action
 
