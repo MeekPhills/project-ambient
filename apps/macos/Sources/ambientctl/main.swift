@@ -183,7 +183,8 @@ private struct AmbientCLI {
                 try engine.execute(.importMedia(AmbientImportCommand(
                     folderPath: arguments[1],
                     mode: try importMode(in: arguments),
-                    requestID: value(after: "--request-id", in: arguments) ?? UUID().uuidString
+                    requestID: value(after: "--request-id", in: arguments) ?? UUID().uuidString,
+                    manifestPath: value(after: "--manifest", in: arguments)
                 ))),
                 engine: engine
             )
@@ -304,7 +305,7 @@ private struct AmbientCLI {
       rotation-trigger set <cadence|screen-lock> [--request-id <id>] --json
       history [--limit <count>] --json
       restore [--request-id <id>] --json
-      import <folder> [--mode copy|reference] [--request-id <id>] --json
+      import <folder> [--mode copy|reference] [--manifest <photo-manifest.tsv>] [--request-id <id>] --json
       scan --json
       export-aerial <channel> --destination <folder> --json
     """

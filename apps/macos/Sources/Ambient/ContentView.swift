@@ -379,6 +379,12 @@ private struct CurrentBackgroundCard: View {
                         Text(asset.tags.prefix(4).map { $0.capitalized }.joined(separator: " • "))
                             .font(.caption)
                             .foregroundStyle(.white.opacity(0.8))
+                        if let credit = asset.rights?.creditLine, asset.rights?.requiresVisibleCredit == true {
+                            Text("Credit: \(credit)")
+                                .font(.caption2)
+                                .foregroundStyle(.white.opacity(0.9))
+                                .lineLimit(2)
+                        }
                     }
                     .padding(20)
                 } else {
@@ -469,6 +475,7 @@ private struct ImportReportCard: View {
         case .unsupported: return "questionmark.square.dashed"
         case .unreadable: return "lock.doc"
         case .copyFailed: return "externaldrive.badge.exclamationmark"
+        case .unmatchedAttribution: return "person.crop.circle.badge.questionmark"
         }
     }
 }
@@ -582,6 +589,12 @@ private struct BackgroundGrid: View {
                                 .font(.caption2)
                                 .foregroundStyle(.secondary)
                                 .lineLimit(1)
+                            if let credit = asset.rights?.creditLine, asset.rights?.requiresVisibleCredit == true {
+                                Text("Credit: \(credit)")
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                                    .lineLimit(2)
+                            }
                         }
                         .accessibilityElement(children: .combine)
                     }

@@ -31,7 +31,11 @@ Project Ambient stores its state in `~/Library/Application Support/Project Ambie
 
 ## Import, provenance, and rollback
 
-Importing is an explicit copy-or-reference choice (`File > Import Background Folder…`, the dashboard import button, or `ambientctl import <folder> [--mode copy|reference] [--request-id <id>] --json`). Every imported asset records provenance — source path, SHA-256, byte count, and modification date — and originals are never altered in either mode. Copy mode duplicates supported media into Ambient's private library; reference mode leaves files in place. A failed import rolls back any copies it created, and typed `.importMedia` commands are idempotent per request ID across restarts, so a crashed or repeated import cannot double-ingest. Duplicate, unsupported, and unreadable inputs are skipped with per-file actionable messages instead of failing the whole import.
+Importing is an explicit copy-or-reference choice (`File > Import Background Folder…`, the dashboard import button, or `ambientctl import <folder> [--mode copy|reference] [--manifest photo-manifest.tsv] [--request-id <id>] --json`). Every imported asset records provenance — source path, SHA-256, byte count, and modification date — and originals are never altered in either mode. Copy mode duplicates supported media into Ambient's private library; reference mode leaves files in place. A failed import rolls back any copies it created, and typed `.importMedia` commands are idempotent per request ID across restarts, so a crashed or repeated import cannot double-ingest. Duplicate, unsupported, unreadable, and unmatched-attribution inputs are skipped with per-file actionable messages instead of failing the whole import.
+
+### Attribution sidecar
+
+If the selected folder contains `photo-manifest.tsv`, Ambient reads it automatically; `ambientctl` can point to another file with `--manifest`. The header must include `filename` and `license`, with optional `creator` and `source URL` columns. Values are recorded declarations, not legal interpretation: `Public Domain`/`CC0` maps to the explicit public-domain basis; other declared licenses map to the attributed-license basis and remain fail-closed for redistribution/commercial clearance. Unmatched manifest rows appear in the import report. A credit line is shown wherever an imported asset declares attribution is required and names a creator.
 
 ## Accessibility
 

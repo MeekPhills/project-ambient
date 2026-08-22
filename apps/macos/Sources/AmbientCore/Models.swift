@@ -41,21 +41,139 @@ public struct AmbientAssetProvenance: Codable, Hashable, Sendable {
 
 public struct AmbientAssetRights: Codable, Hashable, Sendable {
     public enum Basis: String, Codable, Sendable {
+        /// Personal media used locally. The fail-closed default.
         case privateReference
+        /// No rights reserved by the rightsholder (public domain, CC0).
+        case publicDomain
+        /// Used under a declared license whose terms are recorded below.
+        case attributedLicense
     }
 
     public var basis: Basis
     public var redistributionAllowed: Bool
     public var commercialUseVerified: Bool
+    /// Declared attribution. Optional so records written before licensed
+    /// libraries were supported keep decoding unchanged.
+    public var rightsholder: String?
+    public var license: String?
+    public var sourceURL: String?
+    public var attributionRequired: Bool?
+
+    private enum CodingKeys: String, CodingKey {
+        case basis, redistributionAllowed, commercialUseVerified
+        case rightsholder, license, sourceURL, attributionRequired
+    }
 
     public init(
         basis: Basis = .privateReference,
         redistributionAllowed: Bool = false,
-        commercialUseVerified: Bool = false
+        commercialUseVerified: Bool = false,
+        rightsholder: String? = nil,
+        license: String? = nil,
+        sourceURL: String? = nil,
+        attributionRequired: Bool? = nil
     ) {
         self.basis = basis
         self.redistributionAllowed = redistributionAllowed
         self.commercialUseVerified = commercialUseVerified
+        self.rightsholder = rightsholder
+        self.license = license
+        self.sourceURL = sourceURL
+        self.attributionRequired = attributionRequired
+    }
+
+    /// An unreadable or unknown basis decodes as private reference rather than
+    /// failing: rights must fail closed, never open.
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let decodedBasis = try? container.decode(Basis.self, forKey: .basis)
+        basis = decodedBasis ?? .privateReference
+        // An unknown basis is not allowed to inherit affirmative clearance
+        // flags from a future or malformed record.
+        redistributionAllowed = decodedBasis == nil ? false : (try container.decodeIfPresent(Bool.self, forKey: .redistributionAllowed) ?? false)
+        commercialUseVerified = decodedBasis == nil ? false : (try container.decodeIfPresent(Bool.self, forKey: .commercialUseVerified) ?? false)
+        rightsholder = try container.decodeIfPresent(String.self, forKey: .rightsholder)
+        license = try container.decodeIfPresent(String.self, forKey: .license)
+        sourceURL = try container.decodeIfPresent(String.self, forKey: .sourceURL)
+        attributionRequired = decodedBasis == nil ? false : try container.decodeIfPresent(Bool.self, forKey: .attributionRequired)
+    }
+
+    /// True only when the record declares attribution is required and names
+    /// someone to credit.
+    public var requiresVisibleCredit: Bool {
+        (attributionRequired ?? false) && rightsholder?.isEmpty == false
+    }
+
+    /// The one-line credit to display wherever the asset is shown.
+    public var creditLine: String? {
+        guard let rightsholder, !rightsholder.isEmpty else { return nil }
+        guard let license, !license.isEmpty else { return rightsholder }
+        return "\(rightsholder) · \(license)"
+    }
+}
+
+public struct AmbientAttributionManifest: Sendable {
+    public struct Row: Hashable, Sendable {
+        public var filename: String
+        public var creator: String?
+        public var license: String
+        public var sourceURL: String?
+
+        public init(filename: String, creator: String?, license: String, sourceURL: String?) {
+            self.filename = filename
+            self.creator = creator
+            self.license = license
+            self.sourceURL = sourceURL
+        }
+    }
+
+    public var rows: [Row]
+
+    public init(rows: [Row]) { self.rows = rows }
+
+    public static func parseTSV(_ data: Data) throws -> AmbientAttributionManifest {
+        guard let text = String(data: data, encoding: .utf8) else { throw AmbientAttributionManifestError.invalidEncoding }
+        let lines = text.split(whereSeparator: { $0.isNewline }).map(String.init)
+        guard let headerLine = lines.first else { return AmbientAttributionManifest(rows: []) }
+        let headers = headerLine.split(separator: "\t", omittingEmptySubsequences: false).map { normalizedHeader(String($0)) }
+        func index(_ names: Set<String>) -> Int? { headers.firstIndex(where: names.contains) }
+        guard let filenameIndex = index(["filename", "file", "name"]),
+              let licenseIndex = index(["license", "licenseidentifier"]) else {
+            throw AmbientAttributionManifestError.missingRequiredColumns
+        }
+        let creatorIndex = index(["creator", "rightsholder", "author"])
+        let sourceIndex = index(["sourceurl", "source", "url"])
+        var rows: [Row] = []
+        for line in lines.dropFirst() {
+            let fields = line.split(separator: "\t", omittingEmptySubsequences: false).map { String($0).trimmingCharacters(in: .whitespacesAndNewlines) }
+            func field(_ i: Int?) -> String? {
+                guard let i, fields.indices.contains(i), !fields[i].isEmpty else { return nil }
+                return fields[i]
+            }
+            guard let filename = field(filenameIndex), let license = field(licenseIndex) else { continue }
+            let sourceURL = field(sourceIndex)
+            if let sourceURL, URL(string: sourceURL)?.scheme == nil { throw AmbientAttributionManifestError.invalidSourceURL(filename) }
+            rows.append(Row(filename: filename, creator: field(creatorIndex), license: license, sourceURL: sourceURL))
+        }
+        return AmbientAttributionManifest(rows: rows)
+    }
+
+    private static func normalizedHeader(_ value: String) -> String {
+        value.lowercased().filter { $0.isLetter || $0.isNumber }
+    }
+}
+
+public enum AmbientAttributionManifestError: LocalizedError, Sendable {
+    case invalidEncoding
+    case missingRequiredColumns
+    case invalidSourceURL(String)
+
+    public var errorDescription: String? {
+        switch self {
+        case .invalidEncoding: return "The attribution manifest is not valid UTF-8."
+        case .missingRequiredColumns: return "The attribution manifest needs filename and license columns."
+        case .invalidSourceURL(let filename): return "The attribution source URL for \(filename) is invalid."
+        }
     }
 }
 

@@ -104,6 +104,79 @@ final class MediaImporterTests: XCTestCase {
         XCTAssertNil(asset.rights)
     }
 
+    func testAttributionManifestRoundTripsLicensedImport() throws {
+        let source = try temporaryDirectory()
+        let image = source.appendingPathComponent("Lake.jpg")
+        try Data("licensed-image".utf8).write(to: image)
+        let manifest = source.appendingPathComponent("photo-manifest.tsv")
+        try Data("filename\tcreator\tlicense\tsource URL\nLake.jpg\tAda Creator\tCC BY 4.0\thttps://example.test/lake\n".utf8).write(to: manifest)
+
+        let engine = try AmbientEngine(store: AmbientStateStore(directoryURL: try temporaryDirectory()))
+        let result = try engine.execute(.importMedia(AmbientImportCommand(
+            folderPath: source.path,
+            mode: .reference,
+            requestID: "attribution-roundtrip-0001"
+        )))
+
+        let asset = try XCTUnwrap(engine.state.assets.first)
+        XCTAssertEqual(asset.rights?.basis, .attributedLicense)
+        XCTAssertEqual(asset.rights?.rightsholder, "Ada Creator")
+        XCTAssertEqual(asset.rights?.license, "CC BY 4.0")
+        XCTAssertEqual(asset.rights?.sourceURL, "https://example.test/lake")
+        XCTAssertTrue(asset.rights?.requiresVisibleCredit == true)
+        XCTAssertEqual(asset.rights?.creditLine, "Ada Creator · CC BY 4.0")
+        XCTAssertEqual(result.importedAssets?.first?.rights, asset.rights)
+        XCTAssertEqual(result.importReport?.unmatchedAttributionCount, 0)
+        XCTAssertEqual(result.importReport?.unsupportedCount, 0)
+    }
+
+    func testPublicDomainManifestUsesExplicitPublicDomainBasis() throws {
+        let source = try temporaryDirectory()
+        try Data("public-domain-image".utf8).write(to: source.appendingPathComponent("Archive.png"))
+        try Data("filename\tcreator\tlicense\tsource URL\nArchive.png\t\tPublic Domain\thttps://example.test/archive\n".utf8)
+            .write(to: source.appendingPathComponent("photo-manifest.tsv"))
+
+        let engine = try AmbientEngine(store: AmbientStateStore(directoryURL: try temporaryDirectory()))
+        _ = try engine.execute(.importMedia(AmbientImportCommand(
+            folderPath: source.path,
+            mode: .reference,
+            requestID: "public-domain-0001"
+        )))
+        let rights = try XCTUnwrap(engine.state.assets.first?.rights)
+        XCTAssertEqual(rights.basis, .publicDomain)
+        XCTAssertTrue(rights.redistributionAllowed)
+        XCTAssertTrue(rights.commercialUseVerified)
+        XCTAssertFalse(rights.requiresVisibleCredit)
+    }
+
+    func testUnknownRightsBasisDecodesFailClosed() throws {
+        let json = """
+        {"basis":"future-license","redistributionAllowed":true,"commercialUseVerified":true,"rightsholder":"Unknown"}
+        """
+        let rights = try JSONDecoder().decode(AmbientAssetRights.self, from: Data(json.utf8))
+        XCTAssertEqual(rights.basis, .privateReference)
+        XCTAssertFalse(rights.redistributionAllowed)
+        XCTAssertFalse(rights.commercialUseVerified)
+    }
+
+    func testUnmatchedAttributionRowsAreActionableIssues() throws {
+        let source = try temporaryDirectory()
+        try Data("filename\tcreator\tlicense\tsource URL\nMissing.jpg\tAda Creator\tCC BY 4.0\thttps://example.test/missing\n".utf8)
+            .write(to: source.appendingPathComponent("photo-manifest.tsv"))
+        try Data("actual".utf8).write(to: source.appendingPathComponent("Actual.jpg"))
+
+        let engine = try AmbientEngine(store: AmbientStateStore(directoryURL: try temporaryDirectory()))
+        let result = try engine.execute(.importMedia(AmbientImportCommand(
+            folderPath: source.path,
+            mode: .reference,
+            requestID: "unmatched-attribution-0001"
+        )))
+        XCTAssertEqual(result.importReport?.unmatchedAttributionCount, 1)
+        let issue = try XCTUnwrap(result.importReport?.issues.first(where: { $0.kind == .unmatchedAttribution }))
+        XCTAssertEqual(issue.fileName, "Missing.jpg")
+        XCTAssertTrue(issue.message.contains("No imported media matched"))
+    }
+
     func testImportSkipsAssetsAlreadyCatalogedByPathWithoutProvenance() throws {
         let source = try temporaryDirectory()
         let file = source.appendingPathComponent("Legacy.jpg")
