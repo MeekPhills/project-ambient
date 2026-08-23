@@ -458,12 +458,16 @@
                 { "$ref": "#/$defs/scenarioAttestation" },
                 {
                   "type": "object",
-                  "properties": { "fixedStillSHA256": { "type": "null" } }
+                  "properties": {
+                    "fixedStillSHA256": { "type": "null" },
+                    "planScenarioMatched": { "const": false },
+                    "complete": { "const": false }
+                  }
                 }
               ]
             },
             "protocol": { "$ref": "#/$defs/protocol" },
-            "windows": { "type": "array", "minItems": 0, "maxItems": 5, "items": { "$ref": "#/$defs/window" } },
+            "windows": { "const": [] },
             "aggregate": {
               "type": "object",
               "additionalProperties": false,
@@ -473,17 +477,12 @@
                 "contractConformance", "reason"
               ],
               "properties": {
-                "acceptedWindowCount": { "type": "integer", "minimum": 0, "maximum": 4 },
+                "acceptedWindowCount": { "const": 0 },
                 "medianWakeupsPerMinute": { "type": "null" },
                 "rangeWakeupsPerMinute": { "type": "null" },
                 "p95WakeupsPerMinute": { "type": "null" },
                 "contractConformance": { "type": "null" },
-                "reason": {
-                  "enum": [
-                    "incomplete-trial-set", "automated-mismatch",
-                    "missing-attestation", "candidate-or-fixture-drift"
-                  ]
-                }
+                "reason": { "const": "missing-attestation" }
               }
             },
             "coverage": {
@@ -491,7 +490,7 @@
               "additionalProperties": false,
               "required": ["scenarioWakeups", "globalWakeups"],
               "properties": {
-                "scenarioWakeups": { "enum": ["unmeasured", "partial"] },
+                "scenarioWakeups": { "const": "unmeasured" },
                 "globalWakeups": { "const": "unmeasured" }
               }
             },

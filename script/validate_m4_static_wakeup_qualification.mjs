@@ -12,7 +12,7 @@ const planPath = path.join(root, "fixtures/resource-budgets/v1/base-m4-static-wa
 const resourceFixturePath = path.join(root, "fixtures/resource-budgets/v1/base-m4-mac-mini.json");
 const sha256Pattern = /^[a-f0-9]{64}$/;
 const revisionPattern = /^[a-f0-9]{40}$/;
-const expectedSchemaSHA256 = "ef93661dfa5f44a8c42fe63fd2b4d9d9d6007a99f0c1d59911a15d76b6baa1fd";
+const expectedSchemaSHA256 = "5b257b69b6175683b87410d6c01516f4a3fc18ab8fd5ce239baa5a36fcd91738";
 const expectedPlanSHA256 = "c071f4cd6032d4d961853df8aa3820365d31dd5c369c19edcd56e182d58c0069";
 const expectedPlanRevision = "827723f222bb2a335313743b830503d8c2bda71a";
 
@@ -339,6 +339,18 @@ function validateSchemaContract(schema) {
     schema.$defs.incompleteResult.allOf[1].properties.scenarioAttestation.allOf[1].properties.fixedStillSHA256,
     { type: "null" },
   );
+  assert.equal(
+    schema.$defs.incompleteResult.allOf[1].properties.scenarioAttestation.allOf[1].properties.planScenarioMatched.const,
+    false,
+  );
+  assert.equal(
+    schema.$defs.incompleteResult.allOf[1].properties.scenarioAttestation.allOf[1].properties.complete.const,
+    false,
+  );
+  assert.deepEqual(schema.$defs.incompleteResult.allOf[1].properties.windows.const, []);
+  assert.equal(schema.$defs.incompleteResult.allOf[1].properties.aggregate.properties.acceptedWindowCount.const, 0);
+  assert.equal(schema.$defs.incompleteResult.allOf[1].properties.aggregate.properties.reason.const, "missing-attestation");
+  assert.equal(schema.$defs.incompleteResult.allOf[1].properties.coverage.properties.scenarioWakeups.const, "unmeasured");
   assert.deepEqual(
     schema.$defs.completeResult.allOf[1].properties.scenarioAttestation.allOf[1].properties.fixedStillSHA256,
     { $ref: "#/$defs/sha256" },
@@ -450,11 +462,32 @@ function validateResult(result, planBinding) {
   assertNoRetainedIdentifiers(result);
 
   const accepted = result.windows.filter((window) => window.eligible).length;
+  const fixtureProofComplete = [
+    "referenceMachine", "dualDisplay", "operatingSystemStableAcrossEveryTrial",
+    "stableAcrossEveryTrial",
+  ].every((key) => result.fixtureMatch[key]);
+  const scenarioProofComplete = scenarioAttestationKeys
+    .filter((key) => key !== "fixedStillSHA256")
+    .every((key) => result.scenarioAttestation[key]);
+  const globalProofComplete = fixtureProofComplete && scenarioProofComplete;
   if (result.qualification === "incomplete") {
-    assert.ok(accepted <= 4, "incomplete results cannot contain five eligible trials");
-    assert.equal(result.aggregate.acceptedWindowCount, accepted);
     for (const key of ["medianWakeupsPerMinute", "rangeWakeupsPerMinute", "p95WakeupsPerMinute", "contractConformance"]) {
       assert.equal(result.aggregate[key], null, `incomplete result must keep ${key} null`);
+    }
+    if (boundFixedStill === null) {
+      assert.equal(result.windows.length, 0, "a null-still plan cannot retain wakeup windows");
+      assert.equal(accepted, 0, "a null-still plan cannot accept wakeup windows");
+      assert.equal(result.aggregate.acceptedWindowCount, 0);
+      assert.equal(result.aggregate.reason, "missing-attestation");
+      assert.equal(result.scenarioAttestation.planScenarioMatched, false);
+      assert.equal(result.scenarioAttestation.complete, false);
+      assert.deepEqual(result.coverage, { scenarioWakeups: "unmeasured", globalWakeups: "unmeasured" });
+      return;
+    }
+    assert.ok(accepted <= 4, "incomplete results cannot contain five eligible trials");
+    assert.equal(result.aggregate.acceptedWindowCount, accepted);
+    if (accepted > 0) {
+      assert.equal(globalProofComplete, true, "accepted windows require complete fixture and scenario proof");
     }
     assert.ok(["incomplete-trial-set", "automated-mismatch", "missing-attestation", "candidate-or-fixture-drift"].includes(result.aggregate.reason));
     assert.equal(result.coverage.scenarioWakeups, accepted === 0 ? "unmeasured" : "partial");
@@ -575,6 +608,22 @@ function makeResult(planBinding, wakeups = [0, 5, 10, 15, 30]) {
 
 function makeIncomplete(planBinding) {
   const result = makeResult(planBinding);
+  if (planBinding.plan.scenario.fixedNonPersonalStillSHA256 === null) {
+    result.windows = [];
+    result.scenarioAttestation.planScenarioMatched = false;
+    result.scenarioAttestation.complete = false;
+    result.aggregate = {
+      acceptedWindowCount: 0,
+      medianWakeupsPerMinute: null,
+      rangeWakeupsPerMinute: null,
+      p95WakeupsPerMinute: null,
+      contractConformance: null,
+      reason: "missing-attestation",
+    };
+    result.coverage = { scenarioWakeups: "unmeasured", globalWakeups: "unmeasured" };
+    result.qualification = "incomplete";
+    return result;
+  }
   result.windows.pop();
   result.aggregate = {
     acceptedWindowCount: 4,
@@ -604,6 +653,7 @@ function runSelfTests(plan, schema, schemaBytes, planBytes, resourceFixtureBytes
   validateResult(makeResult(collectionReadyPlanBinding), collectionReadyPlanBinding);
   validateResult(makeResult(collectionReadyPlanBinding, [0, 5, 10, 15, 31]), collectionReadyPlanBinding);
   validateResult(makeIncomplete(currentPlanBinding), currentPlanBinding);
+  validateResult(makeIncomplete(collectionReadyPlanBinding), collectionReadyPlanBinding);
   assert.throws(
     () => validateResult(makeResult(currentPlanBinding), currentPlanBinding),
     /complete results require a fixed still frozen in the bound plan/,
@@ -687,24 +737,44 @@ function runSelfTests(plan, schema, schemaBytes, planBytes, resourceFixtureBytes
     assert.throws(() => validateResult(candidate, collectionReadyPlanBinding));
   }
 
-  const incompleteTamperCases = [
+  const currentIncompleteTamperCases = [
     (x) => { x.fixtureMatch.referenceMachine = "unknown"; },
     (x) => { x.scenarioAttestation.complete = "false"; },
+    (x) => {
+      x.windows = [structuredClone(makeResult(collectionReadyPlanBinding).windows[0])];
+      x.aggregate.acceptedWindowCount = 1;
+      x.aggregate.reason = "incomplete-trial-set";
+      x.coverage.scenarioWakeups = "partial";
+    },
+    (x) => { x.coverage.scenarioWakeups = "partial"; },
+    (x) => { x.aggregate.reason = "incomplete-trial-set"; },
+    (x) => { x.scenarioAttestation.planScenarioMatched = true; },
+    (x) => { x.scenarioAttestation.complete = true; },
+  ];
+  for (const tamper of currentIncompleteTamperCases) {
+    const candidate = makeIncomplete(currentPlanBinding);
+    tamper(candidate);
+    assert.throws(() => validateResult(candidate, currentPlanBinding));
+  }
+
+  const readyIncompleteTamperCases = [
     (x) => { x.windows[0].freshProcessInstance = false; },
     (x) => {
       x.windows[0].eligible = false;
       x.aggregate.acceptedWindowCount = 3;
     },
+    (x) => { x.fixtureMatch.referenceMachine = false; },
+    (x) => { x.scenarioAttestation.complete = false; },
     (x) => {
       x.windows = [];
       x.aggregate.acceptedWindowCount = 0;
       x.coverage.scenarioWakeups = "partial";
     },
   ];
-  for (const tamper of incompleteTamperCases) {
-    const candidate = makeIncomplete(currentPlanBinding);
+  for (const tamper of readyIncompleteTamperCases) {
+    const candidate = makeIncomplete(collectionReadyPlanBinding);
     tamper(candidate);
-    assert.throws(() => validateResult(candidate, currentPlanBinding));
+    assert.throws(() => validateResult(candidate, collectionReadyPlanBinding));
   }
 
   const schemaTamperCases = [
@@ -723,6 +793,12 @@ function runSelfTests(plan, schema, schemaBytes, planBytes, resourceFixtureBytes
     (x) => { x.$defs.window.allOf[0].then.properties.eligible.const = false; },
     (x) => { x.$defs.window.allOf[0].else.properties.eligible.const = true; },
     (x) => { x.$defs.incompleteResult.allOf[1].properties.scenarioAttestation.allOf[1].properties.fixedStillSHA256 = { $ref: "#/$defs/sha256" }; },
+    (x) => { x.$defs.incompleteResult.allOf[1].properties.scenarioAttestation.allOf[1].properties.planScenarioMatched.const = true; },
+    (x) => { x.$defs.incompleteResult.allOf[1].properties.scenarioAttestation.allOf[1].properties.complete.const = true; },
+    (x) => { x.$defs.incompleteResult.allOf[1].properties.windows = { type: "array", maxItems: 5 }; },
+    (x) => { x.$defs.incompleteResult.allOf[1].properties.aggregate.properties.acceptedWindowCount = { maximum: 4 }; },
+    (x) => { x.$defs.incompleteResult.allOf[1].properties.aggregate.properties.reason.const = "incomplete-trial-set"; },
+    (x) => { x.$defs.incompleteResult.allOf[1].properties.coverage.properties.scenarioWakeups.const = "partial"; },
     (x) => { x.$defs.completeResult.allOf[1].properties.windows.items.allOf[1].properties.eligible.const = false; },
     (x) => { x.$defs.completeResult.allOf[1].properties.scenarioAttestation.allOf[1].properties.signpostsDisabled.const = false; },
     (x) => { x.$defs.completeResult.allOf[1].properties.windows.maxItems = 6; },
@@ -735,8 +811,8 @@ function runSelfTests(plan, schema, schemaBytes, planBytes, resourceFixtureBytes
     assert.throws(() => validateSchemaContract(candidate));
   }
   return {
-    positives: 5,
-    negatives: 1 + planTamperCases.length + resultTamperCases.length + incompleteTamperCases.length + schemaTamperCases.length,
+    positives: 6,
+    negatives: 1 + planTamperCases.length + resultTamperCases.length + currentIncompleteTamperCases.length + readyIncompleteTamperCases.length + schemaTamperCases.length,
   };
 }
 

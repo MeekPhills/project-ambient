@@ -18,8 +18,11 @@ The current schema's active artifact branches are plan and incomplete result;
 the validator pins the frozen plan bytes, and the current incomplete-result
 branch binds that plan's exact producer revision and byte digest. The complete-
 result definition remains reserved and inactive while the plan's fixed-still
-digest is null. A later reviewed plan must freeze that digest and activate
-exact result bindings before any complete evidence can validate.
+digest is null. The current incomplete form is therefore closed to zero windows,
+zero accepted trials, `unmeasured` coverage, and a missing-attestation reason;
+it cannot retain partial host evidence. A later reviewed plan must freeze that
+digest and activate exact result bindings before any complete evidence can
+validate.
 
 Settled RSS and physical footprint are independent rows. RSS retains its 40 MiB
 maximum, while public `RUSAGE_INFO_V3.ri_phys_footprint` is sampled as a gauge

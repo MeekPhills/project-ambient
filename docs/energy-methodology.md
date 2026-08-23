@@ -59,7 +59,8 @@ Each window's eligibility must equal the conjunction of those retained proofs;
 it cannot be set false to discard a valid high trial. Every result must also
 bind the exact qualification-plan producer revision, plan-byte digest, and
 fixed-still digest. A plan with no frozen still cannot produce a complete
-qualification result.
+qualification result or retain partial wakeup windows; its incomplete result
+must remain zero-window and `unmeasured`.
 
 Hardware capability is not runtime activity. A public report that HEVC hardware
 decode is supported does not prove that a decoder session was created, that a

@@ -81,11 +81,13 @@ Rank five is therefore the maximum observed window rate. The scenario conforms
 only when all five trials are valid and that P95 is at most the unchanged
 ceiling of 2 wakeups per minute. A complete measured set above the ceiling is a
 valid failure, not an incomplete result. An incomplete set keeps P95 and
-contract conformance null. Its accepted windows may be labeled `partial` in
-the result artifact, but global wakeup coverage and the bound resource fixture
-remain `unmeasured`. A complete sanitized result reports all five window
-aggregates, their median and range, and the rank-five P95; it never substitutes
-a single best run.
+contract conformance null. After a future plan freezes the required still, its
+accepted windows may be labeled `partial` only when the result-level fixture
+and scenario proof is also complete. The current null-still plan cannot retain
+any window: its active incomplete form requires zero accepted windows,
+`unmeasured` scenario/global coverage, and reason `missing-attestation`. A
+complete sanitized result reports all five window aggregates, their median and
+range, and the rank-five P95; it never substitutes a single best run.
 
 ## Exact candidate and fixture binding
 
@@ -205,12 +207,14 @@ evidence after collection.
 ## Contract validation
 
 `node script/validate_m4_static_wakeup_qualification.mjs` pins the exact schema,
-plan, and bound resource-fixture bytes; validates the current plan, a synthetic
-collection-ready plan, one conforming synthetic result, one nonconforming
-complete result, and one current-plan incomplete result; and rejects 88 schema,
-plan-binding, eligibility, protocol, arithmetic, identity, fixture, privacy,
-and claim tamper cases. The command accepts no result path, runs no host probe,
-and collects no evidence.
+plan, and bound resource-fixture bytes; validates the current and synthetic
+collection-ready plans, conforming and nonconforming complete results, the
+current zero-window incomplete result, and a collection-ready partial result;
+and rejects 101 schema, plan-binding, eligibility, protocol, arithmetic,
+identity, fixture, privacy, and claim tamper cases. The current-plan incomplete
+result is unmeasured; the separate synthetic partial result exercises retained
+global-proof requirements. The command accepts no result path, runs no host
+probe, and collects no evidence.
 
 ## Prerequisites and next action
 
