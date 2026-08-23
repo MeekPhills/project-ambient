@@ -6,7 +6,7 @@
 
 **Producer revision:** `08c6b09845a218e02b6e8f6f10cba368a203dc59`
 
-**Validation revision:** `0c1ba07dd5bb3c2a98f3bab36c726a6395126dad`
+**Validation revision:** `962308dc561445b865575aaa48609911eb654052`
 
 **Qualification:** host capability only — no runtime measurement, M4 certification, or tracker credit
 
@@ -52,7 +52,8 @@ this probe neither runs nor measures that path and cannot characterize Aerial,
 WindowServer, or other system activity. One logical player object would not be
 a valid decoder-session count in any case.
 
-Accordingly, decoder sessions, GPU time, GPU utilization, and frame pacing
-remain null and `unmeasured`. The existing resource fixture and canonical
-tracker are unchanged: issue #28 remains open, schema v3 remains active, and
-readiness remains 20/100.
+Accordingly, the three emitted runtime metrics—decoder sessions, GPU time, and
+GPU utilization—remain null. Those metrics and frame pacing remain
+`unmeasured`. The existing resource fixture and canonical tracker are
+unchanged: issue #28 remains open, schema v3 remains active, and readiness
+remains 20/100.
