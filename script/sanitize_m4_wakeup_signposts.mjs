@@ -256,6 +256,11 @@ function validateSeries(series) {
     priorEventEndMicros = eventEndMicros;
     const intervalSeconds = Number(eventEndMicros - eventStartMicros) / 1e6;
     assert.ok(intervalSeconds >= 0.5 && intervalSeconds <= 2, `activity event ${index} interval is outside the accepted cadence`);
+    assert.ok(
+      intervalSeconds >= processSeries.samplingGapSecondsMin - 0.1 - 1e-9
+        && intervalSeconds <= processSeries.samplingGapSecondsMax + 0.1 + 1e-9,
+      `activity event ${index} interval conflicts with the declared sampling-gap extrema`,
+    );
     const wallOffsetSeconds = Number(eventEndMicros - firstSnapshotMicros) / 1e6;
     assert.ok(Math.abs(wallOffsetSeconds - event.offsetSeconds) <= 0.1, `activity event ${index} wall and monotonic offsets diverged by more than 100 ms`);
     for (const key of ["interruptWakeups", "packageIdleWakeups", "diskReadBytes", "diskWrittenBytes"]) {
@@ -799,6 +804,8 @@ function runSelfTest() {
   const delayedCadence = makeSeries();
   delayedCadence.processRusageSeries.samplingGapSecondsMax = 3;
   assert.throws(() => parseAndCorrelate(delayedCadence, queryStart, makeNDJSON([launch])), /gap over two seconds/);
+  const impossibleActiveInterval = makeSeries([makeActivityEvent({ offsetSeconds: 2, startOffsetSeconds: 0 })]);
+  assert.throws(() => parseAndCorrelate(impossibleActiveInterval, queryStart, makeNDJSON([launch])), /declared sampling-gap extrema/);
   const truncated = makeSeries();
   truncated.processRusageSeries.activityEventsTruncated = true;
   assert.throws(() => parseAndCorrelate(truncated, queryStart, makeNDJSON([launch])), /truncated/);
@@ -821,6 +828,7 @@ function runSelfTest() {
   wallMismatch.completedAt = "2026-08-23T11:00:04.200000Z";
   assert.throws(() => parseAndCorrelate(wallMismatch, queryStart, makeNDJSON([launch])), /does not match/);
   const activityAnchorMismatch = makeSeries();
+  activityAnchorMismatch.processRusageSeries.activityEvents[0].startUnixMicroseconds = parseCanonicalUTCMicrosecond("2026-08-23T11:00:00.900000Z", "synthetic drift start").toString();
   activityAnchorMismatch.processRusageSeries.activityEvents[0].endUnixMicroseconds = parseCanonicalUTCMicrosecond("2026-08-23T11:00:01.800000Z", "synthetic drift").toString();
   assert.throws(() => parseAndCorrelate(activityAnchorMismatch, queryStart, makeNDJSON([launch])), /diverged/);
   const staleLaunchIdentity = makeSeries();
@@ -908,7 +916,7 @@ async function main() {
   if (options.selfTest) {
     runSelfTest();
     await runSeriesPathSelfTest();
-    console.log("wakeup-signpost sanitizer self-test: 51 positive/negative cases passed; raw records are synthetic, the FIFO is temporary, and retained output is closed");
+    console.log("wakeup-signpost sanitizer self-test: 52 positive/negative cases passed; raw records are synthetic, the FIFO is temporary, and retained output is closed");
     return;
   }
   assert.equal(process.platform, "darwin", "production signpost queries require macOS");
