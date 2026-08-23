@@ -25,8 +25,10 @@ Lifecycle-capable npm commands require one unambiguous true
 `--ignore-scripts` flag; false, duplicate, alias, chained, wrapped, and multiline
 forms fail closed. Root install/pack/publish lifecycle hooks and transient `npx`
 execution are prohibited. The MCPB command uses the exact committed tooling
-lock, and release `npm pack` is independently exercised with prepack, prepare,
-and postpack marker hooks to prove none run.
+lock. Release `npm pack` carries the explicit deny flag, and the mandatory
+aggregate validator rejects install, prepare, pack, dependency, and publish
+lifecycle hooks before packaging begins; this is required because npm versions
+do not suppress every prepare-family hook consistently during `npm pack`.
 
 Moderate, high, or critical advisories fail the release-integrity job. The
 machine-checked policy, lock digests, exact install-script inventory, captured

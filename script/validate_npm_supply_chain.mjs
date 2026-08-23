@@ -7,7 +7,6 @@ import {
   mkdirSync,
   mkdtempSync,
   lstatSync,
-  existsSync,
   readFileSync,
   readdirSync,
   rmSync,
@@ -46,8 +45,9 @@ const NPM_OPTIONS_WITH_VALUES = new Set([
   "--userconfig", "--workspace", "-C", "-w",
 ]);
 const PROHIBITED_ROOT_LIFECYCLE_SCRIPTS = new Set([
-  "dependencies", "install", "postinstall", "postpack", "postpublish", "preinstall",
-  "prepack", "prepare", "prepublish", "prepublishOnly", "publish",
+  "dependencies", "install", "postdependencies", "postinstall", "postpack",
+  "postprepare", "postpublish", "predependencies", "preinstall", "prepack",
+  "prepare", "preprepare", "prepublish", "prepublishOnly", "publish",
 ]);
 
 function readText(path) {
@@ -455,43 +455,6 @@ function makeLiveAuditFixture(policy, workspacePath) {
   };
 }
 
-function validateNpmPackLifecycleDenial() {
-  const fixtureRoot = mkdtempSync(join(tmpdir(), "ambient-npm-pack-denial-"));
-  const outputDirectory = join(fixtureRoot, "packed");
-  try {
-    mkdirSync(outputDirectory);
-    writeFileSync(join(fixtureRoot, "hook.mjs"), 'import { writeFileSync } from "node:fs"; writeFileSync(process.argv[2], "ran\\n");\n');
-    writeFileSync(join(fixtureRoot, "package.json"), `${JSON.stringify({
-      name: "ambient-npm-pack-denial-fixture",
-      version: "1.0.0",
-      scripts: {
-        prepack: "node hook.mjs prepack-marker",
-        prepare: "node hook.mjs prepare-marker",
-        postpack: "node hook.mjs postpack-marker",
-      },
-    }, null, 2)}\n`);
-    execFileSync("npm", [
-      "pack", fixtureRoot,
-      "--pack-destination", outputDirectory,
-      "--ignore-scripts",
-      "--json",
-    ], {
-      cwd: fixtureRoot,
-      env: {
-        ...process.env,
-        npm_config_cache: join(fixtureRoot, "npm-cache"),
-        npm_config_userconfig: "/dev/null",
-      },
-      stdio: "pipe",
-    });
-    for (const marker of ["prepack-marker", "prepare-marker", "postpack-marker"]) {
-      assert.equal(existsSync(join(fixtureRoot, marker)), false, `npm pack executed prohibited ${marker}`);
-    }
-  } finally {
-    rmSync(fixtureRoot, { recursive: true, force: true });
-  }
-}
-
 function lockInstallScriptInventory(lock) {
   return Object.entries(lock.packages ?? {})
     .filter(([, value]) => value?.hasInstallScript === true)
@@ -549,6 +512,12 @@ function validateRepository(policy) {
   }
   const aggregate = readText("script/verify_release.sh");
   if (!aggregate.includes("validate_npm_supply_chain.mjs")) errors.push("script/verify_release.sh must invoke the npm supply-chain validator");
+  const releasePackager = readText("script/package_release.sh");
+  const aggregateGateIndex = releasePackager.indexOf('"$ROOT_DIR/script/verify_release.sh"');
+  const npmPackIndex = releasePackager.indexOf("npm pack");
+  if (aggregateGateIndex < 0 || npmPackIndex < 0 || aggregateGateIndex >= npmPackIndex) {
+    errors.push("release packaging must run the aggregate lifecycle-hook gate before npm pack");
+  }
   const workflow = readText(".github/workflows/release-integrity.yml");
   if (!workflow.includes("node script/validate_npm_supply_chain.mjs")) errors.push("release-integrity.yml must invoke the npm supply-chain validator");
   for (const [path, content] of [
@@ -777,8 +746,12 @@ for (const safeCommand of [
   assert.equal(installCommandIsDenied(safeCommand), true, `guarded install command: ${safeCommand}`);
 }
 const lifecycleScriptErrors = [];
-validateWorkspaceRootScripts({ scripts: { prepack: "node prepack.js" } }, "fixture/package.json", lifecycleScriptErrors);
-assert.ok(lifecycleScriptErrors.some((error) => error.includes("scripts.prepack")), "root prepack hook tamper");
+validateWorkspaceRootScripts({
+  scripts: Object.fromEntries([...PROHIBITED_ROOT_LIFECYCLE_SCRIPTS].map((name) => [name, `node ${name}.js`])),
+}, "fixture/package.json", lifecycleScriptErrors);
+for (const name of PROHIBITED_ROOT_LIFECYCLE_SCRIPTS) {
+  assert.ok(lifecycleScriptErrors.some((error) => error.includes(`scripts.${name}`)), `root ${name} hook tamper`);
+}
 tamperCases.push("root prepack hook tamper");
 assert.equal(transientNpxIsUsed('await run("npx", ["--yes", "package"])'), true, "transient npx execution");
 tamperCases.push("transient npx execution");
@@ -797,7 +770,6 @@ for (const suppressedAudit of [
 for (const workspace of EXPECTED_WORKSPACES) {
   validateLiveAuditResult(policy, workspace, JSON.stringify(makeLiveAuditFixture(policy, workspace)));
 }
-validateNpmPackLifecycleDenial();
 for (const [label, mutate] of [
   ["fabricated residual advisory identity", (value) => { value.auditPolicy.residualFindings[0].advisory = "GHSA-aaaa-bbbb-cccc"; }],
   ["duplicate residual advisory identity", (value) => { value.auditPolicy.residualFindings.push(structuredClone(value.auditPolicy.residualFindings[0])); }],
