@@ -25,9 +25,9 @@ Lifecycle-capable npm commands require one unambiguous true
 `--ignore-scripts` flag; false, duplicate, alias, chained, wrapped, and multiline
 forms fail closed. Root install/pack/publish lifecycle hooks and transient `npx`
 execution are prohibited. The MCPB command uses the exact committed tooling
-lock. Release `npm pack` carries the explicit deny flag, and the mandatory
-aggregate validator rejects install, prepare, pack, dependency, and publish
-lifecycle hooks before packaging begins; this is required because npm versions
+lock. Release `npm pack` carries the explicit deny flag, and one exact active
+policy-validator invocation immediately before it rejects install, prepare,
+pack, dependency, and publish lifecycle hooks; this is required because npm versions
 do not suppress every prepare-family hook consistently during `npm pack`.
 
 Moderate, high, or critical advisories fail the release-integrity job. The
@@ -101,7 +101,7 @@ fails the offline validator.
   467 packages, MCP 124, and MCPB tooling 54 without lifecycle execution.
 - `node script/validate_npm_supply_chain.mjs`: passed; three workspaces, seven
   denied packages, zero exceptions, zero moderate/high/critical findings, one
-  tracked low finding, and 44 fail-closed tamper cases. Fresh audit JSON for all
+  tracked low finding, and 47 fail-closed tamper cases. Fresh audit JSON for all
   three workspaces reconciled exactly to the governed counts and residual rows.
 - `npm test` in `apps/site`: production build passed and 12/12 rendered-route
   tests passed with Vite 8.2.2.

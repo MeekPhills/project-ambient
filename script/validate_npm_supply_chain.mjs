@@ -211,12 +211,30 @@ function installCommandIsDenied(line) {
       const lifecycleOperation = LIFECYCLE_CAPABLE_NPM_OPERATIONS.has(operation) ||
         tokens.some((token) => LIFECYCLE_CAPABLE_NPM_OPERATIONS.has(token));
       if (!lifecycleOperation) continue;
-      const ignoreScriptFlags = tokens.filter((token) => token.startsWith("--ignore-scripts"));
-      if (ignoreScriptFlags.length !== 1) return false;
-      if (!["--ignore-scripts", "--ignore-scripts=true"].includes(ignoreScriptFlags[0])) return false;
+      const scriptControlFlags = tokens.filter((token) => /^--(?:no-)?ignore[-_]scripts(?:=|$)/.test(token));
+      if (scriptControlFlags.length !== 1) return false;
+      if (!["--ignore-scripts", "--ignore-scripts=true"].includes(scriptControlFlags[0])) return false;
     }
   }
   return true;
+}
+
+function logicalCommandLines(input) {
+  const result = [];
+  let current = "";
+  let startLine = 1;
+  for (const [index, physicalLine] of input.split("\n").entries()) {
+    if (current.length === 0) startLine = index + 1;
+    const continued = /\\\s*$/.test(physicalLine);
+    const fragment = continued ? physicalLine.replace(/\\\s*$/, " ") : physicalLine;
+    current += fragment;
+    if (!continued) {
+      result.push({ line: startLine, text: current });
+      current = "";
+    }
+  }
+  if (current.length > 0) result.push({ line: startLine, text: current });
+  return result;
 }
 
 function auditReportingIsSuppressed(line) {
@@ -239,6 +257,20 @@ function validateWorkspaceRootScripts(packageJSON, at, errors) {
     if (PROHIBITED_ROOT_LIFECYCLE_SCRIPTS.has(name)) {
       errors.push(`${at}.scripts.${name} is prohibited by the no-lifecycle execution policy`);
     }
+  }
+}
+
+function validateReleasePackagerBoundary(source, errors) {
+  const expected = [
+    'node "$ROOT_DIR/script/validate_npm_supply_chain.mjs"',
+    'npm_config_cache="$STAGE_DIR/.npm-cache" \\',
+    "npm_config_userconfig=/dev/null \\",
+    'npm pack "$MCP_DIR" --pack-destination "$STAGE_DIR" --ignore-scripts >/dev/null',
+  ];
+  const lines = source.split("\n").map((line) => line.trim());
+  const starts = lines.flatMap((line, index) => line === expected[0] ? [index] : []);
+  if (starts.length !== 1 || JSON.stringify(lines.slice(starts[0], starts[0] + expected.length)) !== JSON.stringify(expected)) {
+    errors.push("release packaging must run one exact active policy validator immediately before npm pack");
   }
 }
 
@@ -500,24 +532,20 @@ function validateRepository(policy) {
 
   const controlledInstallFiles = repositoryFiles.filter(isControlledInstallFile);
   for (const path of controlledInstallFiles) {
-    for (const [index, line] of readText(path).split("\n").entries()) {
-      if (!installCommandIsDenied(line)) errors.push(`${path}:${index + 1} npm install command must explicitly disable lifecycle scripts`);
-      if (auditReportingIsSuppressed(line)) errors.push(`${path}:${index + 1} npm advisory reporting must not be suppressed`);
+    for (const command of logicalCommandLines(readText(path))) {
+      if (!installCommandIsDenied(command.text)) errors.push(`${path}:${command.line} npm install command must explicitly disable lifecycle scripts`);
+      if (auditReportingIsSuppressed(command.text)) errors.push(`${path}:${command.line} npm advisory reporting must not be suppressed`);
     }
   }
   for (const path of repositoryFiles.filter(isControlledTransientExecutionFile)) {
-    for (const [index, line] of readText(path).split("\n").entries()) {
-      if (transientNpxIsUsed(line)) errors.push(`${path}:${index + 1} transient npx execution is prohibited; use committed locked tooling`);
+    for (const command of logicalCommandLines(readText(path))) {
+      if (transientNpxIsUsed(command.text)) errors.push(`${path}:${command.line} transient npx execution is prohibited; use committed locked tooling`);
     }
   }
   const aggregate = readText("script/verify_release.sh");
   if (!aggregate.includes("validate_npm_supply_chain.mjs")) errors.push("script/verify_release.sh must invoke the npm supply-chain validator");
   const releasePackager = readText("script/package_release.sh");
-  const aggregateGateIndex = releasePackager.indexOf('"$ROOT_DIR/script/verify_release.sh"');
-  const npmPackIndex = releasePackager.indexOf("npm pack");
-  if (aggregateGateIndex < 0 || npmPackIndex < 0 || aggregateGateIndex >= npmPackIndex) {
-    errors.push("release packaging must run the aggregate lifecycle-hook gate before npm pack");
-  }
+  validateReleasePackagerBoundary(releasePackager, errors);
   const workflow = readText(".github/workflows/release-integrity.yml");
   if (!workflow.includes("node script/validate_npm_supply_chain.mjs")) errors.push("release-integrity.yml must invoke the npm supply-chain validator");
   for (const [path, content] of [
@@ -538,7 +566,10 @@ function validateRepository(policy) {
     "**/*.sh",
     "package.json",
     "**/package.json",
+    "**/*.js",
+    "**/*.cjs",
     "**/*.mjs",
+    "**/*.ts",
     "Dockerfile",
     "**/Dockerfile",
     "CLAUDE.md",
@@ -731,10 +762,15 @@ for (const unsafeCommand of [
   "npm ci $NPM_FLAGS",
   "npm ci --no-ignore-scripts",
   "npm ci --ignore-scripts --ignore-scripts=false",
+  "npm ci --ignore-scripts --no-ignore-scripts",
 ]) {
   assert.equal(installCommandIsDenied(unsafeCommand), false, `unguarded install command: ${unsafeCommand}`);
   tamperCases.push(`unguarded install command: ${unsafeCommand}`);
 }
+const multilineNegation = logicalCommandLines("npm ci --ignore-scripts \\\n  --no-ignore-scripts");
+assert.equal(multilineNegation.length, 1, "multiline npm command framing");
+assert.equal(installCommandIsDenied(multilineNegation[0].text), false, "multiline negated ignore-scripts flag");
+tamperCases.push("multiline negated ignore-scripts flag");
 for (const safeCommand of [
   "npm ci --ignore-scripts",
   "RUN npm ci --ignore-scripts=true",
@@ -755,6 +791,15 @@ for (const name of PROHIBITED_ROOT_LIFECYCLE_SCRIPTS) {
 tamperCases.push("root prepack hook tamper");
 assert.equal(transientNpxIsUsed('await run("npx", ["--yes", "package"])'), true, "transient npx execution");
 tamperCases.push("transient npx execution");
+for (const [label, source] of [
+  ["commented release packager gate", '# node "$ROOT_DIR/script/validate_npm_supply_chain.mjs"\nnpm_config_cache="$STAGE_DIR/.npm-cache" \\\nnpm_config_userconfig=/dev/null \\\nnpm pack "$MCP_DIR" --pack-destination "$STAGE_DIR" --ignore-scripts >/dev/null\n'],
+  ["late release packager gate", 'npm pack "$MCP_DIR" --pack-destination "$STAGE_DIR" --ignore-scripts >/dev/null\nnode "$ROOT_DIR/script/validate_npm_supply_chain.mjs"\n'],
+]) {
+  const errors = [];
+  validateReleasePackagerBoundary(source, errors);
+  assert.ok(errors.length > 0, label);
+}
+tamperCases.push("release packager gate framing");
 for (const suppressedAudit of [
   "export npm_config_audit=false",
   "export npm_config_audit='false'",

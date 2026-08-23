@@ -163,6 +163,7 @@ git -C "$ROOT_DIR" archive --format=zip \
   --output "$STAGE_DIR/Project-Ambient-$VERSION-source.zip" \
   "$source_revision"
 
+node "$ROOT_DIR/script/validate_npm_supply_chain.mjs"
 npm_config_cache="$STAGE_DIR/.npm-cache" \
   npm_config_userconfig=/dev/null \
   npm pack "$MCP_DIR" --pack-destination "$STAGE_DIR" --ignore-scripts >/dev/null
