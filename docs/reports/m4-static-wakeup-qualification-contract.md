@@ -47,7 +47,9 @@ After the temporary rows are deleted, each sanitized window retains the
 observed minimum and maximum sampling gaps, maximum absolute cross-clock drift,
 fresh-process and warm-up completion flags, process/candidate continuity, and
 fixture/scenario stability. Those closed fields make eligibility reviewable;
-an `eligible` flag cannot substitute for missing or out-of-range proof.
+`eligible` must be true if and only if every retained proof flag is true. It
+cannot be suppressed to hide a valid high-wakeup trial or asserted to replace
+missing or out-of-range proof.
 
 One invalid, missing, duplicate, reordered, replaced, or extra trial makes the
 whole five-trial set incomplete. A high valid trial remains in the set. There
@@ -93,6 +95,16 @@ SHA-256, `arm64` architecture, release configuration, and artifact kind. The
 running executable must match that candidate before and after every trial. A
 different executable digest, including a later signed or notarized binary,
 requires a new five-trial set.
+
+Every retained result must also name the exact producer revision and SHA-256
+of the qualification-plan bytes it follows. Its fixed-still digest must equal
+the digest frozen in that exact plan. The current plan deliberately carries a
+null digest, so the published schema accepts plan artifacts while its only
+active result branch accepts plan-bound incomplete results; the validator pins
+the reviewed plan bytes exactly. The complete-result definition is reserved
+for synthetic contract testing and is not an active evidence branch.
+Activating complete results requires a reviewed plan revision and byte digest
+that freeze the non-personal still first.
 
 The retained result also records the non-identifying macOS version and build.
 Both must remain stable across all five trials; a system update or build drift
@@ -193,11 +205,12 @@ evidence after collection.
 ## Contract validation
 
 `node script/validate_m4_static_wakeup_qualification.mjs` pins the exact schema,
-plan, and bound resource-fixture bytes; validates one plan, one conforming
-synthetic result, one nonconforming complete result, and one incomplete result;
-and rejects 78 schema, protocol, arithmetic, identity, fixture, privacy, and
-claim tamper cases. The command accepts no result path, runs no host probe, and
-collects no evidence.
+plan, and bound resource-fixture bytes; validates the current plan, a synthetic
+collection-ready plan, one conforming synthetic result, one nonconforming
+complete result, and one current-plan incomplete result; and rejects 88 schema,
+plan-binding, eligibility, protocol, arithmetic, identity, fixture, privacy,
+and claim tamper cases. The command accepts no result path, runs no host probe,
+and collects no evidence.
 
 ## Prerequisites and next action
 

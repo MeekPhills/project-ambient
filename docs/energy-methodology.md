@@ -55,6 +55,11 @@ The retained window summary must preserve fresh-process and warm-up completion,
 observed sampling-gap extrema, maximum cross-clock drift, process/candidate
 continuity, and fixture/scenario stability so raw-row deletion does not make an
 eligibility decision unauditable.
+Each window's eligibility must equal the conjunction of those retained proofs;
+it cannot be set false to discard a valid high trial. Every result must also
+bind the exact qualification-plan producer revision, plan-byte digest, and
+fixed-still digest. A plan with no frozen still cannot produce a complete
+qualification result.
 
 Hardware capability is not runtime activity. A public report that HEVC hardware
 decode is supported does not prove that a decoder session was created, that a

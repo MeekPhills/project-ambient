@@ -14,6 +14,13 @@ complete reviewed run are separate prerequisites. Future sanitized windows must
 retain timing extrema and closed continuity/stability proof after temporary raw
 rows are deleted.
 
+The current schema's active artifact branches are plan and incomplete result;
+the validator pins the frozen plan bytes, and the current incomplete-result
+branch binds that plan's exact producer revision and byte digest. The complete-
+result definition remains reserved and inactive while the plan's fixed-still
+digest is null. A later reviewed plan must freeze that digest and activate
+exact result bindings before any complete evidence can validate.
+
 Settled RSS and physical footprint are independent rows. RSS retains its 40 MiB
 maximum, while public `RUSAGE_INFO_V3.ri_phys_footprint` is sampled as a gauge
 with a separate 40 MiB nearest-rank P95 ceiling. Passing either row never

@@ -4,8 +4,7 @@
   "title": "Project Ambient settled-static wakeup qualification protocol",
   "oneOf": [
     { "$ref": "#/$defs/plan" },
-    { "$ref": "#/$defs/incompleteResult" },
-    { "$ref": "#/$defs/completeResult" }
+    { "$ref": "#/$defs/incompleteResult" }
   ],
   "$defs": {
     "sha256": { "type": "string", "pattern": "^(?!0{64}$)[a-f0-9]{64}$" },
@@ -174,7 +173,9 @@
         "rotationTrigger": { "const": "screen-lock" },
         "mediaType": { "const": "image" },
         "mediaDynamicRange": { "const": "sdr" },
-        "fixedNonPersonalStillSHA256": { "type": "null" },
+        "fixedNonPersonalStillSHA256": {
+          "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/sha256" }]
+        },
         "fixedStillRequiredBeforeCollection": { "const": true },
         "rulesEnabled": { "const": false },
         "temporaryChannelActive": { "const": false },
@@ -345,7 +346,9 @@
         "complete"
       ],
       "properties": {
-        "fixedStillSHA256": { "$ref": "#/$defs/sha256" },
+        "fixedStillSHA256": {
+          "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/sha256" }]
+        },
         "planScenarioMatched": { "type": "boolean" },
         "settledStatic": { "type": "boolean" },
         "windowsHidden": { "type": "boolean" },
@@ -385,13 +388,35 @@
         "fixtureStable": { "type": "boolean" },
         "scenarioStable": { "type": "boolean" },
         "eligible": { "type": "boolean" }
-      }
+      },
+      "allOf": [
+        {
+          "if": {
+            "required": [
+              "freshProcessInstance", "warmupCompleted",
+              "processIdentityContinuous", "candidateIdentityContinuous",
+              "fixtureStable", "scenarioStable"
+            ],
+            "properties": {
+              "freshProcessInstance": { "const": true },
+              "warmupCompleted": { "const": true },
+              "processIdentityContinuous": { "const": true },
+              "candidateIdentityContinuous": { "const": true },
+              "fixtureStable": { "const": true },
+              "scenarioStable": { "const": true }
+            }
+          },
+          "then": { "properties": { "eligible": { "const": true } } },
+          "else": { "properties": { "eligible": { "const": false } } }
+        }
+      ]
     },
     "resultBase": {
       "type": "object",
       "additionalProperties": false,
       "required": [
         "schemaVersion", "contractId", "artifactKind", "planRevision",
+        "planSHA256",
         "resourceFixtureBinding", "candidate", "fixtureMatch",
         "scenarioAttestation", "protocol", "windows", "aggregate",
         "coverage", "qualification"
@@ -401,6 +426,7 @@
         "contractId": {},
         "artifactKind": {},
         "planRevision": {},
+        "planSHA256": {},
         "resourceFixtureBinding": {},
         "candidate": {},
         "fixtureMatch": {},
@@ -422,11 +448,20 @@
             "schemaVersion": { "const": 1 },
             "contractId": { "const": "base-m4-static-settled-hidden-wakeups-v1" },
             "artifactKind": { "const": "qualification-result" },
-            "planRevision": { "$ref": "#/$defs/revision" },
+            "planRevision": { "const": "827723f222bb2a335313743b830503d8c2bda71a" },
+            "planSHA256": { "const": "c071f4cd6032d4d961853df8aa3820365d31dd5c369c19edcd56e182d58c0069" },
             "resourceFixtureBinding": { "$ref": "#/$defs/resourceFixtureBinding" },
             "candidate": { "$ref": "#/$defs/candidate" },
             "fixtureMatch": { "$ref": "#/$defs/fixtureMatch" },
-            "scenarioAttestation": { "$ref": "#/$defs/scenarioAttestation" },
+            "scenarioAttestation": {
+              "allOf": [
+                { "$ref": "#/$defs/scenarioAttestation" },
+                {
+                  "type": "object",
+                  "properties": { "fixedStillSHA256": { "type": "null" } }
+                }
+              ]
+            },
             "protocol": { "$ref": "#/$defs/protocol" },
             "windows": { "type": "array", "minItems": 0, "maxItems": 5, "items": { "$ref": "#/$defs/window" } },
             "aggregate": {
@@ -476,6 +511,7 @@
             "contractId": { "const": "base-m4-static-settled-hidden-wakeups-v1" },
             "artifactKind": { "const": "qualification-result" },
             "planRevision": { "$ref": "#/$defs/revision" },
+            "planSHA256": { "$ref": "#/$defs/sha256" },
             "resourceFixtureBinding": { "$ref": "#/$defs/resourceFixtureBinding" },
             "candidate": { "$ref": "#/$defs/candidate" },
             "fixtureMatch": {
@@ -498,6 +534,7 @@
                 {
                   "type": "object",
                   "properties": {
+                    "fixedStillSHA256": { "$ref": "#/$defs/sha256" },
                     "planScenarioMatched": { "const": true },
                     "settledStatic": { "const": true },
                     "windowsHidden": { "const": true },

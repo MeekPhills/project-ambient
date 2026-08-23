@@ -12,8 +12,9 @@ const planPath = path.join(root, "fixtures/resource-budgets/v1/base-m4-static-wa
 const resourceFixturePath = path.join(root, "fixtures/resource-budgets/v1/base-m4-mac-mini.json");
 const sha256Pattern = /^[a-f0-9]{64}$/;
 const revisionPattern = /^[a-f0-9]{40}$/;
-const expectedSchemaSHA256 = "22fe9c9f2460760d4a97e6b77ca255b702323e036590b2a668ef2b6c9391fb98";
+const expectedSchemaSHA256 = "ef93661dfa5f44a8c42fe63fd2b4d9d9d6007a99f0c1d59911a15d76b6baa1fd";
 const expectedPlanSHA256 = "c071f4cd6032d4d961853df8aa3820365d31dd5c369c19edcd56e182d58c0069";
+const expectedPlanRevision = "827723f222bb2a335313743b830503d8c2bda71a";
 
 const expectedBinding = {
   fixtureId: "base-2024-m4-mac-mini-16gb-256gb",
@@ -121,7 +122,7 @@ const topPlanKeys = [
 ];
 const resultKeys = [
   "schemaVersion", "contractId", "artifactKind", "planRevision",
-  "resourceFixtureBinding", "candidate", "fixtureMatch",
+  "planSHA256", "resourceFixtureBinding", "candidate", "fixtureMatch",
   "scenarioAttestation", "protocol", "windows", "aggregate", "coverage",
   "qualification",
 ];
@@ -170,7 +171,18 @@ function approximatelyEqual(left, right) {
   return Math.abs(left - right) <= 1e-12;
 }
 
-function validatePlan(plan, resourceFixtureBytes, resourceFixture) {
+function makePlanBinding(revision, bytes) {
+  assert.match(revision, revisionPattern, "plan binding revision must be a commit SHA");
+  assert.notEqual(revision, "0".repeat(40), "plan binding revision cannot be a placeholder");
+  const plan = JSON.parse(Buffer.from(bytes).toString("utf8"));
+  return {
+    plan,
+    revision,
+    sha256: createHash("sha256").update(bytes).digest("hex"),
+  };
+}
+
+function validatePlan(plan, resourceFixtureBytes, resourceFixture, expectedFixedStillSHA256 = null) {
   exactKeys(plan, topPlanKeys, "plan");
   assert.equal(plan.schemaVersion, 1);
   assert.equal(plan.contractId, "base-m4-static-settled-hidden-wakeups-v1");
@@ -187,7 +199,14 @@ function validatePlan(plan, resourceFixtureBytes, resourceFixture) {
   assert.deepEqual(plan.protocol, expectedProtocol, "qualification protocol drifted");
   assert.deepEqual(plan.candidateRequirements, expectedCandidateRequirements, "candidate requirements drifted");
   assert.deepEqual(plan.machineFixture, expectedMachineFixture, "machine fixture drifted");
-  assert.deepEqual(plan.scenario, expectedScenario, "plan must not claim a fixed still or collected scenario");
+  if (expectedFixedStillSHA256 !== null) {
+    assert.match(expectedFixedStillSHA256, sha256Pattern, "frozen still must be a SHA-256 digest");
+    assert.notEqual(expectedFixedStillSHA256, "0".repeat(64), "frozen still cannot be a placeholder");
+  }
+  assert.deepEqual(plan.scenario, {
+    ...expectedScenario,
+    fixedNonPersonalStillSHA256: expectedFixedStillSHA256,
+  }, "plan scenario or frozen still binding drifted");
   assert.deepEqual(plan.attestationPolicy, {
     ownerRequiredFor: expectedOwnerAttestations,
     automatedMismatchOverridesOwner: true,
@@ -221,8 +240,7 @@ function validateSchemaContract(schema) {
   assert.deepEqual(schema.oneOf, [
     { $ref: "#/$defs/plan" },
     { $ref: "#/$defs/incompleteResult" },
-    { $ref: "#/$defs/completeResult" },
-  ], "schema must keep plan, incomplete-result, and complete-result branches");
+  ], "current schema must keep complete results inactive until the fixed still is frozen");
   assert.equal(schema.$defs.sha256.pattern, "^(?!0{64}$)[a-f0-9]{64}$");
   assert.equal(schema.$defs.revision.pattern, "^(?!0{40}$)[a-f0-9]{40}$");
   for (const name of [
@@ -263,7 +281,14 @@ function validateSchemaContract(schema) {
   assert.equal(schema.$defs.machineFixture.properties.displays.minItems, 2);
   assert.equal(schema.$defs.machineFixture.properties.displays.maxItems, 2);
   assert.ok(schema.$defs.machineFixture.properties.displays.prefixItems.every((entry) => entry.allOf[1].type === "object"));
-  assert.equal(schema.$defs.scenario.properties.fixedNonPersonalStillSHA256.type, "null");
+  assert.deepEqual(schema.$defs.scenario.properties.fixedNonPersonalStillSHA256.oneOf, [
+    { type: "null" },
+    { $ref: "#/$defs/sha256" },
+  ]);
+  assert.deepEqual(schema.$defs.scenarioAttestation.properties.fixedStillSHA256.oneOf, [
+    { type: "null" },
+    { $ref: "#/$defs/sha256" },
+  ]);
   assert.deepEqual(schema.$defs.retentionPolicy.properties.prohibitedFields.const, expectedProhibitedFields);
   assert.deepEqual(schema.$defs.retentionPolicy.properties.prohibitedTools.const, expectedProhibitedTools);
   for (const name of ["incompleteResult", "completeResult"]) {
@@ -282,6 +307,14 @@ function validateSchemaContract(schema) {
   assert.equal(schema.$defs.window.properties.samplingGapSecondsMinimum.minimum, 0.5);
   assert.equal(schema.$defs.window.properties.samplingGapSecondsMaximum.maximum, 2);
   assert.equal(schema.$defs.window.properties.crossClockDriftMillisecondsMaximum.maximum, 100);
+  assert.equal(schema.$defs.window.allOf.length, 1);
+  const eligibilityRule = schema.$defs.window.allOf[0];
+  const retainedProofKeys = windowProofKeys.filter((key) => key !== "eligible");
+  assert.deepEqual([...eligibilityRule.if.required].sort(), [...retainedProofKeys].sort());
+  exactKeys(eligibilityRule.if.properties, retainedProofKeys, "schema.$defs.window eligibility proof");
+  for (const key of retainedProofKeys) assert.equal(eligibilityRule.if.properties[key].const, true);
+  assert.equal(eligibilityRule.then.properties.eligible.const, true);
+  assert.equal(eligibilityRule.else.properties.eligible.const, false);
   const completeFixtureSchema = schema.$defs.completeResult.allOf[1].properties.fixtureMatch;
   assert.deepEqual(completeFixtureSchema.allOf[0], { $ref: "#/$defs/fixtureMatch" });
   for (const key of ["referenceMachine", "dualDisplay", "operatingSystemStableAcrossEveryTrial", "stableAcrossEveryTrial"]) {
@@ -296,6 +329,20 @@ function validateSchemaContract(schema) {
   assert.deepEqual(completeWindowSchema.allOf[0], { $ref: "#/$defs/window" });
   for (const key of windowProofKeys) assert.equal(completeWindowSchema.allOf[1].properties[key].const, true);
   assert.equal(schema.$defs.completeResult.allOf[1].properties.coverage.properties.globalWakeups.const, "partial");
+  assert.equal(schema.$defs.incompleteResult.allOf[1].properties.planRevision.const, expectedPlanRevision);
+  assert.equal(schema.$defs.incompleteResult.allOf[1].properties.planSHA256.const, expectedPlanSHA256);
+  assert.deepEqual(
+    schema.$defs.incompleteResult.allOf[1].properties.scenarioAttestation.allOf[0],
+    { $ref: "#/$defs/scenarioAttestation" },
+  );
+  assert.deepEqual(
+    schema.$defs.incompleteResult.allOf[1].properties.scenarioAttestation.allOf[1].properties.fixedStillSHA256,
+    { type: "null" },
+  );
+  assert.deepEqual(
+    schema.$defs.completeResult.allOf[1].properties.scenarioAttestation.allOf[1].properties.fixedStillSHA256,
+    { $ref: "#/$defs/sha256" },
+  );
   assert.equal(schema.$defs.incompleteResult.allOf[1].properties.aggregate.properties.contractConformance.type, "null");
   assert.equal(JSON.stringify(schema).includes("trackerCredit"), false, "qualification schema must not carry tracker credit");
 }
@@ -340,11 +387,8 @@ function validateWindow(window, expectedIndex) {
   for (const key of windowProofKeys) {
     assert.equal(typeof window[key], "boolean", `${key} must be boolean`);
   }
-  if (window.eligible) {
-    for (const key of windowProofKeys.filter((key) => key !== "eligible")) {
-      assert.equal(window[key], true, `eligible trial requires ${key}`);
-    }
-  }
+  const proofComplete = windowProofKeys.filter((key) => key !== "eligible").every((key) => window[key]);
+  assert.equal(window.eligible, proofComplete, "trial eligibility must exactly match retained proof");
 }
 
 function assertNoRetainedIdentifiers(value, at = "result") {
@@ -360,14 +404,24 @@ function assertNoRetainedIdentifiers(value, at = "result") {
   }
 }
 
-function validateResult(result) {
+function validateResult(result, planBinding) {
+  exactKeys(planBinding, ["plan", "revision", "sha256"], "plan binding");
+  assert.equal(planBinding.plan.schemaVersion, 1);
+  assert.equal(planBinding.plan.contractId, "base-m4-static-settled-hidden-wakeups-v1");
+  assert.equal(planBinding.plan.artifactKind, "qualification-plan");
+  assert.match(planBinding.revision, revisionPattern);
+  assert.notEqual(planBinding.revision, "0".repeat(40));
+  assert.match(planBinding.sha256, sha256Pattern);
+  assert.notEqual(planBinding.sha256, "0".repeat(64));
   exactKeys(result, resultKeys, "result");
   assert.equal(result.schemaVersion, 1);
   assert.equal(result.contractId, "base-m4-static-settled-hidden-wakeups-v1");
   assert.equal(result.artifactKind, "qualification-result");
-  assert.match(result.planRevision, revisionPattern);
-  assert.notEqual(result.planRevision, "0".repeat(40));
+  assert.equal(result.planRevision, planBinding.revision, "result must bind the exact plan producer revision");
+  assert.equal(result.planSHA256, planBinding.sha256, "result must bind the exact plan bytes");
+  assert.deepEqual(planBinding.plan.resourceFixtureBinding, expectedBinding);
   assert.deepEqual(result.resourceFixtureBinding, expectedBinding);
+  assert.deepEqual(result.resourceFixtureBinding, planBinding.plan.resourceFixtureBinding);
   validateCandidate(result.candidate);
   exactKeys(result.fixtureMatch, fixtureMatchKeys, "result.fixtureMatch");
   for (const key of ["referenceMachine", "dualDisplay", "operatingSystemStableAcrossEveryTrial", "stableAcrossEveryTrial"]) {
@@ -376,12 +430,19 @@ function validateResult(result) {
   assert.match(result.fixtureMatch.operatingSystemVersion, /^[0-9]+(?:[.][0-9]+){1,2}$/);
   assert.match(result.fixtureMatch.operatingSystemBuild, /^[A-Za-z0-9]+$/);
   exactKeys(result.scenarioAttestation, scenarioAttestationKeys, "result.scenarioAttestation");
-  assert.match(result.scenarioAttestation.fixedStillSHA256, sha256Pattern);
-  assert.notEqual(result.scenarioAttestation.fixedStillSHA256, "0".repeat(64));
+  const boundFixedStill = planBinding.plan.scenario?.fixedNonPersonalStillSHA256;
+  assert.ok(boundFixedStill === null || sha256Pattern.test(boundFixedStill), "bound plan fixed still must be null or a SHA-256 digest");
+  if (boundFixedStill !== null) assert.notEqual(boundFixedStill, "0".repeat(64));
+  const retainedFixedStill = result.scenarioAttestation.fixedStillSHA256;
+  assert.ok(retainedFixedStill === null || sha256Pattern.test(retainedFixedStill), "result fixed still must be null or a SHA-256 digest");
+  if (retainedFixedStill !== null) assert.notEqual(retainedFixedStill, "0".repeat(64));
+  assert.equal(retainedFixedStill, boundFixedStill, "result fixed still must match the bound plan exactly");
   for (const key of scenarioAttestationKeys.filter((key) => key !== "fixedStillSHA256")) {
     assert.equal(typeof result.scenarioAttestation[key], "boolean", `result.scenarioAttestation.${key} must be boolean`);
   }
+  assert.deepEqual(planBinding.plan.protocol, expectedProtocol);
   assert.deepEqual(result.protocol, expectedProtocol);
+  assert.deepEqual(result.protocol, planBinding.plan.protocol);
   assert.ok(Array.isArray(result.windows) && result.windows.length <= 5);
   result.windows.forEach((window, index) => validateWindow(window, index + 1));
   exactKeys(result.aggregate, aggregateKeys, "result.aggregate");
@@ -402,6 +463,8 @@ function validateResult(result) {
   }
 
   assert.ok(["scenario-pass", "scenario-fail"].includes(result.qualification));
+  assert.match(boundFixedStill, sha256Pattern, "complete results require a fixed still frozen in the bound plan");
+  assert.notEqual(boundFixedStill, "0".repeat(64));
   assert.equal(result.windows.length, 5);
   assert.equal(accepted, 5);
   assert.ok(result.windows.every((window) => windowProofKeys.every((key) => window[key])));
@@ -437,7 +500,7 @@ function validateResult(result) {
   assert.deepEqual(result.coverage, { scenarioWakeups: "measured", globalWakeups: "partial" });
 }
 
-function makeResult(wakeups = [0, 5, 10, 15, 30]) {
+function makeResult(planBinding, wakeups = [0, 5, 10, 15, 30]) {
   const windows = wakeups.map((interruptWakeups, index) => ({
     index: index + 1,
     snapshotCount: 901,
@@ -462,7 +525,8 @@ function makeResult(wakeups = [0, 5, 10, 15, 30]) {
     schemaVersion: 1,
     contractId: "base-m4-static-settled-hidden-wakeups-v1",
     artifactKind: "qualification-result",
-    planRevision: "a".repeat(40),
+    planRevision: planBinding.revision,
+    planSHA256: planBinding.sha256,
     resourceFixtureBinding: structuredClone(expectedBinding),
     candidate: {
       sourceRevision: "b".repeat(40),
@@ -484,7 +548,7 @@ function makeResult(wakeups = [0, 5, 10, 15, 30]) {
       stableAcrossEveryTrial: true,
     },
     scenarioAttestation: {
-      fixedStillSHA256: "4".repeat(64),
+      fixedStillSHA256: planBinding.plan.scenario.fixedNonPersonalStillSHA256,
       planScenarioMatched: true,
       settledStatic: true,
       windowsHidden: true,
@@ -509,8 +573,8 @@ function makeResult(wakeups = [0, 5, 10, 15, 30]) {
   };
 }
 
-function makeIncomplete() {
-  const result = makeResult();
+function makeIncomplete(planBinding) {
+  const result = makeResult(planBinding);
   result.windows.pop();
   result.aggregate = {
     acceptedWindowCount: 4,
@@ -528,11 +592,22 @@ function makeIncomplete() {
 function runSelfTests(plan, schema, schemaBytes, planBytes, resourceFixtureBytes, resourceFixture) {
   assert.equal(createHash("sha256").update(schemaBytes).digest("hex"), expectedSchemaSHA256, "qualification schema bytes drifted");
   assert.equal(createHash("sha256").update(planBytes).digest("hex"), expectedPlanSHA256, "qualification plan bytes drifted");
+  const currentPlanBinding = makePlanBinding(expectedPlanRevision, planBytes);
+  assert.deepEqual(currentPlanBinding.plan, plan, "parsed plan binding must match the reviewed plan bytes");
+  const collectionReadyPlan = structuredClone(plan);
+  collectionReadyPlan.scenario.fixedNonPersonalStillSHA256 = "4".repeat(64);
+  const collectionReadyPlanBytes = Buffer.from(`${JSON.stringify(collectionReadyPlan)}\n`);
+  const collectionReadyPlanBinding = makePlanBinding("a".repeat(40), collectionReadyPlanBytes);
   validateSchemaContract(schema);
   validatePlan(plan, resourceFixtureBytes, resourceFixture);
-  validateResult(makeResult());
-  validateResult(makeResult([0, 5, 10, 15, 31]));
-  validateResult(makeIncomplete());
+  validatePlan(collectionReadyPlanBinding.plan, resourceFixtureBytes, resourceFixture, "4".repeat(64));
+  validateResult(makeResult(collectionReadyPlanBinding), collectionReadyPlanBinding);
+  validateResult(makeResult(collectionReadyPlanBinding, [0, 5, 10, 15, 31]), collectionReadyPlanBinding);
+  validateResult(makeIncomplete(currentPlanBinding), currentPlanBinding);
+  assert.throws(
+    () => validateResult(makeResult(currentPlanBinding), currentPlanBinding),
+    /complete results require a fixed still frozen in the bound plan/,
+  );
 
   const planTamperCases = [
     (x) => { delete x.protocol.repeatCount; },
@@ -572,6 +647,9 @@ function runSelfTests(plan, schema, schemaBytes, planBytes, resourceFixtureBytes
   }
 
   const resultTamperCases = [
+    (x) => { x.planRevision = "c".repeat(40); },
+    (x) => { x.planSHA256 = "d".repeat(64); },
+    (x) => { x.scenarioAttestation.fixedStillSHA256 = "e".repeat(64); },
     (x) => { x.windows.pop(); },
     (x) => { x.windows[1].index = 1; },
     (x) => { [x.windows[0], x.windows[1]] = [x.windows[1], x.windows[0]]; },
@@ -604,9 +682,9 @@ function runSelfTests(plan, schema, schemaBytes, planBytes, resourceFixtureBytes
     (x) => { x.pid = 1; },
   ];
   for (const tamper of resultTamperCases) {
-    const candidate = makeResult();
+    const candidate = makeResult(collectionReadyPlanBinding);
     tamper(candidate);
-    assert.throws(() => validateResult(candidate));
+    assert.throws(() => validateResult(candidate, collectionReadyPlanBinding));
   }
 
   const incompleteTamperCases = [
@@ -614,15 +692,19 @@ function runSelfTests(plan, schema, schemaBytes, planBytes, resourceFixtureBytes
     (x) => { x.scenarioAttestation.complete = "false"; },
     (x) => { x.windows[0].freshProcessInstance = false; },
     (x) => {
+      x.windows[0].eligible = false;
+      x.aggregate.acceptedWindowCount = 3;
+    },
+    (x) => {
       x.windows = [];
       x.aggregate.acceptedWindowCount = 0;
       x.coverage.scenarioWakeups = "partial";
     },
   ];
   for (const tamper of incompleteTamperCases) {
-    const candidate = makeIncomplete();
+    const candidate = makeIncomplete(currentPlanBinding);
     tamper(candidate);
-    assert.throws(() => validateResult(candidate));
+    assert.throws(() => validateResult(candidate, currentPlanBinding));
   }
 
   const schemaTamperCases = [
@@ -631,11 +713,16 @@ function runSelfTests(plan, schema, schemaBytes, planBytes, resourceFixtureBytes
     (x) => { x.$defs.protocol.properties.repeatCount.const = 4; },
     (x) => { x.$defs.protocol.properties.wakeupsPerMinuteCeiling.const = 3; },
     (x) => { delete x.$defs.protocol.properties.samplingGapSeconds.allOf[1].type; },
+    (x) => { x.oneOf.push({ $ref: "#/$defs/completeResult" }); },
     (x) => { x.$defs.scenario.properties.fixedNonPersonalStillSHA256 = { $ref: "#/$defs/sha256" }; },
+    (x) => { x.$defs.scenarioAttestation.properties.fixedStillSHA256 = { $ref: "#/$defs/sha256" }; },
     (x) => { x.$defs.retentionPolicy.properties.prohibitedFields.const.pop(); },
     (x) => { x.$defs.resultBase.required.pop(); },
     (x) => { x.$defs.completeResult.allOf[1].additionalProperties = true; },
     (x) => { x.$defs.window.properties.samplingGapSecondsMaximum.maximum = 3; },
+    (x) => { x.$defs.window.allOf[0].then.properties.eligible.const = false; },
+    (x) => { x.$defs.window.allOf[0].else.properties.eligible.const = true; },
+    (x) => { x.$defs.incompleteResult.allOf[1].properties.scenarioAttestation.allOf[1].properties.fixedStillSHA256 = { $ref: "#/$defs/sha256" }; },
     (x) => { x.$defs.completeResult.allOf[1].properties.windows.items.allOf[1].properties.eligible.const = false; },
     (x) => { x.$defs.completeResult.allOf[1].properties.scenarioAttestation.allOf[1].properties.signpostsDisabled.const = false; },
     (x) => { x.$defs.completeResult.allOf[1].properties.windows.maxItems = 6; },
@@ -648,8 +735,8 @@ function runSelfTests(plan, schema, schemaBytes, planBytes, resourceFixtureBytes
     assert.throws(() => validateSchemaContract(candidate));
   }
   return {
-    positives: 4,
-    negatives: planTamperCases.length + resultTamperCases.length + incompleteTamperCases.length + schemaTamperCases.length,
+    positives: 5,
+    negatives: 1 + planTamperCases.length + resultTamperCases.length + incompleteTamperCases.length + schemaTamperCases.length,
   };
 }
 
