@@ -13,8 +13,9 @@ usage: build_mcpb_release.sh [output-path]
 
 Build the MCP bundle from the already-compiled MCP service. The packer is installed
 from the committed script/mcpb-tooling package-lock.json and run as a local binary.
-This command requires npm registry access, but isolates npm configuration so it does
-not read or send maintainer registry credentials.
+This command requires direct access to the canonical npm registry. npm and the local
+packer run with an allowlisted environment, isolated home/cache, empty user/global
+configuration, and no inherited maintainer registry credentials.
 EOF
 }
 
@@ -48,12 +49,16 @@ mkdir -p "$OUTPUT_PARENT"
 OUTPUT_PARENT="$(cd "$OUTPUT_PARENT" && pwd)"
 WORK_DIR="$(mktemp -d "$OUTPUT_PARENT/.mcpb-staging.XXXXXX")"
 NPM_CACHE="$WORK_DIR/npm-cache"
+NPM_HOME="$WORK_DIR/home"
+NPM_USER_CONFIG="$WORK_DIR/user.npmrc"
+NPM_GLOBAL_CONFIG="$WORK_DIR/global.npmrc"
 STAGE_DIR="$WORK_DIR/mcpb-stage"
 TOOLING_STAGE_DIR="$WORK_DIR/mcpb-tooling"
 cleanup() { rm -rf "$WORK_DIR"; }
 trap cleanup EXIT
 
-mkdir -p "$STAGE_DIR/dist" "$TOOLING_STAGE_DIR"
+mkdir -p "$STAGE_DIR/dist" "$TOOLING_STAGE_DIR" "$NPM_HOME"
+touch "$NPM_USER_CONFIG" "$NPM_GLOBAL_CONFIG"
 for entry in package.json package-lock.json LICENSE; do
   cp "$MCP_DIR/$entry" "$STAGE_DIR/$entry"
 done
@@ -62,14 +67,40 @@ cp "$MCP_DIR/packaging/mcpb/manifest.json" "$STAGE_DIR/manifest.json"
 cp "$MCPB_TOOLING_DIR/package.json" "$MCPB_TOOLING_DIR/package-lock.json" "$TOOLING_STAGE_DIR"/
 
 (
-  export npm_config_cache="$NPM_CACHE"
-  export npm_config_userconfig=/dev/null
-  export npm_config_fund=false
-  export npm_config_update_notifier=false
-  npm --prefix "$TOOLING_STAGE_DIR" ci --ignore-scripts
-  npm --prefix "$STAGE_DIR" ci --omit=dev --ignore-scripts
-  "$TOOLING_STAGE_DIR/node_modules/.bin/mcpb" pack "$STAGE_DIR" "$OUTPUT"
+  cd "$TOOLING_STAGE_DIR"
+  env -i \
+    PATH="$PATH" \
+    HOME="$NPM_HOME" \
+    TMPDIR="${TMPDIR:-/tmp}" \
+    npm_config_cache="$NPM_CACHE" \
+    npm_config_userconfig="$NPM_USER_CONFIG" \
+    npm_config_globalconfig="$NPM_GLOBAL_CONFIG" \
+    npm_config_registry=https://registry.npmjs.org/ \
+    npm_config_audit=true \
+    npm_config_fund=false \
+    npm_config_update_notifier=false \
+    npm ci --ignore-scripts
 )
+(
+  cd "$STAGE_DIR"
+  env -i \
+    PATH="$PATH" \
+    HOME="$NPM_HOME" \
+    TMPDIR="${TMPDIR:-/tmp}" \
+    npm_config_cache="$NPM_CACHE" \
+    npm_config_userconfig="$NPM_USER_CONFIG" \
+    npm_config_globalconfig="$NPM_GLOBAL_CONFIG" \
+    npm_config_registry=https://registry.npmjs.org/ \
+    npm_config_audit=true \
+    npm_config_fund=false \
+    npm_config_update_notifier=false \
+    npm ci --omit=dev --ignore-scripts
+)
+env -i \
+  PATH="$PATH" \
+  HOME="$NPM_HOME" \
+  TMPDIR="${TMPDIR:-/tmp}" \
+  "$TOOLING_STAGE_DIR/node_modules/.bin/mcpb" pack "$STAGE_DIR" "$OUTPUT"
 
 [[ -f "$OUTPUT" ]] || { printf 'MCP bundle was not created: %s\n' "$OUTPUT" >&2; exit 1; }
 printf 'MCP bundle created with @anthropic-ai/mcpb@%s: %s\n' "$MCPB_CLI_VERSION" "$OUTPUT"

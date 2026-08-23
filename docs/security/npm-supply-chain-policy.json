@@ -10,7 +10,7 @@
     "workspaces": [
       {
         "path": "apps/site",
-        "lockfileSHA256": "d83748f2a50c99c2a6cb1aaa2b3fcc282d5180d6624592560bb2e145e02aa143",
+        "lockfileSHA256": "eb852abe3cedd914f015b190f323716a622a0f1ddd41e3651a4755332574ca84",
         "installScriptPackages": [
           {
             "path": "node_modules/@esbuild-kit/core-utils/node_modules/esbuild",
@@ -85,11 +85,11 @@
         "path": "apps/site",
         "counts": {
           "info": 0,
-          "low": 1,
+          "low": 0,
           "moderate": 0,
           "high": 0,
           "critical": 0,
-          "total": 1
+          "total": 0
         }
       },
       {
@@ -115,17 +115,7 @@
         }
       }
     ],
-    "residualFindings": [
-      {
-        "advisory": "GHSA-4x5r-pxfx-6jf8",
-        "package": "@babel/core",
-        "nodePath": "node_modules/@babel/core",
-        "severity": "low",
-        "workspace": "apps/site",
-        "disposition": "tracked-development-only-major-fix-deferred",
-        "reason": "The affected source-map parser is reachable only from the local development/build toolchain; production dependencies omit it. The first patched release is Babel 8, so this low-severity major migration remains visible instead of being forced into the release-security slice."
-      }
-    ]
+    "residualFindings": []
   },
   "tracker": {
     "schema": 3,
