@@ -59,6 +59,102 @@ Repeated alignment still requires controlled suppression and uninstrumented
 replication before causal attribution. No nearby signpost excludes only these
 instrumented seams; it does not prove a framework or kernel source.
 
+## Fail-closed sanitizer
+
+The only supported production query path is:
+
+```bash
+node script/sanitize_m4_wakeup_signposts.mjs \
+  --series /path/to/signposts-on-wakeup-series.json \
+  --query-start 2026-08-23T10:45:00Z \
+  > /path/to/signposts-on-correlation.json
+```
+
+The series must be the exact, complete JSON object emitted by
+`measure_m4_wakeup_series.sh`. The query start is a required whole-second UTC
+timestamp no later than the measured process start, with at most one hour of
+lookback from the exact first snapshot. Each public rusage snapshot carries the
+process's wall-clock start identity plus paired wall and monotonic sample times.
+The sanitizer validates the fixture identity, process incarnation, requested
+and observed sample counts, exact first/last anchors, wall/monotonic agreement,
+complete activity intervals, counter sums, wakeup rate, coverage, and
+non-qualification fields before it queries any logs. Correlation accepts only
+the collector's exact one-second interval, observed gaps from 0.5 through 2.0
+seconds, active intervals consistent with those declared extrema within the
+100-millisecond cross-clock tolerance, and at most 256 complete activity rows;
+a delayed or wider series cannot support the documented same/adjacent-second
+semantics.
+
+The Node process invokes `/usr/bin/log show` directly without a shell, raw-log
+path, archive, output option, or live stream. The query is bounded by the
+declared start and the first whole second at or after the exact final snapshot,
+includes loss records, and selects all signpost events for the measured PID and
+fixed subsystem/category without filtering by event name. The outward-rounded
+tail prevents fractional-second omission; validated records after the exact
+measurement end are discarded from correlation. Raw NDJSON remains in the
+child pipe and transient memory only. Nothing is written to standard output
+until the child exits and the entire query validates.
+
+Validation rejects without producing an artifact when any of these conditions
+is observed:
+
+- malformed, incomplete, oversized, or non-terminal NDJSON;
+- any unified-log loss record or unsuccessful query exit;
+- an unknown event name, wrong PID/subsystem/category/type, interval signpost,
+  or message/format payload;
+- a missing, duplicate, in-window, or pre-process-start `lifecycle.launch`
+  marker; no arbitrary process-age upper bound is imposed because launch is
+  emitted after synchronous initialization;
+- a malformed, timezone-free, impossible, out-of-query, or out-of-window
+  timestamp;
+- a query lookback over one hour, a measurement over the bounded 72-hour
+  protocol, a sampling gap outside 0.5–2.0 seconds, or wall/monotonic drift over
+  100 milliseconds;
+- a missing/additional series field, truncated activity list, inconsistent
+  count/sum/rate, unsafe number, changed fixture ceiling, conformance claim, or
+  qualification claim.
+
+The parser accepts at most 256 selected records, 64 KiB per NDJSON line, and
+4 MiB of child output. The series file is opened once with
+`O_NOFOLLOW | O_NONBLOCK`, so a FIFO cannot stall before the regular-file
+check; it is then bounded, stat-checked, and read through that same descriptor.
+Its 52-case release self-test uses synthetic in-memory records plus a temporary
+FIFO rejection check; the repository contains no raw or raw-shaped unified-log
+fixture.
+
+The retained version-1 artifact contains only the measurement window, fixed
+query identifiers, grouped `(eventName, offsetSecond, count)` rows, wakeup
+buckets with same/adjacent groups, aggregate counts, and explicit null
+causation/qualification. It does not retain raw timestamps, messages, paths,
+UUIDs, process or sender images, thread/activity/signpost identifiers, host or
+boot identity, disk counters, ceiling comparisons, or source qualification.
+The artifact is always marked
+`budgetEligibility: "ineligible-signposts-on-window"`.
+
+For correlation, an activity row with interrupt wakeups retains the exact wall
+clock at both ends of its sampling interval. A static signpost inside that
+interval is listed as `same`; a signpost within one second before or after the
+actual interval is `adjacent-before` or `adjacent-after`. This avoids losing an
+in-interval handler when an accepted delayed sample crosses two floored wall
+seconds. The displayed `endOffsetSeconds` remains the paired monotonic offset.
+Disk-only activity rows are not wakeup buckets. A nearby row means only that
+the named handler executed nearby; an empty list means only that no instrumented
+handler was observed nearby.
+
+### Runtime compatibility smoke
+
+On 2026-08-23, the production CLI completed a six-snapshot, one-second-interval
+smoke against a deliberately instrumented Ambient launch. It retrieved exactly
+one pre-window launch marker, observed no unified-log loss, retained no
+in-window signposts, and emitted one wakeup bucket containing two interrupt
+wakeups with no nearby instrumented callback. The corrected producer bound the
+launch marker to the current process start and used exact first/last snapshot
+anchors; its sampling gaps stayed inside the accepted cadence. Raw NDJSON remained in the child
+pipe, the temporary process series was deleted, and no correlation artifact was
+written to the repository or filesystem. This proves parser/query compatibility only. The short
+signposts-on window is ineligible for budget, cadence, P95, attribution, or
+qualification claims.
+
 ## Explicitly incomplete
 
 This slice does not yet signpost import, thumbnail generation, wallpaper apply,
