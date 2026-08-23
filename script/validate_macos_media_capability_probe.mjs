@@ -45,6 +45,14 @@ function parseAndValidate(input) {
   return validate(JSON.parse(input));
 }
 
+function validateWireOutput(input) {
+  assert.ok(input.length > 0, "media capability output is empty");
+  const canonical = input.endsWith("\n") ? input.slice(0, -1) : input;
+  assert.equal(canonical.includes("\n"), false, "media capability output must contain exactly one JSON line");
+  assert.equal(canonical.includes("\r"), false, "media capability output must use LF rather than CRLF");
+  return parseAndValidate(canonical);
+}
+
 function occurrences(source, token) {
   return source.split(token).length - 1;
 }
@@ -109,10 +117,10 @@ const makeValid = (overrides = {}) => ({
 
 function runSelfTest(source) {
   validateSourceContract(source);
-  parseAndValidate(JSON.stringify(makeValid()));
-  parseAndValidate(JSON.stringify(makeValid({ hevcCodecTypeHardwareDecodeSupported: false, metalDeviceAvailable: false })));
-  parseAndValidate(JSON.stringify(makeValid({ hevcCodecTypeHardwareDecodeSupported: true, metalDeviceAvailable: false })));
-  parseAndValidate(JSON.stringify(makeValid({ hevcCodecTypeHardwareDecodeSupported: false, metalDeviceAvailable: true })));
+  validateWireOutput(`${JSON.stringify(makeValid())}\n`);
+  validateWireOutput(`${JSON.stringify(makeValid({ hevcCodecTypeHardwareDecodeSupported: false, metalDeviceAvailable: false }))}\n`);
+  validateWireOutput(`${JSON.stringify(makeValid({ hevcCodecTypeHardwareDecodeSupported: true, metalDeviceAvailable: false }))}\n`);
+  validateWireOutput(`${JSON.stringify(makeValid({ hevcCodecTypeHardwareDecodeSupported: false, metalDeviceAvailable: true }))}\n`);
 
   const tamperCases = [
     (value) => { delete value.metalDeviceAvailable; },
@@ -144,8 +152,12 @@ function runSelfTest(source) {
     canonical.replace('{"schemaVersion":1', '{ "schemaVersion":1'),
     canonical.replace('"schemaVersion":1', '"schemaVersion":1.0'),
     canonical.replace(',"qualification"', ',\n"qualification"'),
+    ` ${canonical}\n`,
+    `${canonical}\n\n`,
+    `\uFEFF${canonical}\n`,
+    `${canonical}\r\n`,
   ];
-  for (const candidate of rawTamperCases) assert.throws(() => parseAndValidate(candidate));
+  for (const candidate of rawTamperCases) assert.throws(() => validateWireOutput(candidate));
   const sourceTamperCases = [
     (value) => value.replace("MTLCopyAllDevices()", "MTLCreateSystemDefaultDevice()"),
     (value) => `${value}\nVTDecompressionSessionCreate`,
@@ -178,9 +190,7 @@ async function main() {
   }
   assert.equal(process.argv.length, 2, "usage: validate_macos_media_capability_probe.mjs [--self-test]");
   validateSourceContract(source);
-  const input = (await readStdin()).trim();
-  assert.ok(input.length > 0, "media capability output is empty");
-  parseAndValidate(input);
+  validateWireOutput(await readStdin());
   console.log("macOS media capability output valid: capability-only; decoder and GPU runtime metrics remain null");
 }
 

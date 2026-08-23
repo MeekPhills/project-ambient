@@ -43,9 +43,10 @@ changed, or fixture-mismatched samples make that measure unqualified rather
 than permitting extrapolation from a shorter window.
 
 Hardware capability is not runtime activity. A public report that HEVC hardware
-decode is supported does not prove that a decoder exists, is hardware-backed,
-or remains available for a particular profile, level, resolution, frame rate,
-HDR mode, or rendition. Likewise, discovering a Metal device does not measure
+decode is supported does not prove that a decoder session was created, that a
+particular session is hardware-backed, or that resources remain available for
+a particular profile, level, resolution, frame rate, HDR mode, or rendition.
+Likewise, discovering a Metal device does not measure
 GPU work, utilization, frame pacing, or downstream compositor activity. Keep
 decoder and GPU coverage `unmeasured` until an app-owned playback pipeline can
 count its own decompression sessions and command submissions, and until the
