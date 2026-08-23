@@ -4,6 +4,9 @@ on:
   pull_request:
     paths:
       - ".github/workflows/release-integrity.yml"
+      - "**/package-lock.json"
+      - "**/.npmrc"
+      - "docs/security/**"
       - "distribution/**"
       - "docs/release-checklist.md"
       - "docs/launch-day-runbook.md"

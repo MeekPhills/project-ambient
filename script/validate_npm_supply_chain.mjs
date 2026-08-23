@@ -2,8 +2,8 @@
 
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { readFileSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { readFileSync, readdirSync } from "node:fs";
+import { dirname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -12,6 +12,7 @@ const EXPECTED_WORKSPACES = ["apps/site", "script/mcpb-tooling", "services/mcp"]
 const NPMRC_BYTES = "ignore-scripts=true\n";
 const DISPOSITION = "disabled-by-default-no-exception";
 const SEVERITIES = ["info", "low", "moderate", "high", "critical", "total"];
+const IGNORED_DISCOVERY_DIRECTORIES = new Set([".git", ".build", ".next", ".vinext", ".wrangler", "coverage", "dist", "node_modules"]);
 
 function readText(path) {
   return readFileSync(join(ROOT, path), "utf8");
@@ -23,6 +24,31 @@ function readJSON(path) {
 
 function sha256(path) {
   return createHash("sha256").update(readFileSync(join(ROOT, path))).digest("hex");
+}
+
+function discoverRepositoryFiles(directory = ROOT, found = []) {
+  for (const entry of readdirSync(directory, { withFileTypes: true })) {
+    if (entry.isSymbolicLink()) continue;
+    if (entry.isDirectory()) {
+      if (!IGNORED_DISCOVERY_DIRECTORIES.has(entry.name)) discoverRepositoryFiles(join(directory, entry.name), found);
+      continue;
+    }
+    if (entry.isFile()) found.push(relative(ROOT, join(directory, entry.name)).split(sep).join("/"));
+  }
+  return found;
+}
+
+function validateDiscoveredLockfiles(discovered, errors) {
+  const expected = EXPECTED_WORKSPACES.map((workspace) => `${workspace}/package-lock.json`);
+  if (JSON.stringify(discovered) !== JSON.stringify(expected)) {
+    errors.push("repository package-lock.json discovery must match the three governed workspaces exactly");
+  }
+}
+
+function installCommandIsDenied(line) {
+  const command = line.trim();
+  const installPattern = /^(?:run:\s*)?npm(?:\s+--prefix\s+\S+)?\s+(?:ci|install)\b/;
+  return !installPattern.test(command) || command.includes("--ignore-scripts");
 }
 
 function isObject(value) {
@@ -150,6 +176,9 @@ function lockInstallScriptInventory(lock) {
 
 function validateRepository(policy) {
   const errors = [];
+  const repositoryFiles = discoverRepositoryFiles().sort();
+  const discoveredLockfiles = repositoryFiles.filter((path) => path.endsWith("/package-lock.json"));
+  validateDiscoveredLockfiles(discoveredLockfiles, errors);
   for (const workspace of policy.installPolicy.workspaces) {
     const lockPath = `${workspace.path}/package-lock.json`;
     const packagePath = `${workspace.path}/package.json`;
@@ -165,25 +194,27 @@ function validateRepository(policy) {
     if (JSON.stringify(actualInventory) !== JSON.stringify(workspace.installScriptPackages)) errors.push(`${lockPath} install-script inventory drifted`);
   }
 
-  const controlledInstallFiles = [
-    "CLAUDE.md",
-    ".github/workflows/ci.yml",
-    ".github/workflows/release-integrity.yml",
-    "apps/site/README.md",
-    "services/mcp/README.md",
-    "services/mcp/Dockerfile",
-    "script/build_mcpb_release.sh"
-  ];
-  const installPattern = /\bnpm(?:\s+--prefix\s+\S+)?\s+ci\b/;
+  const controlledInstallFiles = repositoryFiles.filter((path) =>
+    (path.startsWith(".github/workflows/") && /\.ya?ml$/.test(path)) ||
+    path.endsWith(".sh") ||
+    path.endsWith("/Dockerfile") ||
+    path === "Dockerfile" ||
+    path === "CLAUDE.md" ||
+    path === "apps/site/README.md" ||
+    path === "services/mcp/README.md"
+  );
   for (const path of controlledInstallFiles) {
     for (const [index, line] of readText(path).split("\n").entries()) {
-      if (installPattern.test(line) && !line.includes("--ignore-scripts")) errors.push(`${path}:${index + 1} npm ci must explicitly disable lifecycle scripts`);
+      if (!installCommandIsDenied(line)) errors.push(`${path}:${index + 1} npm install command must explicitly disable lifecycle scripts`);
     }
   }
   const aggregate = readText("script/verify_release.sh");
   if (!aggregate.includes("validate_npm_supply_chain.mjs")) errors.push("script/verify_release.sh must invoke the npm supply-chain validator");
   const workflow = readText(".github/workflows/release-integrity.yml");
   if (!workflow.includes("node script/validate_npm_supply_chain.mjs")) errors.push("release-integrity.yml must invoke the npm supply-chain validator");
+  for (const trigger of ["**/package-lock.json", "**/.npmrc", "docs/security/**"]) {
+    if (!workflow.includes(`- "${trigger}"`)) errors.push(`release-integrity.yml must trigger on ${trigger}`);
+  }
   return errors;
 }
 
@@ -220,6 +251,13 @@ tamper("moderate advisory retained", (value) => { value.auditPolicy.workspaces[0
 tamper("residual severity promoted", (value) => { value.auditPolicy.residualFindings[0].severity = "high"; });
 tamper("residual path hidden", (value) => { value.auditPolicy.residualFindings[0].nodePath = "unknown"; });
 tamper("tracker credit changed", (value) => { value.tracker.creditChange = 1; });
+const discoveryErrors = [];
+validateDiscoveredLockfiles([...EXPECTED_WORKSPACES.map((workspace) => `${workspace}/package-lock.json`), "unreviewed/package-lock.json"], discoveryErrors);
+assert.ok(discoveryErrors.length > 0, "unreviewed lockfile discovery");
+tamperCases.push("unreviewed lockfile discovery");
+assert.equal(installCommandIsDenied("npm ci"), false, "unguarded install command");
+assert.equal(installCommandIsDenied("npm ci --ignore-scripts"), true, "guarded install command");
+tamperCases.push("unguarded install command");
 
 const shapeErrors = validatePolicyShape(policy);
 assert.deepEqual(shapeErrors, [], `invalid npm supply-chain policy:\n${shapeErrors.join("\n")}`);

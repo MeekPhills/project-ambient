@@ -83,7 +83,7 @@ fails the offline validator.
   467 packages, MCP 124, and MCPB tooling 54 without lifecycle execution.
 - `node script/validate_npm_supply_chain.mjs`: passed; three workspaces, seven
   denied packages, zero exceptions, zero moderate/high/critical findings, one
-  tracked low finding, and 12 fail-closed tamper cases.
+  tracked low finding, and 14 fail-closed tamper cases.
 - `npm test` in `apps/site`: production build passed and 12/12 rendered-route
   tests passed with Vite 8.2.2.
 - `drizzle-kit check` and isolated `drizzle-kit generate`: passed; no schema
