@@ -14,12 +14,19 @@ elapsed time with `CLOCK_MONOTONIC_RAW`. It also bound both snapshots to the
 same process-start token and treated 64-bit counters as decimal strings until
 validated deltas were safely representable.
 
-The reported wakeup rate conservatively sums the process's package-idle and
-interrupt-wakeup deltas. Disk activity is the process-attributable read/write
-byte delta over the same interval. The helper needs no elevation, private API,
-identifier collection, or persistent service. When the compiler or either
-snapshot is unavailable, the harness reports an explicit unavailable reason
-and leaves both coverage rows unmeasured.
+The reported wakeup rate uses the process's interrupt-wakeup delta. Apple's
+[XNU scheduler accounting](https://github.com/apple-oss-distributions/xnu/blob/f6217f891ac0bb64f3d375211650a4c1ff8ca1ea/osfmk/kern/sched_prim.c#L897-L902)
+credits every qualifying wakeup to the interrupt ledger and conditionally also
+credits the platform-idle ledger; the
+[rusage mapping](https://github.com/apple-oss-distributions/xnu/blob/f6217f891ac0bb64f3d375211650a4c1ff8ca1ea/osfmk/kern/bsd_kern.c#L1257-L1260)
+exposes those as interrupt and package-idle counters. Package-idle wakeups are
+therefore a diagnostic subset, so the harness validates that relationship and
+does not add the counters.
+Disk activity is the process-attributable read/write byte delta over the same
+interval. The helper needs no elevation, private API, identifier collection, or
+persistent service. When the compiler or either snapshot is unavailable, the
+harness reports an explicit unavailable reason and leaves both coverage rows
+unmeasured.
 
 Command:
 
