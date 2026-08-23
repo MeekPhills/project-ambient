@@ -25,6 +25,7 @@ run node "$ROOT_DIR/script/validate_rights.mjs"
 run node "$ROOT_DIR/script/validate_aerial_parity.mjs"
 run node "$ROOT_DIR/script/validate_display_control.mjs"
 run node "$ROOT_DIR/script/validate_resource_budgets.mjs"
+run node "$ROOT_DIR/script/summarize_process_rusage_series.mjs" --self-test
 if [[ "$(uname -s)" == "Darwin" ]]; then
   run xcrun clang -std=c11 -Wall -Wextra -Werror -fsyntax-only "$ROOT_DIR/script/macos_process_rusage.c"
 fi
