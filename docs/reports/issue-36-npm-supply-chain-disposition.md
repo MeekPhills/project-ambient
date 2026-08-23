@@ -1,9 +1,13 @@
 # Issue #36 npm supply-chain disposition
 
-**Captured:** 2026-08-23  
-**Baseline:** `84ced53b980961b9db7e62daa852e45d522127de`  
-**Branch:** `chore/36-site-dependency-policy`  
-**Issue:** [#36](https://github.com/MeekPhills/project-ambient/issues/36)  
+**Captured:** 2026-08-23
+
+**Baseline:** `84ced53b980961b9db7e62daa852e45d522127de`
+
+**Branch:** `chore/36-site-dependency-policy`
+
+**Issue:** [#36](https://github.com/MeekPhills/project-ambient/issues/36)
+
 **Tracker:** zero credit; canonical schema v3 remains 20/100
 
 ## Security boundary
