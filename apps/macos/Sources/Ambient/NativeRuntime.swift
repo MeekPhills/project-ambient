@@ -1,6 +1,29 @@
 import AmbientCore
 import AppKit
 import Foundation
+import OSLog
+
+@MainActor
+final class MacWakeupSignposter {
+    static let launchArgument = "--wakeup-attribution-signposts"
+
+    static func makeSink(
+        arguments: [String] = CommandLine.arguments
+    ) -> @MainActor (AmbientWakeupSignpostEvent) -> Void {
+        guard arguments.contains(launchArgument) else { return { _ in } }
+        let recorder = MacWakeupSignposter()
+        return { event in recorder.emit(event) }
+    }
+
+    private let signposter = OSSignposter(
+        subsystem: "io.projectambient.mac",
+        category: "WakeupAttribution.v1"
+    )
+
+    private func emit(_ event: AmbientWakeupSignpostEvent) {
+        signposter.emitEvent(event.name)
+    }
+}
 
 @MainActor
 final class MacBoundaryScheduler: AmbientBoundaryScheduling {

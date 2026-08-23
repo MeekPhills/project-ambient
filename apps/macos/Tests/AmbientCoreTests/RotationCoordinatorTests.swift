@@ -282,6 +282,102 @@ final class AmbientRotationSchedulePlannerTests: XCTestCase {
 
 @MainActor
 final class AmbientRotationCoordinatorTests: XCTestCase {
+    func testWakeupSignpostCatalogHasStablePayloadFreeNames() {
+        XCTAssertEqual(
+            AmbientWakeupSignpostEvent.allCases.map { $0.name.description },
+            [
+                "lifecycle.launch",
+                "lifecycle.will_sleep",
+                "lifecycle.did_wake",
+                "lifecycle.screen_locked",
+                "lifecycle.screen_unlocked",
+                "display.configuration_changed",
+                "power.state_changed",
+                "clock_or_timezone.changed",
+                "state.local_changed",
+                "state.external_changed",
+                "rotation.boundary_fired"
+            ]
+        )
+    }
+
+    func testRuntimeEventsAreSignpostedBeforeDeduplication() throws {
+        let calendar = utcCalendar()
+        let driver = TestRotationDriver(state: try scheduledState())
+        let events = TestRuntimeEvents()
+        var tracedEvents: [AmbientWakeupSignpostEvent] = []
+        let coordinator = AmbientRotationCoordinator(
+            driver: driver,
+            scheduler: TestBoundaryScheduler(),
+            events: events,
+            calendar: calendar,
+            now: { try! self.date(hour: 9, minute: 30, calendar: calendar) },
+            traceEvent: { tracedEvents.append($0) }
+        )
+        coordinator.start()
+
+        let runtimeEvents: [AmbientRuntimeEvent] = [
+            .willSleep,
+            .willSleep,
+            .didWake,
+            .didWake,
+            .screenLocked,
+            .screenLocked,
+            .screenUnlocked,
+            .displayConfigurationChanged,
+            .powerStateChanged,
+            .clockOrTimeZoneChanged,
+            .stateStoreChanged(revision: nil),
+            .stateStoreChanged(revision: UInt64.max)
+        ]
+        for event in runtimeEvents {
+            events.send(event)
+        }
+
+        XCTAssertEqual(
+            tracedEvents,
+            [
+                .lifecycleLaunch,
+                .lifecycleWillSleep,
+                .lifecycleWillSleep,
+                .lifecycleDidWake,
+                .lifecycleDidWake,
+                .lifecycleScreenLocked,
+                .lifecycleScreenLocked,
+                .lifecycleScreenUnlocked,
+                .displayConfigurationChanged,
+                .powerStateChanged,
+                .clockOrTimeZoneChanged,
+                .stateExternalChanged,
+                .stateExternalChanged
+            ]
+        )
+    }
+
+    func testLocalStateChangeAndBoundaryCallbackAreSignpostedOnce() throws {
+        let calendar = utcCalendar()
+        let clock = TestClock(try date(hour: 9, minute: 30, calendar: calendar))
+        let scheduler = TestBoundaryScheduler()
+        var tracedEvents: [AmbientWakeupSignpostEvent] = []
+        let coordinator = AmbientRotationCoordinator(
+            driver: TestRotationDriver(state: try scheduledState()),
+            scheduler: scheduler,
+            events: TestRuntimeEvents(),
+            calendar: calendar,
+            now: { clock.date },
+            traceEvent: { tracedEvents.append($0) }
+        )
+        coordinator.start()
+        tracedEvents.removeAll()
+
+        coordinator.stateDidChange()
+        let timer = try XCTUnwrap(scheduler.entries.last)
+        clock.date = timer.date
+        timer.fire()
+
+        XCTAssertEqual(tracedEvents, [.stateLocalChanged, .rotationBoundaryFired])
+    }
+
     func testStartReconcilesAndSchedulesNextBoundary() throws {
         let calendar = utcCalendar()
         let clock = TestClock(try date(hour: 9, minute: 30, calendar: calendar))
