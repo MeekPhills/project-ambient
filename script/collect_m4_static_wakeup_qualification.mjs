@@ -1,17 +1,13 @@
 #!/usr/bin/env node
 
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { analyzeProcessRusageSeries } from "./summarize_process_rusage_series.mjs";
-import {
-  expectedPlanRevision,
-  makePlanBinding,
-  validatePlan,
-  validateResult as validateQualificationResult,
-} from "./validate_m4_static_wakeup_qualification.mjs";
+import { makeValidatedActiveStaticWakeupPlanBinding } from "./validate_m4_static_wakeup_qualification.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const planPath = path.join(root, "fixtures/resource-budgets/v1/base-m4-static-wakeup-qualification-plan.json");
@@ -25,6 +21,29 @@ const maxClockDriftNanoseconds = 100_000_000n;
 const syntheticTestToken = Symbol("ambient-static-wakeup-collector-synthetic-test");
 const preflightProducerRevision = "b439193ed513811bec90ce2491ec30033aa2a4e4";
 const fixedStillSHA256 = "4".repeat(64);
+const activeCollectorPlanBindings = new WeakSet();
+const syntheticCollectorPlanBindings = new WeakSet();
+const operationTimeoutKeys = [
+  "preflightMilliseconds", "attestationMilliseconds", "clockCaptureMilliseconds",
+  "launchSetupMilliseconds", "warmupMilliseconds", "sampleMilliseconds",
+  "finishMilliseconds", "terminationRequestMilliseconds",
+  "exitConfirmationMilliseconds", "forceTerminationMilliseconds",
+];
+const productionOperationTimeouts = Object.freeze({
+  preflightMilliseconds: 60_000,
+  attestationMilliseconds: 60_000,
+  clockCaptureMilliseconds: 5_000,
+  launchSetupMilliseconds: 60_000,
+  warmupMilliseconds: 305_000,
+  sampleMilliseconds: 5_000,
+  finishMilliseconds: 5_000,
+  terminationRequestMilliseconds: 5_000,
+  exitConfirmationMilliseconds: 10_000,
+  forceTerminationMilliseconds: 5_000,
+});
+const syntheticOperationTimeouts = Object.freeze(Object.fromEntries(
+  operationTimeoutKeys.map((key) => [key, 20]),
+));
 
 const ownerAttestationNames = [
   "factory-base-machine-configuration",
@@ -77,10 +96,21 @@ const sessionKeys = [
   "launchReceipt", "launchObservation", "waitUntilAbsolute",
   "sampleAtAbsoluteDeadline", "finishTrial",
 ];
+const exitReceiptKeys = ["processIdentity", "exited"];
 
 function exactKeys(value, keys, at) {
   assert.ok(value && typeof value === "object" && !Array.isArray(value), `${at} must be an object`);
   assert.deepEqual(Object.keys(value).sort(), [...keys].sort(), `${at} has unexpected or missing keys`);
+}
+
+function validateOperationTimeouts(value) {
+  exactKeys(value, operationTimeoutKeys, "collector operation timeouts");
+  for (const key of operationTimeoutKeys) {
+    assert.ok(
+      Number.isSafeInteger(value[key]) && value[key] >= 1 && value[key] <= 600_000,
+      `collector operation timeout ${key} must be an integer from 1 through 600000`,
+    );
+  }
 }
 
 function parseCanonicalUInt64(value, at) {
@@ -95,6 +125,48 @@ function deepFreeze(value) {
   if (!value || typeof value !== "object" || Object.isFrozen(value)) return value;
   for (const child of Object.values(value)) deepFreeze(child);
   return Object.freeze(value);
+}
+
+async function runWithTimeout(operation, timeoutMilliseconds, at) {
+  const controller = new AbortController();
+  let timeoutID = null;
+  const operationPromise = Promise.resolve().then(() => operation(controller.signal));
+  const timeoutPromise = new Promise((_, reject) => {
+    timeoutID = setTimeout(() => {
+      const error = new Error(`${at} exceeded its collector-owned timeout`);
+      controller.abort(error);
+      reject(error);
+    }, timeoutMilliseconds);
+  });
+  try {
+    return await Promise.race([operationPromise, timeoutPromise]);
+  } finally {
+    if (timeoutID !== null) clearTimeout(timeoutID);
+  }
+}
+
+function makeCollectorActivePlanBinding(planBytes, resourceFixtureBytes, resourceFixture) {
+  const binding = makeValidatedActiveStaticWakeupPlanBinding(
+    planBytes,
+    resourceFixtureBytes,
+    resourceFixture,
+  );
+  activeCollectorPlanBindings.add(binding);
+  return binding;
+}
+
+function makeSyntheticCollectorPlanBinding(activeBinding) {
+  assert.equal(activeCollectorPlanBindings.has(activeBinding), true, "synthetic plan requires the validated active plan");
+  const plan = structuredClone(activeBinding.plan);
+  plan.scenario.fixedNonPersonalStillSHA256 = fixedStillSHA256;
+  const bytes = Buffer.from(`${JSON.stringify(plan)}\n`);
+  const binding = deepFreeze({
+    plan,
+    revision: "a".repeat(40),
+    sha256: createHash("sha256").update(bytes).digest("hex"),
+  });
+  syntheticCollectorPlanBindings.add(binding);
+  return binding;
 }
 
 function stopped(reason, attemptedTrials = 0) {
@@ -122,7 +194,7 @@ function validatePairedClockProgress(before, after, at) {
   return { beforeMonotonic, afterMonotonic, beforeWall, afterWall, absoluteDriftNanoseconds };
 }
 
-export function buildAbsoluteDeadlines(originNanoseconds) {
+function buildAbsoluteDeadlines(originNanoseconds) {
   const origin = typeof originNanoseconds === "bigint"
     ? originNanoseconds
     : parseCanonicalUInt64(originNanoseconds, "measurement origin");
@@ -197,6 +269,52 @@ function validateProcessIdentity(identity, at) {
   assert.ok(absoluteStart > 0n, `${at} absolute process-start token must be positive`);
   assert.ok(wallStart > 0n, `${at} wall-clock process-start token must be positive`);
   return { key: `${identity.processStartAbsoluteTime}:${identity.processStartUnixMicroseconds}`, wallStart };
+}
+
+function validateExitReceipt(receipt, expectedIdentity, at) {
+  exactKeys(receipt, exitReceiptKeys, at);
+  assert.deepEqual(receipt.processIdentity, expectedIdentity, `${at} is bound to another process`);
+  assert.equal(receipt.exited, true, `${at} did not confirm process exit`);
+}
+
+async function terminateAndConfirmProcess(cleanup, operationTimeouts, index) {
+  try {
+    await runWithTimeout(
+      (signal) => cleanup.requestTermination(signal),
+      operationTimeouts.terminationRequestMilliseconds,
+      `trial ${index} graceful termination request`,
+    );
+    const receipt = await runWithTimeout(
+      (signal) => cleanup.waitForExit(signal),
+      operationTimeouts.exitConfirmationMilliseconds,
+      `trial ${index} graceful exit confirmation`,
+    );
+    validateExitReceipt(receipt, cleanup.identity, `trial ${index} graceful exit receipt`);
+    return true;
+  } catch {
+    // A failed, ignored, or unconfirmed graceful request must escalate.
+  }
+
+  try {
+    await runWithTimeout(
+      (signal) => cleanup.forceTermination(signal),
+      operationTimeouts.forceTerminationMilliseconds,
+      `trial ${index} forced termination request`,
+    );
+  } catch {
+    // A lost force acknowledgement may still have stopped the exact process.
+  }
+  try {
+    const receipt = await runWithTimeout(
+      (signal) => cleanup.waitForExit(signal),
+      operationTimeouts.exitConfirmationMilliseconds,
+      `trial ${index} forced exit confirmation`,
+    );
+    validateExitReceipt(receipt, cleanup.identity, `trial ${index} forced exit receipt`);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function validateFixtureObservation(value, preflight, at) {
@@ -326,15 +444,16 @@ function projectQualificationResult(planBinding, preflight, windows) {
     coverage: { scenarioWakeups: "measured", globalWakeups: "partial" },
     qualification: p95 <= 2 ? "scenario-pass" : "scenario-fail",
   };
-  validateQualificationResult(result, planBinding);
   return deepFreeze(result);
 }
 
 async function collectOneTrial(index, context, processLauncher, adapter) {
   let session = null;
-  let terminateLaunchedProcess = null;
+  let launchedProcessCleanup = null;
+  let fallbackTerminationRequest = null;
   let launchedProcessIdentity = null;
   let launchPromise = null;
+  let launchSignal = null;
   let launchGateClosed = false;
   let failed = false;
   let window = null;
@@ -347,38 +466,90 @@ async function collectOneTrial(index, context, processLauncher, adapter) {
   };
   try {
     const specification = makeLaunchSpecification(index, context.planBinding, context.preflight);
-    const preLaunchClock = deepFreeze(structuredClone(await adapter.captureClock(index)));
+    const preLaunchClock = deepFreeze(structuredClone(await runWithTimeout(
+      (signal) => adapter.captureClock(index, signal),
+      context.operationTimeouts.clockCaptureMilliseconds,
+      `trial ${index} pre-launch clock capture`,
+    )));
     exactKeys(preLaunchClock, ["monotonicNanoseconds", "wallClockUnixMicroseconds"], `trial ${index} pre-launch clock`);
     parseCanonicalUInt64(preLaunchClock.monotonicNanoseconds, `trial ${index} pre-launch monotonic clock`);
     parseCanonicalUInt64(preLaunchClock.wallClockUnixMicroseconds, `trial ${index} pre-launch wall clock`);
     const expectedLaunchReceipt = Object.freeze({ index });
+    const expectedOwnershipReceipt = Object.freeze({ index });
     let gateUses = 0;
+    let ownershipTransfers = 0;
     const launchGate = Object.freeze({
       launch: () => {
         assert.equal(launchGateClosed, false, `trial ${index} attempted a process launch after the gate closed`);
         assert.equal(gateUses, 0, `trial ${index} attempted more than one process launch`);
+        assert.ok(launchSignal instanceof AbortSignal, `trial ${index} launch has no collector abort signal`);
+        assert.equal(launchSignal.aborted, false, `trial ${index} attempted a process launch after cancellation`);
         gateUses += 1;
-        launchPromise = (async () => {
-          const process = await processLauncher(specification);
-          assert.ok(
-            process && typeof process === "object" && !Array.isArray(process),
-            `trial ${index} launched process must be an object`,
-          );
-          const terminate = process.terminate;
-          assert.equal(typeof terminate, "function", `trial ${index} launched process must provide termination`);
-          terminateLaunchedProcess = () => Reflect.apply(terminate, process, []);
-          exactKeys(process, ["handle", "identity", "terminate"], `trial ${index} launched process`);
-          launchedProcessIdentity = deepFreeze(structuredClone(process.identity));
-          validateProcessIdentity(launchedProcessIdentity, `trial ${index} launched process.identity`);
-          return Object.freeze({
-            receipt: expectedLaunchReceipt,
-            processHandle: process.handle,
-          });
-        })();
+        const ownershipReceiver = Object.freeze({
+          transfer: (process) => {
+            assert.equal(launchGateClosed, false, `trial ${index} transferred ownership after the gate closed`);
+            assert.equal(launchSignal.aborted, false, `trial ${index} transferred ownership after cancellation`);
+            assert.equal(ownershipTransfers, 0, `trial ${index} attempted more than one ownership transfer`);
+            ownershipTransfers += 1;
+            assert.ok(
+              process && typeof process === "object" && !Array.isArray(process),
+              `trial ${index} ownership transfer must contain a process object`,
+            );
+            const requestTermination = process.requestTermination;
+            assert.equal(typeof requestTermination, "function", `trial ${index} launched process must provide graceful termination`);
+            fallbackTerminationRequest = (signal) => Reflect.apply(requestTermination, process, [signal]);
+            const forceTermination = process.forceTermination;
+            const waitForExit = process.waitForExit;
+            assert.equal(typeof forceTermination, "function", `trial ${index} launched process must provide forced termination`);
+            assert.equal(typeof waitForExit, "function", `trial ${index} launched process must provide exit confirmation`);
+            launchedProcessIdentity = deepFreeze(structuredClone(process.identity));
+            validateProcessIdentity(launchedProcessIdentity, `trial ${index} launched process.identity`);
+            launchedProcessCleanup = Object.freeze({
+              identity: launchedProcessIdentity,
+              requestTermination: fallbackTerminationRequest,
+              forceTermination: (signal) => Reflect.apply(forceTermination, process, [signal]),
+              waitForExit: (signal) => Reflect.apply(waitForExit, process, [signal]),
+            });
+            exactKeys(
+              process,
+              ["identity", "requestTermination", "forceTermination", "waitForExit"],
+              `trial ${index} launched process ownership`,
+            );
+            return expectedOwnershipReceipt;
+          },
+        });
+        const launchResult = processLauncher(specification, launchSignal, ownershipReceiver);
+        assert.ok(
+          launchResult && typeof launchResult === "object" && !Array.isArray(launchResult),
+          `trial ${index} launcher must return a synchronous result`,
+        );
+        assert.equal(typeof launchResult.then, "undefined", `trial ${index} launcher result cannot be asynchronous`);
+        exactKeys(
+          launchResult,
+          ["handle", "ownershipReceipt"],
+          `trial ${index} launcher result`,
+        );
+        assert.equal(ownershipTransfers, 1, `trial ${index} launcher did not transfer ownership exactly once`);
+        assert.equal(
+          launchResult.ownershipReceipt,
+          expectedOwnershipReceipt,
+          `trial ${index} launcher returned an invalid ownership receipt`,
+        );
+        launchPromise = Promise.resolve(Object.freeze({
+          receipt: expectedLaunchReceipt,
+          processHandle: launchResult.handle,
+        }));
         return launchPromise;
       },
     });
-    session = await adapter.openTrial(specification, launchGate);
+    session = await runWithTimeout(
+      (signal) => {
+        launchSignal = signal;
+        return adapter.openTrial(specification, launchGate, signal);
+      },
+      context.operationTimeouts.launchSetupMilliseconds,
+      `trial ${index} adapter launch setup`,
+    );
     assert.equal(gateUses, 1, `trial ${index} did not consume its one-shot launch capability exactly once`);
     exactKeys(session, sessionKeys, `trial ${index} session`);
     assert.equal(session.launchReceipt, expectedLaunchReceipt, `trial ${index} returned an invalid launch receipt`);
@@ -406,7 +577,11 @@ async function collectOneTrial(index, context, processLauncher, adapter) {
 
     const launchMonotonic = BigInt(launch.monotonicNanoseconds);
     const warmupDeadline = launchMonotonic + 300n * nanosecondsPerSecond;
-    const warmup = deepFreeze(structuredClone(await session.waitUntilAbsolute(warmupDeadline.toString())));
+    const warmup = deepFreeze(structuredClone(await runWithTimeout(
+      (signal) => session.waitUntilAbsolute(warmupDeadline.toString(), signal),
+      context.operationTimeouts.warmupMilliseconds,
+      `trial ${index} warm-up wait`,
+    )));
     const warmupIdentity = validateObservation(warmup, context, `trial ${index} warm-up end`);
     assert.equal(warmupIdentity.key, launchIdentity.key, `trial ${index} process changed during warm-up`);
     const warmupClock = retainClockDrift(
@@ -426,7 +601,11 @@ async function collectOneTrial(index, context, processLauncher, adapter) {
     const snapshots = [];
     for (let sampleIndex = 0; sampleIndex < deadlines.length; sampleIndex += 1) {
       const deadline = deadlines[sampleIndex];
-      const snapshot = structuredClone(await session.sampleAtAbsoluteDeadline(deadline, sampleIndex));
+      const snapshot = structuredClone(await runWithTimeout(
+        (signal) => session.sampleAtAbsoluteDeadline(deadline, sampleIndex, signal),
+        context.operationTimeouts.sampleMilliseconds,
+        `trial ${index} sample ${sampleIndex}`,
+      ));
       assert.ok(snapshot && typeof snapshot === "object" && !Array.isArray(snapshot), `trial ${index} sample ${sampleIndex} is invalid`);
       const actualMonotonic = parseCanonicalUInt64(
         snapshot.monotonicNanoseconds,
@@ -450,7 +629,11 @@ async function collectOneTrial(index, context, processLauncher, adapter) {
       wallClockUnixMicroseconds: snapshots[0].wallClockUnixMicroseconds,
     }, `trial ${index} measurement start`));
 
-    const finish = deepFreeze(structuredClone(await session.finishTrial()));
+    const finish = deepFreeze(structuredClone(await runWithTimeout(
+      (signal) => session.finishTrial(signal),
+      context.operationTimeouts.finishMilliseconds,
+      `trial ${index} final observation`,
+    )));
     const finishIdentity = validateObservation(finish, context, `trial ${index} finish`);
     assert.equal(finishIdentity.key, launchIdentity.key, `trial ${index} process changed before final verification`);
     const lastSnapshot = snapshots.at(-1);
@@ -483,31 +666,50 @@ async function collectOneTrial(index, context, processLauncher, adapter) {
         failed = true;
       }
     }
-    if (terminateLaunchedProcess !== null) {
+    if (launchedProcessCleanup !== null) {
+      const exitConfirmed = await terminateAndConfirmProcess(
+        launchedProcessCleanup,
+        context.operationTimeouts,
+        index,
+      );
+      if (!exitConfirmed) failed = true;
+    } else if (fallbackTerminationRequest !== null) {
       try {
-        await terminateLaunchedProcess();
+        await runWithTimeout(
+          fallbackTerminationRequest,
+          context.operationTimeouts.terminationRequestMilliseconds,
+          `trial ${index} fallback termination request`,
+        );
       } catch {
-        failed = true;
+        // The trial is already invalid and no identity-bound confirmation exists.
       }
+      failed = true;
     }
   }
   return failed ? null : window;
 }
 
-export async function runStaticWakeupCollectorProtocol({
+async function runStaticWakeupCollectorProtocol({
   planBinding,
-  resourceFixtureBytes,
-  resourceFixture,
   testToken = null,
   preflightProvider,
   ownerAttestationProvider,
   processLauncher,
   adapter,
+  operationTimeouts = productionOperationTimeouts,
 }) {
   const expectedStill = planBinding.plan.scenario.fixedNonPersonalStillSHA256;
-  validatePlan(planBinding.plan, resourceFixtureBytes, resourceFixture, expectedStill);
-  if (expectedStill === null) return stopped("plan-not-collection-ready");
+  if (expectedStill === null) {
+    assert.equal(activeCollectorPlanBindings.has(planBinding), true, "collector requires the validated active plan");
+    return stopped("plan-not-collection-ready");
+  }
   if (testToken !== syntheticTestToken) return stopped("public-host-adapter-unavailable");
+  assert.equal(
+    syntheticCollectorPlanBindings.has(planBinding),
+    true,
+    "synthetic collector requires the private fixed-still plan",
+  );
+  validateOperationTimeouts(operationTimeouts);
   assert.equal(typeof preflightProvider, "function", "synthetic preflight provider is required");
   assert.equal(typeof ownerAttestationProvider, "function", "synthetic owner-attestation provider is required");
   assert.equal(typeof processLauncher, "function", "collector-owned process launcher is required");
@@ -517,10 +719,14 @@ export async function runStaticWakeupCollectorProtocol({
 
   let preflight;
   try {
-    preflight = deepFreeze(structuredClone(await preflightProvider({
-      qualificationPlanSHA256: planBinding.sha256,
-      fixedStillSHA256: expectedStill,
-    })));
+    preflight = deepFreeze(structuredClone(await runWithTimeout(
+      (signal) => preflightProvider({
+        qualificationPlanSHA256: planBinding.sha256,
+        fixedStillSHA256: expectedStill,
+      }, signal),
+      operationTimeouts.preflightMilliseconds,
+      "collector automated preflight",
+    )));
     validateSyntheticPreflight(preflight, planBinding.sha256);
   } catch {
     return stopped("preflight-invalid");
@@ -528,10 +734,14 @@ export async function runStaticWakeupCollectorProtocol({
   if (preflight.status !== "pass") return stopped(`preflight-${preflight.stopReason}`);
 
   try {
-    const attestations = deepFreeze(structuredClone(await ownerAttestationProvider({
-      qualificationPlanSHA256: planBinding.sha256,
-      required: [...ownerAttestationNames],
-    })));
+    const attestations = deepFreeze(structuredClone(await runWithTimeout(
+      (signal) => ownerAttestationProvider({
+        qualificationPlanSHA256: planBinding.sha256,
+        required: [...ownerAttestationNames],
+      }, signal),
+      operationTimeouts.attestationMilliseconds,
+      "collector owner attestation",
+    )));
     validateOwnerAttestations(attestations, planBinding);
   } catch {
     return stopped("owner-attestation-incomplete");
@@ -540,6 +750,7 @@ export async function runStaticWakeupCollectorProtocol({
   const context = {
     planBinding,
     preflight,
+    operationTimeouts,
     processIdentities: new Set(),
     fixtureBaseline: null,
     scenarioBaseline: null,
@@ -642,16 +853,37 @@ function makeSyntheticAdapter({
   mutateFinish,
   mutateSession,
   mutateLaunchedProcess,
-  delayedProcessLaunch = false,
+  mutateLaunchResult,
+  asyncOwnershipReturn = false,
   rejectSetupDuringLaunch = false,
+  stallOpenTrial = false,
+  stallWarmup = false,
+  stallSampleAt = null,
+  stallFinish = false,
   doubleLaunch = false,
   terminateThrows = false,
+  gracefulTerminationIgnored = false,
+  forceTerminationThrows = false,
+  stallExitConfirmation = false,
+  mutateExitReceipt,
 }) {
   const log = {
     captureClockCalls: [], openTrialCalls: [], processLaunchCalls: [], warmupCalls: [],
-    sampleCalls: [], finishCalls: [], terminateCalls: [],
+    sampleCalls: [], finishCalls: [], terminateCalls: [], forceTerminateCalls: [],
+    exitConfirmationCalls: [],
   };
   const preLaunchByTrial = new Map();
+
+  function stallUntilAbort(signal, message) {
+    return new Promise((_, reject) => {
+      const fail = () => reject(signal.reason ?? new Error(message));
+      if (signal.aborted) {
+        fail();
+        return;
+      }
+      signal.addEventListener("abort", fail, { once: true });
+    });
+  }
 
   function processIdentity(index) {
     const preLaunchWall = BigInt(preLaunchByTrial.get(index).wallClockUnixMicroseconds);
@@ -674,26 +906,51 @@ function makeSyntheticAdapter({
     };
   }
 
-  const processLauncher = async (specification) => {
+  const processLauncher = (specification, signal, ownershipReceiver) => {
     log.processLaunchCalls.push(specification.index);
-    if (delayedProcessLaunch) {
-      await new Promise((resolve) => setImmediate(resolve));
-    }
+    assert.equal(signal.aborted, false, "synthetic launch signal is already aborted");
+    let running = true;
     const process = {
-      handle: Object.freeze({ index: specification.index }),
       identity: processIdentity(specification.index),
-      async terminate() {
+      async requestTermination(requestSignal) {
         log.terminateCalls.push(specification.index);
+        assert.equal(requestSignal.aborted, false, "synthetic graceful-termination signal is already aborted");
         if (terminateThrows) throw new Error("synthetic terminate failure");
+        if (!gracefulTerminationIgnored) running = false;
+      },
+      async forceTermination(forceSignal) {
+        log.forceTerminateCalls.push(specification.index);
+        assert.equal(forceSignal.aborted, false, "synthetic forced-termination signal is already aborted");
+        if (forceTerminationThrows) throw new Error("synthetic forced termination failure");
+        running = false;
+      },
+      async waitForExit(exitSignal) {
+        log.exitConfirmationCalls.push(specification.index);
+        if (stallExitConfirmation) {
+          return stallUntilAbort(exitSignal, "synthetic exit confirmation stalled");
+        }
+        const receipt = {
+          processIdentity: processIdentity(specification.index),
+          exited: !running,
+        };
+        if (mutateExitReceipt) mutateExitReceipt(receipt, specification);
+        return receipt;
       },
     };
     if (mutateLaunchedProcess) mutateLaunchedProcess(process, specification);
-    return process;
+    const ownershipReceipt = ownershipReceiver.transfer(process);
+    const result = {
+      handle: Object.freeze({ index: specification.index }),
+      ownershipReceipt,
+    };
+    if (mutateLaunchResult) mutateLaunchResult(result, specification);
+    return asyncOwnershipReturn ? Promise.resolve(result) : result;
   };
 
   const adapter = {
-    async captureClock(index) {
+    async captureClock(index, signal) {
       log.captureClockCalls.push(index);
+      assert.equal(signal.aborted, false, "synthetic clock-capture signal is already aborted");
       const value = {
         monotonicNanoseconds: (1_000_000_000_000n + BigInt(index) * 2_000_000_000_000n).toString(),
         wallClockUnixMicroseconds: (1_800_000_000_000_000n + BigInt(index) * 2_000_000_000n).toString(),
@@ -703,12 +960,13 @@ function makeSyntheticAdapter({
       return value;
     },
 
-    async openTrial(specification, launchGate) {
+    async openTrial(specification, launchGate, signal) {
       log.openTrialCalls.push(specification.index);
       const index = specification.index;
       const pendingLaunch = launchGate.launch();
       if (rejectSetupDuringLaunch) throw new Error("synthetic setup failure during launch");
       const launched = await pendingLaunch;
+      if (stallOpenTrial) return stallUntilAbort(signal, "synthetic adapter setup stalled");
       if (doubleLaunch) await launchGate.launch();
       assert.equal(launched.processHandle.index, index);
       const preLaunch = preLaunchByTrial.get(index);
@@ -726,8 +984,9 @@ function makeSyntheticAdapter({
       const session = {
         launchReceipt: launched.receipt,
         launchObservation,
-        async waitUntilAbsolute(deadline) {
+        async waitUntilAbsolute(deadline, signal) {
           log.warmupCalls.push({ index, deadline });
+          if (stallWarmup) return stallUntilAbort(signal, "synthetic warm-up stalled");
           const target = BigInt(deadline);
           const wall = launchWall + (target - launchMonotonic) / 1000n;
           const value = observation(index, target, wall, identity);
@@ -736,8 +995,11 @@ function makeSyntheticAdapter({
           measurementOriginWall = BigInt(value.wallClockUnixMicroseconds);
           return value;
         },
-        async sampleAtAbsoluteDeadline(deadline, sampleIndex) {
+        async sampleAtAbsoluteDeadline(deadline, sampleIndex, signal) {
           log.sampleCalls.push({ index, sampleIndex, deadline });
+          if (stallSampleAt === sampleIndex) {
+            return stallUntilAbort(signal, "synthetic sample stalled");
+          }
           const target = BigInt(deadline);
           const offset = target - measurementOriginMonotonic;
           const value = {
@@ -755,8 +1017,9 @@ function makeSyntheticAdapter({
           lastSnapshot = structuredClone(value);
           return value;
         },
-        async finishTrial() {
+        async finishTrial(signal) {
           log.finishCalls.push(index);
+          if (stallFinish) return stallUntilAbort(signal, "synthetic final observation stalled");
           const finalMonotonic = BigInt(lastSnapshot.monotonicNanoseconds) + 1_000_000n;
           const finalWall = BigInt(lastSnapshot.wallClockUnixMicroseconds) + 1_000n;
           const value = observation(index, finalMonotonic, finalWall, identity);
@@ -776,21 +1039,29 @@ async function runSelfTest() {
     readFile(planPath), readFile(resourceFixturePath), readFile(qualificationSchemaPath),
   ]);
   const resourceFixture = JSON.parse(resourceFixtureBytes);
-  const currentPlanBinding = makePlanBinding(expectedPlanRevision, planBytes);
-  const readyPlan = structuredClone(currentPlanBinding.plan);
-  readyPlan.scenario.fixedNonPersonalStillSHA256 = fixedStillSHA256;
-  const readyPlanBinding = makePlanBinding("a".repeat(40), Buffer.from(`${JSON.stringify(readyPlan)}\n`));
+  const currentPlanBinding = makeCollectorActivePlanBinding(
+    planBytes,
+    resourceFixtureBytes,
+    resourceFixture,
+  );
+  const readyPlanBinding = makeSyntheticCollectorPlanBinding(currentPlanBinding);
   const { default: Ajv2020 } = await import("../services/mcp/node_modules/ajv/dist/2020.js");
   let positives = 0;
   let negatives = 0;
+  const ajv = new Ajv2020({ strict: true, allErrors: true });
+  const qualificationSchema = JSON.parse(qualificationSchemaBytes);
+  ajv.addSchema(qualificationSchema);
+  const activeValidator = ajv.getSchema(qualificationSchema.$id);
+  const completeValidator = ajv.getSchema(`${qualificationSchema.$id}#/$defs/completeResult`);
+  const collectorPublicAPI = await import(import.meta.url);
+  assert.deepEqual(Object.keys(collectorPublicAPI), [], "collector module exposed a synthetic execution seam");
+  positives += 1;
 
   let preflightCalls = 0;
   let attestationCalls = 0;
   const untouchedAdapter = { captureClock: async () => assert.fail(), openTrial: async () => assert.fail() };
   const currentStop = await runStaticWakeupCollectorProtocol({
     planBinding: currentPlanBinding,
-    resourceFixtureBytes,
-    resourceFixture,
     preflightProvider: async () => { preflightCalls += 1; },
     ownerAttestationProvider: async () => { attestationCalls += 1; },
     adapter: untouchedAdapter,
@@ -802,8 +1073,6 @@ async function runSelfTest() {
 
   const inaccessibleReadyPath = await runStaticWakeupCollectorProtocol({
     planBinding: readyPlanBinding,
-    resourceFixtureBytes,
-    resourceFixture,
   });
   assert.deepEqual(inaccessibleReadyPath, stopped("public-host-adapter-unavailable"));
   positives += 1;
@@ -814,17 +1083,54 @@ async function runSelfTest() {
   });
   const unavailablePreflight = await runStaticWakeupCollectorProtocol({
     planBinding: readyPlanBinding,
-    resourceFixtureBytes,
-    resourceFixture,
     testToken: syntheticTestToken,
     preflightProvider: async () => makeUnavailablePreflight(readyPlanBinding),
     ownerAttestationProvider: async () => assert.fail(),
     processLauncher: unavailableAdapter.processLauncher,
     adapter: unavailableAdapter.adapter,
+    operationTimeouts: syntheticOperationTimeouts,
   });
   assert.deepEqual(unavailablePreflight, stopped("preflight-public-fact-unavailable"));
   assert.deepEqual(unavailableAdapter.log.processLaunchCalls, []);
   positives += 1;
+
+  const stallUntilAbort = (signal) => new Promise((_, reject) => {
+    const fail = () => reject(signal.reason ?? new Error("synthetic provider stalled"));
+    if (signal.aborted) {
+      fail();
+      return;
+    }
+    signal.addEventListener("abort", fail, { once: true });
+  });
+  const stalledProviderAdapter = makeSyntheticAdapter({
+    planBinding: readyPlanBinding,
+    preflight: makePreflight(readyPlanBinding),
+  });
+  const stalledPreflight = await runStaticWakeupCollectorProtocol({
+    planBinding: readyPlanBinding,
+    testToken: syntheticTestToken,
+    preflightProvider: (_request, signal) => stallUntilAbort(signal),
+    ownerAttestationProvider: async () => assert.fail(),
+    processLauncher: stalledProviderAdapter.processLauncher,
+    adapter: stalledProviderAdapter.adapter,
+    operationTimeouts: syntheticOperationTimeouts,
+  });
+  assert.deepEqual(stalledPreflight, stopped("preflight-invalid"));
+  assert.deepEqual(stalledProviderAdapter.log.processLaunchCalls, []);
+  negatives += 1;
+
+  const stalledAttestation = await runStaticWakeupCollectorProtocol({
+    planBinding: readyPlanBinding,
+    testToken: syntheticTestToken,
+    preflightProvider: async () => makePreflight(readyPlanBinding),
+    ownerAttestationProvider: (_request, signal) => stallUntilAbort(signal),
+    processLauncher: stalledProviderAdapter.processLauncher,
+    adapter: stalledProviderAdapter.adapter,
+    operationTimeouts: syntheticOperationTimeouts,
+  });
+  assert.deepEqual(stalledAttestation, stopped("owner-attestation-incomplete"));
+  assert.deepEqual(stalledProviderAdapter.log.processLaunchCalls, []);
+  negatives += 1;
 
   async function runSynthetic({
     wakeups, mutatePreflight, mutateAttestations, ...adapterOptions
@@ -838,14 +1144,17 @@ async function runSelfTest() {
     });
     const outcome = await runStaticWakeupCollectorProtocol({
       planBinding: readyPlanBinding,
-      resourceFixtureBytes,
-      resourceFixture,
       testToken: syntheticTestToken,
       preflightProvider: async () => structuredClone(preflight),
       ownerAttestationProvider: async () => structuredClone(attestations),
       processLauncher: synthetic.processLauncher,
       adapter: synthetic.adapter,
+      operationTimeouts: syntheticOperationTimeouts,
     });
+    if (outcome.status === "complete") {
+      assert.equal(completeValidator(outcome.result), true, JSON.stringify(completeValidator.errors));
+      assert.equal(activeValidator(outcome.result), false, "the active schema accepted a synthetic result");
+    }
     return { outcome, log: synthetic.log };
   }
 
@@ -856,6 +1165,8 @@ async function runSelfTest() {
   assert.deepEqual(conforming.log.processLaunchCalls, [1, 2, 3, 4, 5]);
   assert.equal(conforming.log.sampleCalls.length, 4_505);
   assert.deepEqual(conforming.log.terminateCalls, [1, 2, 3, 4, 5]);
+  assert.deepEqual(conforming.log.forceTerminateCalls, []);
+  assert.deepEqual(conforming.log.exitConfirmationCalls, [1, 2, 3, 4, 5]);
   const sanitizedJSON = JSON.stringify(conforming.outcome.result);
   assert.equal(sanitizedJSON.includes("987654321000000001"), false);
   assert.equal(sanitizedJSON.includes("1800000002005000"), false);
@@ -896,16 +1207,16 @@ async function runSelfTest() {
   let terminatorGetterReads = 0;
   const singleReadTerminator = await runSynthetic({
     mutateLaunchedProcess: (process) => {
-      const terminate = process.terminate;
+      const requestTermination = process.requestTermination;
       let served = false;
-      Object.defineProperty(process, "terminate", {
+      Object.defineProperty(process, "requestTermination", {
         enumerable: true,
         configurable: true,
         get() {
           terminatorGetterReads += 1;
           if (served) return undefined;
           served = true;
-          return terminate;
+          return requestTermination;
         },
       });
     },
@@ -915,11 +1226,22 @@ async function runSelfTest() {
   assert.deepEqual(singleReadTerminator.log.terminateCalls, [1, 2, 3, 4, 5]);
   positives += 1;
 
-  const ajv = new Ajv2020({ strict: true, allErrors: true });
-  const qualificationSchema = JSON.parse(qualificationSchemaBytes);
-  ajv.addSchema(qualificationSchema);
-  const activeValidator = ajv.getSchema(qualificationSchema.$id);
-  const completeValidator = ajv.getSchema(`${qualificationSchema.$id}#/$defs/completeResult`);
+  const gracefulFailureEscalates = await runSynthetic({ terminateThrows: true });
+  assert.equal(gracefulFailureEscalates.outcome.status, "complete");
+  assert.deepEqual(gracefulFailureEscalates.log.terminateCalls, [1, 2, 3, 4, 5]);
+  assert.deepEqual(gracefulFailureEscalates.log.forceTerminateCalls, [1, 2, 3, 4, 5]);
+  assert.deepEqual(gracefulFailureEscalates.log.exitConfirmationCalls, [1, 2, 3, 4, 5]);
+  positives += 1;
+
+  const ignoredGracefulRequestEscalates = await runSynthetic({ gracefulTerminationIgnored: true });
+  assert.equal(ignoredGracefulRequestEscalates.outcome.status, "complete");
+  assert.deepEqual(ignoredGracefulRequestEscalates.log.forceTerminateCalls, [1, 2, 3, 4, 5]);
+  assert.deepEqual(
+    ignoredGracefulRequestEscalates.log.exitConfirmationCalls,
+    [1, 1, 2, 2, 3, 3, 4, 4, 5, 5],
+  );
+  positives += 1;
+
   assert.equal(completeValidator(conforming.outcome.result), true, JSON.stringify(completeValidator.errors));
   assert.equal(activeValidator(conforming.outcome.result), false, "the active schema accepted a synthetic result");
   positives += 1;
@@ -959,13 +1281,25 @@ async function runSelfTest() {
       },
       expectedTrial: 1,
     },
+    { options: { asyncOwnershipReturn: true }, expectedTrial: 1 },
     {
       options: {
-        delayedProcessLaunch: true,
+        mutateLaunchResult: (result) => {
+          result.ownershipReceipt = Object.freeze({ index: 1 });
+        },
+      },
+      expectedTrial: 1,
+    },
+    {
+      options: {
         rejectSetupDuringLaunch: true,
       },
       expectedTrial: 1,
     },
+    { options: { stallOpenTrial: true }, expectedTrial: 1 },
+    { options: { stallWarmup: true }, expectedTrial: 1 },
+    { options: { stallSampleAt: 10 }, expectedTrial: 1 },
+    { options: { stallFinish: true }, expectedTrial: 1 },
     {
       options: {
         mutateSession: (session) => {
@@ -1187,7 +1521,22 @@ async function runSelfTest() {
       },
       expectedTrial: 3,
     },
-    { options: { terminateThrows: true }, expectedTrial: 1 },
+    { options: { stallExitConfirmation: true }, expectedTrial: 1 },
+    {
+      options: {
+        mutateExitReceipt: (receipt) => {
+          receipt.processIdentity.processStartAbsoluteTime = "8";
+        },
+      },
+      expectedTrial: 1,
+    },
+    {
+      options: {
+        gracefulTerminationIgnored: true,
+        forceTerminationThrows: true,
+      },
+      expectedTrial: 1,
+    },
     {
       options: {
         mutateSession: (_session, specification) => {
@@ -1218,6 +1567,11 @@ async function runSelfTest() {
       ),
       `trial tamper case ${caseIndex} did not terminate every launched trial exactly once`,
     );
+    assert.deepEqual(
+      [...new Set(result.log.exitConfirmationCalls)],
+      Array.from({ length: testCase.expectedTrial }, (_, index) => index + 1),
+      `trial tamper case ${caseIndex} did not attempt identity-bound exit confirmation`,
+    );
     negatives += 1;
   }
 
@@ -1235,9 +1589,11 @@ async function productionMain() {
     readFile(planPath), readFile(resourceFixturePath),
   ]);
   const outcome = await runStaticWakeupCollectorProtocol({
-    planBinding: makePlanBinding(expectedPlanRevision, planBytes),
-    resourceFixtureBytes,
-    resourceFixture: JSON.parse(resourceFixtureBytes),
+    planBinding: makeCollectorActivePlanBinding(
+      planBytes,
+      resourceFixtureBytes,
+      JSON.parse(resourceFixtureBytes),
+    ),
   });
   assert.deepEqual(outcome, stopped("plan-not-collection-ready"));
   process.stderr.write(

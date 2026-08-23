@@ -255,14 +255,21 @@ proves that the active null-still plan invokes zero host callbacks. Neither
 validator runs a live host preflight or creates evidence.
 
 `node script/collect_m4_static_wakeup_qualification.mjs --self-test` exercises
-the strict five-trial protocol over synthetic rows only. Nine positive and 39
+the strict five-trial protocol over synthetic rows only. Twelve positive and 49
 fail-closed cases cover the current zero-call stop, inaccessible production
 host adapter, unavailable and malformed preflight, all six exact owner
 attestations, and collector-owned launch/warm-up/sample/finalize/terminate
 calls. For each trial, the adapter must consume a collector-minted one-shot
-launch capability exactly once and return its unforgeable receipt. The
-launcher-provided process-start identity must equal the identity in every
-adapter observation, so cleanup and measurement bind to the same process.
+launch capability exactly once and return its unforgeable receipt. Before the
+launcher can return a handle, it must synchronously register process-start
+identity, graceful/forced termination operations, and identity-bound exit
+confirmation with a collector-minted ownership receiver. Only a successful
+registration yields the unforgeable ownership receipt that the launcher must
+return. An asynchronous or forged launcher result is rejected after registered
+cleanup is already collector-owned; before registration succeeds, cleanup
+remains the launcher's responsibility. The registered identity must equal the
+identity in every adapter observation, so cleanup and measurement bind to the
+same process.
 Process start is bounded by paired clocks around that launch; the engine requests
 exactly 901 absolute deadlines after a 300-second warm-up, binds snapshot zero
 to the warm-up clock anchor and every snapshot to its requested deadline, and
@@ -272,10 +279,22 @@ retains the largest accepted boundary, individual-gap, or cumulative-series
 drift.
 Candidate/fixture/scenario continuity, fixed fifteen-minute
 normalization, rank-five P95, valid high-wakeup failure, privacy projection,
-guaranteed post-launch termination after ownership transfer even when launcher
-or adapter validation fails, an in-flight launch barrier before collector exit,
-and no-retry/replacement behavior are also fail-closed. The synthetic path
-requires an unexported module-local test token. The production entry point
+and no-retry/replacement behavior are also fail-closed. Every preflight,
+attestation, adapter, wait, sample, finalization, and cleanup operation has a
+collector-owned timeout and abort signal. A stall enters cleanup. Cleanup first
+requests graceful termination, then requires an exact identity-bound exit
+receipt; it escalates to forced termination on failure, timeout, or an
+unconfirmed exit, and no later trial begins without confirmed exit.
+The fixed production bounds are 60 seconds for preflight, attestation, and
+launch setup; 5 seconds for clock capture, each sample, final observation, and
+each graceful/forced termination request; 305 seconds for the warm-up wait; and
+10 seconds for each exit confirmation. These are failure bounds, not permission
+to relax the separately validated cadence or elapsed-time limits.
+
+The synthetic path and alternate-plan/result validators are module-private and
+require an unexported test token. The qualification module exports only a
+constructor pinned to the exact active plan revision, bytes, resource fixture,
+and null still; the collector module exports nothing. The production entry point
 accepts no host or fixture arguments, emits no result artifact, and exits at
 `plan-not-collection-ready` before preflight, attestation, adapter, or process
 launch. The aggregate release gate verifies that real stopped invocation and

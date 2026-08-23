@@ -16,8 +16,6 @@ const expectedSchemaSHA256 = "5b257b69b6175683b87410d6c01516f4a3fc18ab8fd5ce239b
 const expectedPlanSHA256 = "c071f4cd6032d4d961853df8aa3820365d31dd5c369c19edcd56e182d58c0069";
 const expectedPlanRevision = "827723f222bb2a335313743b830503d8c2bda71a";
 
-export { expectedPlanRevision };
-
 const expectedBinding = {
   fixtureId: "base-2024-m4-mac-mini-16gb-256gb",
   path: "fixtures/resource-budgets/v1/base-m4-mac-mini.json",
@@ -173,7 +171,13 @@ function approximatelyEqual(left, right) {
   return Math.abs(left - right) <= 1e-12;
 }
 
-export function makePlanBinding(revision, bytes) {
+function deepFreeze(value) {
+  if (!value || typeof value !== "object" || Object.isFrozen(value)) return value;
+  for (const child of Object.values(value)) deepFreeze(child);
+  return Object.freeze(value);
+}
+
+function makePlanBinding(revision, bytes) {
   assert.match(revision, revisionPattern, "plan binding revision must be a commit SHA");
   assert.notEqual(revision, "0".repeat(40), "plan binding revision cannot be a placeholder");
   const plan = JSON.parse(Buffer.from(bytes).toString("utf8"));
@@ -184,7 +188,7 @@ export function makePlanBinding(revision, bytes) {
   };
 }
 
-export function validatePlan(plan, resourceFixtureBytes, resourceFixture, expectedFixedStillSHA256 = null) {
+function validatePlan(plan, resourceFixtureBytes, resourceFixture, expectedFixedStillSHA256 = null) {
   exactKeys(plan, topPlanKeys, "plan");
   assert.equal(plan.schemaVersion, 1);
   assert.equal(plan.contractId, "base-m4-static-settled-hidden-wakeups-v1");
@@ -234,6 +238,17 @@ export function validatePlan(plan, resourceFixtureBytes, resourceFixture, expect
     coverage: { scenarioWakeups: "unmeasured", globalWakeups: "unmeasured" },
     qualification: "plan-only",
   }, "plan must remain uncollected and unmeasured");
+}
+
+export function makeValidatedActiveStaticWakeupPlanBinding(
+  planBytes,
+  resourceFixtureBytes,
+  resourceFixture,
+) {
+  const binding = makePlanBinding(expectedPlanRevision, planBytes);
+  assert.equal(binding.sha256, expectedPlanSHA256, "active qualification plan bytes drifted");
+  validatePlan(binding.plan, resourceFixtureBytes, resourceFixture, null);
+  return deepFreeze(binding);
 }
 
 function validateSchemaContract(schema) {
@@ -418,7 +433,7 @@ function assertNoRetainedIdentifiers(value, at = "result") {
   }
 }
 
-export function validateResult(result, planBinding) {
+function validateResult(result, planBinding) {
   exactKeys(planBinding, ["plan", "revision", "sha256"], "plan binding");
   assert.equal(planBinding.plan.schemaVersion, 1);
   assert.equal(planBinding.plan.contractId, "base-m4-static-settled-hidden-wakeups-v1");
@@ -643,12 +658,26 @@ function makeIncomplete(planBinding) {
 function runSelfTests(plan, schema, schemaBytes, planBytes, resourceFixtureBytes, resourceFixture) {
   assert.equal(createHash("sha256").update(schemaBytes).digest("hex"), expectedSchemaSHA256, "qualification schema bytes drifted");
   assert.equal(createHash("sha256").update(planBytes).digest("hex"), expectedPlanSHA256, "qualification plan bytes drifted");
-  const currentPlanBinding = makePlanBinding(expectedPlanRevision, planBytes);
+  const currentPlanBinding = makeValidatedActiveStaticWakeupPlanBinding(
+    planBytes,
+    resourceFixtureBytes,
+    resourceFixture,
+  );
   assert.deepEqual(currentPlanBinding.plan, plan, "parsed plan binding must match the reviewed plan bytes");
+  assert.equal(Object.isFrozen(currentPlanBinding), true, "active plan binding must be immutable");
+  assert.equal(Object.isFrozen(currentPlanBinding.plan), true, "active plan must be immutable");
   const collectionReadyPlan = structuredClone(plan);
   collectionReadyPlan.scenario.fixedNonPersonalStillSHA256 = "4".repeat(64);
   const collectionReadyPlanBytes = Buffer.from(`${JSON.stringify(collectionReadyPlan)}\n`);
   const collectionReadyPlanBinding = makePlanBinding("a".repeat(40), collectionReadyPlanBytes);
+  assert.throws(
+    () => makeValidatedActiveStaticWakeupPlanBinding(
+      collectionReadyPlanBytes,
+      resourceFixtureBytes,
+      resourceFixture,
+    ),
+    /active qualification plan bytes drifted/,
+  );
   validateSchemaContract(schema);
   validatePlan(plan, resourceFixtureBytes, resourceFixture);
   validatePlan(collectionReadyPlanBinding.plan, resourceFixtureBytes, resourceFixture, "4".repeat(64));
@@ -820,6 +849,12 @@ function runSelfTests(plan, schema, schemaBytes, planBytes, resourceFixtureBytes
 
 async function main() {
   assert.equal(process.argv.length, 2, "usage: validate_m4_static_wakeup_qualification.mjs");
+  const publicAPI = await import(import.meta.url);
+  assert.deepEqual(
+    Object.keys(publicAPI),
+    ["makeValidatedActiveStaticWakeupPlanBinding"],
+    "qualification validator exposed an inactive plan or result seam",
+  );
   const [schemaBytes, planBytes, resourceFixtureBytes] = await Promise.all([
     readFile(schemaPath),
     readFile(planPath),

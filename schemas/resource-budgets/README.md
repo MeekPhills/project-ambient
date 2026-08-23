@@ -17,10 +17,16 @@ five-trial orchestration and reduction rules behind synthetic-only test seams.
 The engine owns a one-shot launch capability consumed exactly once per trial,
 binds the launcher-returned process identity to every adapter observation, and
 owns paired-clock warm-up, 901 absolute sample calls, final observation, and
-guaranteed post-launch termination even when wrapper or adapter validation
-fails. The collector closes the launch gate and settles any in-flight launch
-before exit. It also requires all six closed owner attestations before a
-synthetic trial can begin.
+cleanup even when wrapper or adapter validation fails. A collector-minted
+receiver must synchronously accept graceful/forced termination and
+identity-bound exit confirmation before it issues the ownership receipt needed
+to return a process handle. Collector-owned timeouts and abort signals bound
+every host operation; stalled work enters cleanup, and a later trial cannot
+begin until exit is confirmed. It also requires all six closed owner
+attestations before a synthetic trial can begin. Alternate plans, complete
+results, and execution stay
+module-private; the only exported qualification helper is pinned to the exact
+active null-still plan and resource fixture.
 Its production entry point
 validates the active plan and stops before any adapter or launch while the still
 digest is null; it emits no result artifact.
