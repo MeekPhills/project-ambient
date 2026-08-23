@@ -78,7 +78,9 @@ process's wall-clock start identity plus paired wall and monotonic sample times.
 The sanitizer validates the fixture identity, process incarnation, requested
 and observed sample counts, exact first/last anchors, wall/monotonic agreement,
 complete activity intervals, counter sums, wakeup rate, coverage, and
-non-qualification fields before it queries any logs. Correlation accepts only
+non-qualification fields before it queries any logs. Physical-footprint P95 and
+maximum gauges are validated for producer consistency but never retained in the
+correlation artifact. Correlation accepts only
 the collector's exact one-second interval, observed gaps from 0.5 through 2.0
 seconds, active intervals consistent with those declared extrema within the
 100-millisecond cross-clock tolerance, and at most 256 complete activity rows;
@@ -118,7 +120,7 @@ The parser accepts at most 256 selected records, 64 KiB per NDJSON line, and
 4 MiB of child output. The series file is opened once with
 `O_NOFOLLOW | O_NONBLOCK`, so a FIFO cannot stall before the regular-file
 check; it is then bounded, stat-checked, and read through that same descriptor.
-Its 52-case release self-test uses synthetic in-memory records plus a temporary
+Its 53-case release self-test uses synthetic in-memory records plus a temporary
 FIFO rejection check; the repository contains no raw or raw-shaped unified-log
 fixture.
 
@@ -143,6 +145,13 @@ handler was observed nearby.
 
 ### Runtime compatibility smoke
 
+The historical compatibility smoke was produced at
+`7e6e882eff4abc9a94c50d9663793795dc6de68a`. It predates the physical-footprint
+fields required by producer revision
+`91fc69c23597c308526fcdd25983d97939a34d4d`; it remains compatibility evidence
+only for that PR #63 head's query/sanitizer shape, not for the widened current
+input shape.
+
 On 2026-08-23, the production CLI completed a six-snapshot, one-second-interval
 smoke against a deliberately instrumented Ambient launch. It retrieved exactly
 one pre-window launch marker, observed no unified-log loss, retained no
@@ -151,7 +160,8 @@ wakeups with no nearby instrumented callback. The corrected producer bound the
 launch marker to the current process start and used exact first/last snapshot
 anchors; its sampling gaps stayed inside the accepted cadence. Raw NDJSON remained in the child
 pipe, the temporary process series was deleted, and no correlation artifact was
-written to the repository or filesystem. This proves parser/query compatibility only. The short
+written to the repository or filesystem. This establishes parser/query
+compatibility only for the pinned historical producer. The short
 signposts-on window is ineligible for budget, cadence, P95, attribution, or
 qualification claims.
 

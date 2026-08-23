@@ -20,6 +20,7 @@ const maxLogStderrBytes = 64 * 1024;
 const maxPid = 2_147_483_647;
 const microsecondsPerSecond = 1_000_000n;
 const maxUInt64 = (1n << 64n) - 1n;
+const maxSafeInteger = BigInt(Number.MAX_SAFE_INTEGER);
 
 const eventNames = [
   "lifecycle.launch",
@@ -61,6 +62,10 @@ const processSeriesKeys = [
   "lastSnapshotUnixMicroseconds",
   "samplingGapSecondsMin",
   "samplingGapSecondsMax",
+  "physicalFootprintBytesP95",
+  "physicalFootprintBytesMax",
+  "physicalFootprintMiBP95",
+  "physicalFootprintMiBMax",
   "packageIdleWakeups",
   "interruptWakeups",
   "totalWakeups",
@@ -212,6 +217,15 @@ function validateSeries(series) {
   assert.ok(processSeries.samplingGapSecondsMin <= processSeries.samplingGapSecondsMax, "sampling-gap bounds are inverted");
   assert.ok(processSeries.samplingGapSecondsMin >= 0.5, "sampling cadence contains a sub-half-second gap");
   assert.ok(processSeries.samplingGapSecondsMax <= 2, "sampling cadence contains a gap over two seconds");
+  const physicalFootprintBytesP95 = parseCanonicalUInt64(processSeries.physicalFootprintBytesP95, "processRusageSeries.physicalFootprintBytesP95");
+  const physicalFootprintBytesMax = parseCanonicalUInt64(processSeries.physicalFootprintBytesMax, "processRusageSeries.physicalFootprintBytesMax");
+  assert.ok(physicalFootprintBytesP95 > 0n && physicalFootprintBytesMax > 0n, "physical-footprint gauges must be positive");
+  assert.ok(physicalFootprintBytesP95 <= physicalFootprintBytesMax, "physical-footprint P95 exceeds its maximum");
+  assert.ok(physicalFootprintBytesMax <= maxSafeInteger, "physical-footprint gauge exceeds Number.MAX_SAFE_INTEGER");
+  assertFiniteNumber(processSeries.physicalFootprintMiBP95, "processRusageSeries.physicalFootprintMiBP95", Number.MIN_VALUE);
+  assertFiniteNumber(processSeries.physicalFootprintMiBMax, "processRusageSeries.physicalFootprintMiBMax", Number.MIN_VALUE);
+  assert.ok(approximatelyEqual(processSeries.physicalFootprintMiBP95, Number(physicalFootprintBytesP95) / (1024 * 1024)), "physical-footprint P95 MiB is inconsistent");
+  assert.ok(approximatelyEqual(processSeries.physicalFootprintMiBMax, Number(physicalFootprintBytesMax) / (1024 * 1024)), "physical-footprint maximum MiB is inconsistent");
 
   for (const key of [
     "packageIdleWakeups",
@@ -622,6 +636,10 @@ function makeSeries(activityEvents = [
       lastSnapshotUnixMicroseconds: parseCanonicalUTCMicrosecond("2026-08-23T11:00:04.100000Z", "synthetic last snapshot").toString(),
       samplingGapSecondsMin: 1,
       samplingGapSecondsMax: 1,
+      physicalFootprintBytesP95: "20971520",
+      physicalFootprintBytesMax: "20971520",
+      physicalFootprintMiBP95: 20,
+      physicalFootprintMiBMax: 20,
       packageIdleWakeups: sums.packageIdleWakeups,
       interruptWakeups: sums.interruptWakeups,
       totalWakeups: sums.interruptWakeups,
@@ -730,7 +748,7 @@ function runSelfTest() {
   );
   assert.equal(intervalBound.wakeupBuckets[0].nearbySignposts[0].relation, "same", "a handler inside a two-second activity interval must not be lost to bucket flooring");
   const serializedOutput = JSON.stringify(output);
-  for (const prohibited of ["prohibited/raw/path", "eventMessage", "composedMessage", "formatString", "processImagePath", "signpostIdentifier", "threadIdentifier", "bootUUID"]) {
+  for (const prohibited of ["prohibited/raw/path", "eventMessage", "composedMessage", "formatString", "processImagePath", "signpostIdentifier", "threadIdentifier", "bootUUID", "physicalFootprint"]) {
     assert.equal(serializedOutput.includes(prohibited), false, `raw metadata leaked into retained output: ${prohibited}`);
   }
 
@@ -818,6 +836,9 @@ function runSelfTest() {
   const unsafe = makeSeries();
   unsafe.processRusageSeries.diskReadBytes = Number.MAX_SAFE_INTEGER + 1;
   assert.throws(() => parseAndCorrelate(unsafe, queryStart, makeNDJSON([launch])), /safe integer/);
+  const inconsistentPhysicalFootprint = makeSeries();
+  inconsistentPhysicalFootprint.processRusageSeries.physicalFootprintMiBP95 = 21;
+  assert.throws(() => parseAndCorrelate(inconsistentPhysicalFootprint, queryStart, makeNDJSON([launch])), /physical-footprint P95 MiB is inconsistent/);
   const wrongRate = makeSeries();
   wrongRate.processRusageSeries.wakeupsPerMinute += 1;
   assert.throws(() => parseAndCorrelate(wrongRate, queryStart, makeNDJSON([launch])), /wakeups-per-minute/);
@@ -916,7 +937,7 @@ async function main() {
   if (options.selfTest) {
     runSelfTest();
     await runSeriesPathSelfTest();
-    console.log("wakeup-signpost sanitizer self-test: 52 positive/negative cases passed; raw records are synthetic, the FIFO is temporary, and retained output is closed");
+    console.log("wakeup-signpost sanitizer self-test: 53 positive/negative cases passed; raw records are synthetic, the FIFO is temporary, and retained output is closed");
     return;
   }
   assert.equal(process.platform, "darwin", "production signpost queries require macOS");
