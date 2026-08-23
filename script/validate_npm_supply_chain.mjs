@@ -20,6 +20,7 @@ import { fileURLToPath } from "node:url";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const POLICY_PATH = "docs/security/npm-supply-chain-policy.json";
+const EXPECTED_PACKAGE_RELEASE_SHA256 = "18dac0bbdca8cb25c79d0976e6aa5138dcffc56beae206ad56936c1c0f432f01";
 const EXPECTED_WORKSPACES = ["apps/site", "script/mcpb-tooling", "services/mcp"];
 const NPMRC_BYTES = "ignore-scripts=true\n";
 const DISPOSITION = "disabled-by-default-no-exception";
@@ -27,13 +28,17 @@ const SEVERITIES = ["info", "low", "moderate", "high", "critical", "total"];
 const PRUNED_DISCOVERY_DIRECTORIES = new Set([".git", "node_modules"]);
 const GENERATED_OPERATIONAL_DIRECTORIES = new Set([".build", ".next", ".vinext", ".wrangler", "coverage", "dist"]);
 const LIFECYCLE_CAPABLE_NPM_OPERATIONS = new Set([
-  "add", "ci", "clean-install", "dedupe", "i", "ic", "in", "ins", "inst",
-  "install", "install-clean", "link", "pack", "prune", "publish", "r", "rb",
-  "rebuild", "remove", "rm", "un", "uninstall", "unlink", "up", "update", "upgrade",
+  "add", "ci", "cit", "clean-install", "clean-install-test", "dedupe", "ddp", "i",
+  "ic", "in", "ins", "inst", "insta", "instal", "install", "install-ci-test",
+  "install-clean", "install-test", "isnt", "isnta", "isntal", "isntall",
+  "isntall-clean", "it", "link", "ln", "pack", "prune", "publish", "r", "rb",
+  "rebuild", "remove", "rm", "sit", "u", "un", "uninstall", "unlink", "up",
+  "update", "upgrade", "udpate",
 ]);
+const PROHIBITED_TRANSIENT_NPM_OPERATIONS = new Set(["exec", "x"]);
 const NON_INSTALL_NPM_OPERATIONS = new Set([
   "access", "audit", "bugs", "cache", "completion", "config", "deprecate", "diff",
-  "dist-tag", "docs", "doctor", "edit", "exec", "explain", "explore", "find-dupes",
+  "dist-tag", "docs", "doctor", "edit", "explain", "explore", "find-dupes",
   "fund", "help", "hook", "init", "ll", "login", "logout", "ls", "org", "outdated",
   "owner", "ping", "pkg", "prefix", "profile", "query", "repo",
   "restart", "root", "run", "run-script", "sbom", "search", "set", "shrinkwrap",
@@ -194,9 +199,10 @@ function validateDiscoveredSupplyChainFiles(lockfiles, shrinkwraps, npmrcs, syml
 function installCommandIsDenied(line) {
   const shellSegments = line.split(/&&|\|\||[;|]/);
   for (const segment of shellSegments) {
-    const npmCommands = segment.matchAll(/(?:^|[\s:`>"'()/])npm\s+([^#]*)/g);
+    const npmCommands = segment.matchAll(/(?=(?:^|[\s:`>"'()/])npm\s+([^#]*))/g);
     for (const match of npmCommands) {
-      const tokens = match[1].trim().split(/\s+/).filter(Boolean);
+      const tokens = match[1].trim().split(/\s+/).filter(Boolean)
+        .map((token) => token.replace(/^["'(`]+|["'),`]+$/g, ""));
       let operation = null;
       for (let index = 0; index < tokens.length; index += 1) {
         const token = tokens[index];
@@ -207,13 +213,19 @@ function installCommandIsDenied(line) {
         operation = token;
         break;
       }
+      if (typeof operation === "string" && operation.includes("$")) return false;
+      if (PROHIBITED_TRANSIENT_NPM_OPERATIONS.has(operation)) return false;
       if (NON_INSTALL_NPM_OPERATIONS.has(operation)) continue;
-      const lifecycleOperation = LIFECYCLE_CAPABLE_NPM_OPERATIONS.has(operation) ||
-        tokens.some((token) => LIFECYCLE_CAPABLE_NPM_OPERATIONS.has(token));
-      if (!lifecycleOperation) continue;
-      const scriptControlFlags = tokens.filter((token) => /^--(?:no-)?ignore[-_]scripts(?:=|$)/.test(token));
+      if (!LIFECYCLE_CAPABLE_NPM_OPERATIONS.has(operation)) continue;
+      const scriptControlIndices = tokens.flatMap((token, index) =>
+        /^--(?:no-)?ignore[-_]scripts(?:=|$)/.test(token) ? [index] : []);
+      const scriptControlFlags = scriptControlIndices.map((index) => tokens[index]);
       if (scriptControlFlags.length !== 1) return false;
       if (!["--ignore-scripts", "--ignore-scripts=true"].includes(scriptControlFlags[0])) return false;
+      if (
+        scriptControlFlags[0] === "--ignore-scripts" &&
+        /^(?:true|false|0|1|yes|no|on|off)$/i.test(tokens[scriptControlIndices[0] + 1] ?? "")
+      ) return false;
     }
   }
   return true;
@@ -247,6 +259,21 @@ function transientNpxIsUsed(line) {
   return /(?:^|[\s:`>"'()/])npx\b/.test(line);
 }
 
+function indirectNpmLifecycleIsUsed(line) {
+  const operations = [...LIFECYCLE_CAPABLE_NPM_OPERATIONS].sort((a, b) => b.length - a.length)
+    .map((operation) => operation.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+    .join("|");
+  const variableInvocation = new RegExp(`["']?\\$\\{?(?:NPM[A-Za-z0-9_]*|[A-Za-z_][A-Za-z0-9_]*NPM[A-Za-z0-9_]*)\\}?["']?\\s+(?:${operations})(?:\\s|$)`, "i");
+  const commandSubstitution = new RegExp(`\\$\\([^)]*\\bnpm\\b[^)]*\\)\\s+(?:${operations})(?:\\s|$)`, "i");
+  const npmAssignment = /(?:^|[;\s])(?:export\s+)?[A-Za-z_][A-Za-z0-9_]*\s*=\s*(?:\$\([^)]*\bnpm\b[^)]*\)|\(?["']?(?:[^"'\s;]*\/)?npm["']?\)?)(?:[;\s]|$)/i;
+  const npmAlias = /(?:^|[;\s])alias\s+[A-Za-z_][A-Za-z0-9_]*\s*=\s*["']?npm(?:["']|[;\s]|$)/i;
+  return variableInvocation.test(line) || commandSubstitution.test(line) || npmAssignment.test(line) || npmAlias.test(line);
+}
+
+function programmaticNpmExecutionIsUsed(line) {
+  return /\b(?:exec|execSync|execFile|execFileSync|spawn|spawnSync|execa|run)\s*\(\s*["'`]npm(?:["'`]|\s)/.test(line);
+}
+
 function validateWorkspaceRootScripts(packageJSON, at, errors) {
   if (packageJSON.scripts === undefined) return;
   if (!isObject(packageJSON.scripts)) {
@@ -271,6 +298,12 @@ function validateReleasePackagerBoundary(source, errors) {
   const starts = lines.flatMap((line, index) => line === expected[0] ? [index] : []);
   if (starts.length !== 1 || JSON.stringify(lines.slice(starts[0], starts[0] + expected.length)) !== JSON.stringify(expected)) {
     errors.push("release packaging must run one exact active policy validator immediately before npm pack");
+  }
+  const packCommands = logicalCommandLines(source).filter((command) => /(?:^|\s)npm\s+pack\b/.test(command.text));
+  if (packCommands.length !== 1) errors.push("release packaging must contain exactly one npm pack command");
+  const sourceSHA256 = createHash("sha256").update(source).digest("hex");
+  if (sourceSHA256 !== EXPECTED_PACKAGE_RELEASE_SHA256) {
+    errors.push("script/package_release.sh changed outside the reviewed pre-pack boundary");
   }
 }
 
@@ -534,12 +567,14 @@ function validateRepository(policy) {
   for (const path of controlledInstallFiles) {
     for (const command of logicalCommandLines(readText(path))) {
       if (!installCommandIsDenied(command.text)) errors.push(`${path}:${command.line} npm install command must explicitly disable lifecycle scripts`);
+      if (indirectNpmLifecycleIsUsed(command.text)) errors.push(`${path}:${command.line} indirect npm lifecycle execution is prohibited`);
       if (auditReportingIsSuppressed(command.text)) errors.push(`${path}:${command.line} npm advisory reporting must not be suppressed`);
     }
   }
   for (const path of repositoryFiles.filter(isControlledTransientExecutionFile)) {
     for (const command of logicalCommandLines(readText(path))) {
       if (transientNpxIsUsed(command.text)) errors.push(`${path}:${command.line} transient npx execution is prohibited; use committed locked tooling`);
+      if (programmaticNpmExecutionIsUsed(command.text)) errors.push(`${path}:${command.line} programmatic npm execution is prohibited; use a governed shell command`);
     }
   }
   const aggregate = readText("script/verify_release.sh");
@@ -758,11 +793,21 @@ for (const unsafeCommand of [
   "npm rebuild",
   "npm pack .",
   "npm publish",
+  "npm install-test",
+  "npm install-ci-test",
+  "npm isntall",
+  "npm isntall-clean",
+  "npm clean-install-test",
+  "npm exec --package npm -- npm ci",
+  "npm x npm -- ci",
+  'npm "$NPM_OPERATION"',
+  'npm run check "$(npm ci)"',
   "npm ci \\",
   "npm ci $NPM_FLAGS",
   "npm ci --no-ignore-scripts",
   "npm ci --ignore-scripts --ignore-scripts=false",
   "npm ci --ignore-scripts --no-ignore-scripts",
+  "npm ci --ignore-scripts false",
 ]) {
   assert.equal(installCommandIsDenied(unsafeCommand), false, `unguarded install command: ${unsafeCommand}`);
   tamperCases.push(`unguarded install command: ${unsafeCommand}`);
@@ -771,6 +816,15 @@ const multilineNegation = logicalCommandLines("npm ci --ignore-scripts \\\n  --n
 assert.equal(multilineNegation.length, 1, "multiline npm command framing");
 assert.equal(installCommandIsDenied(multilineNegation[0].text), false, "multiline negated ignore-scripts flag");
 tamperCases.push("multiline negated ignore-scripts flag");
+for (const indirectCommand of [
+  'NPM_BIN=/usr/bin/npm; "$NPM_BIN" ci',
+  'TOOL=$(command -v npm); "$TOOL" install',
+  "alias installer=npm; installer ci",
+  "$(command -v npm) ci",
+]) {
+  assert.equal(indirectNpmLifecycleIsUsed(indirectCommand), true, `indirect npm lifecycle command: ${indirectCommand}`);
+  tamperCases.push(`indirect npm lifecycle command: ${indirectCommand}`);
+}
 for (const safeCommand of [
   "npm ci --ignore-scripts",
   "RUN npm ci --ignore-scripts=true",
@@ -791,9 +845,18 @@ for (const name of PROHIBITED_ROOT_LIFECYCLE_SCRIPTS) {
 tamperCases.push("root prepack hook tamper");
 assert.equal(transientNpxIsUsed('await run("npx", ["--yes", "package"])'), true, "transient npx execution");
 tamperCases.push("transient npx execution");
+for (const programmaticCommand of [
+  'spawn("npm", ["ci"])',
+  'execFileSync("npm", ["pack", "."])',
+]) {
+  assert.equal(programmaticNpmExecutionIsUsed(programmaticCommand), true, `programmatic npm execution: ${programmaticCommand}`);
+  tamperCases.push(`programmatic npm execution: ${programmaticCommand}`);
+}
 for (const [label, source] of [
   ["commented release packager gate", '# node "$ROOT_DIR/script/validate_npm_supply_chain.mjs"\nnpm_config_cache="$STAGE_DIR/.npm-cache" \\\nnpm_config_userconfig=/dev/null \\\nnpm pack "$MCP_DIR" --pack-destination "$STAGE_DIR" --ignore-scripts >/dev/null\n'],
   ["late release packager gate", 'npm pack "$MCP_DIR" --pack-destination "$STAGE_DIR" --ignore-scripts >/dev/null\nnode "$ROOT_DIR/script/validate_npm_supply_chain.mjs"\n'],
+  ["dead-branch release packager gate", 'if false; then\nnode "$ROOT_DIR/script/validate_npm_supply_chain.mjs"\nnpm_config_cache="$STAGE_DIR/.npm-cache" \\\nnpm_config_userconfig=/dev/null \\\nnpm pack "$MCP_DIR" --pack-destination "$STAGE_DIR" --ignore-scripts >/dev/null\nfi\n'],
+  ["uncalled-function release packager gate", 'pack_archive() {\nnode "$ROOT_DIR/script/validate_npm_supply_chain.mjs"\nnpm_config_cache="$STAGE_DIR/.npm-cache" \\\nnpm_config_userconfig=/dev/null \\\nnpm pack "$MCP_DIR" --pack-destination "$STAGE_DIR" --ignore-scripts >/dev/null\n}\n'],
 ]) {
   const errors = [];
   validateReleasePackagerBoundary(source, errors);
