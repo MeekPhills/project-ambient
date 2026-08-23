@@ -2,7 +2,12 @@
 
 **Issue:** [#28](https://github.com/MeekPhills/project-ambient/issues/28)
 **Captured:** 2026-08-23
+**Producer revision:** `76c633e8959954948c0bc310e86a4e6e3abd3b9f`
 **Qualification:** partial wakeup-distribution evidence only
+
+The final-script output below is frozen historical evidence from that revision.
+The current strict series contract also requires physical-footprint gauges, so
+this older JSON is not presented as current-input compatibility evidence.
 
 ## Reproducible collector
 

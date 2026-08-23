@@ -2,7 +2,13 @@
 
 **Issue:** [#28](https://github.com/MeekPhills/project-ambient/issues/28)
 **Captured:** 2026-08-23
+**Producer contract:** `de6021c3b7e37bd06a3a44bf886543420bfc0e21`
 **Qualification:** partial settled-static evidence only
+
+The exact output below is frozen to the producer contract finalized at that
+revision. Later collectors sample every rusage row, add physical-footprint
+gauges, and evaluate the RSS maximum under a renamed field; those changes do
+not rewrite this historical JSON.
 
 ## Method
 
@@ -115,3 +121,6 @@ the wakeup source with public tooling before any optimization or ceiling review.
 The follow-up [wakeup-series observation](m4-wakeup-attribution-observation.md)
 adds bounded event timing and records that independent five-minute windows vary
 across both sides of the ceiling without identifying a concrete source.
+The later [physical-footprint observation](m4-physical-footprint-observation.md)
+samples public `ri_phys_footprint` on every row, keeps it separate from RSS, and
+records a partial P95 result without changing either ceiling.

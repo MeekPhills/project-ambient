@@ -145,6 +145,12 @@ handler was observed nearby.
 
 ### Runtime compatibility smoke
 
+The historical compatibility producer was finalized at PR #63 exact head
+`62bf7bc64a2ce672e0c6a760a529ac3a41549bb8`. That smoke predates the physical-
+footprint fields required by producer revision
+`91fc69c23597c308526fcdd25983d97939a34d4d`; it remains evidence for the PR #63
+query/sanitizer contract only, not for the widened current input shape.
+
 On 2026-08-23, the production CLI completed a six-snapshot, one-second-interval
 smoke against a deliberately instrumented Ambient launch. It retrieved exactly
 one pre-window launch marker, observed no unified-log loss, retained no

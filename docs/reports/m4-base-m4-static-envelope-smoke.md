@@ -2,7 +2,12 @@
 
 **Issue:** [#28](https://github.com/MeekPhills/project-ambient/issues/28)
 **Captured:** 2026-08-22T13:16:37Z
+**Producer revision:** `13c0124e03800ebe700d078a990b11fd181fe9c6`
 **Qualification:** partial static smoke only — no tracker credit or M4 certification
+
+The exact output below is frozen historical evidence from that revision. The
+current harness has a wider, fail-closed output contract and is not expected to
+reproduce this JSON shape byte for byte.
 
 ## Scope
 
