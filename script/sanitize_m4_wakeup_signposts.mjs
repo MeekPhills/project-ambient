@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 
 import assert from "node:assert/strict";
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { constants as fsConstants } from "node:fs";
-import { access, open } from "node:fs/promises";
+import { access, mkdtemp, open, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import path from "node:path";
 
 const artifactVersion = 1;
@@ -800,7 +801,6 @@ function runSelfTest() {
   assert.throws(() => parseAndCorrelate(staleLaunchIdentity, queryStart, makeNDJSON([launch])), /measured process incarnation/);
   assert.throws(() => parseAndCorrelate(makeSeries(), "2026-08-23T09:59:59Z", makeNDJSON([launch])), /lookback/);
 
-  console.log("wakeup-signpost sanitizer self-test: 49 positive/negative cases passed; raw records are synthetic and retained output is closed");
 }
 
 function parseArguments(argv) {
@@ -822,7 +822,7 @@ async function readSeriesFile(seriesPath) {
   const resolvedPath = path.resolve(seriesPath);
   let handle;
   try {
-    const flags = fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW | (fsConstants.O_CLOEXEC ?? 0);
+    const flags = fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW | fsConstants.O_NONBLOCK | (fsConstants.O_CLOEXEC ?? 0);
     handle = await open(resolvedPath, flags);
   } catch {
     throw new Error("series file could not be opened without following links");
@@ -864,10 +864,24 @@ async function readSeriesFile(seriesPath) {
   }
 }
 
+async function runSeriesPathSelfTest() {
+  const directory = await mkdtemp(path.join(tmpdir(), "ambient-signpost-selftest-"));
+  const fifoPath = path.join(directory, "series.fifo");
+  try {
+    const result = spawnSync("/usr/bin/mkfifo", [fifoPath], { shell: false, timeout: 2_000 });
+    assert.equal(result.status, 0, "self-test could not create its bounded FIFO fixture");
+    await assert.rejects(readSeriesFile(fifoPath), /series file failed closed validation/);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+}
+
 async function main() {
   const options = parseArguments(process.argv.slice(2));
   if (options.selfTest) {
     runSelfTest();
+    await runSeriesPathSelfTest();
+    console.log("wakeup-signpost sanitizer self-test: 50 positive/negative cases passed; raw records are synthetic, the FIFO is temporary, and retained output is closed");
     return;
   }
   assert.equal(process.platform, "darwin", "production signpost queries require macOS");

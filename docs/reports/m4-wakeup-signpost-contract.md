@@ -112,10 +112,12 @@ is observed:
   qualification claim.
 
 The parser accepts at most 256 selected records, 64 KiB per NDJSON line, and
-4 MiB of child output. The series file is opened once with `O_NOFOLLOW`, then
-bounded, stat-checked, and read through that same descriptor. Its 49-case
-release self-test uses synthetic in-memory records; the repository contains no
-raw or raw-shaped unified-log fixture.
+4 MiB of child output. The series file is opened once with
+`O_NOFOLLOW | O_NONBLOCK`, so a FIFO cannot stall before the regular-file
+check; it is then bounded, stat-checked, and read through that same descriptor.
+Its 50-case release self-test uses synthetic in-memory records plus a temporary
+FIFO rejection check; the repository contains no raw or raw-shaped unified-log
+fixture.
 
 The retained version-1 artifact contains only the measurement window, fixed
 query identifiers, grouped `(eventName, offsetSecond, count)` rows, wakeup
