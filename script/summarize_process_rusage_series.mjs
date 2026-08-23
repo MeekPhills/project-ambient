@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 
 import assert from "node:assert/strict";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 const snapshotKeys = [
   "monotonicNanoseconds",
@@ -44,7 +46,7 @@ function nearestRankP95(values) {
   return sorted[rank];
 }
 
-function summarizeProcessRusageSeries(snapshots, eventLimit = 256, expectedSnapshotCount = null) {
+export function analyzeProcessRusageSeries(snapshots, eventLimit = 256, expectedSnapshotCount = null) {
   assert.ok(Number.isSafeInteger(eventLimit) && eventLimit >= 1 && eventLimit <= 10_000, "event limit must be an integer from 1 through 10000");
   assert.ok(Array.isArray(snapshots) && snapshots.length >= 2, "at least two snapshots are required");
   assert.ok(expectedSnapshotCount === null || (Number.isSafeInteger(expectedSnapshotCount) && expectedSnapshotCount >= 2 && expectedSnapshotCount <= 259_201), "expected snapshot count must be null or an integer from 2 through 259201");
@@ -67,6 +69,7 @@ function summarizeProcessRusageSeries(snapshots, eventLimit = 256, expectedSnaps
   let activityEventCount = 0;
   let samplingGapSecondsMin = Number.POSITIVE_INFINITY;
   let samplingGapSecondsMax = 0;
+  let crossClockDriftNanosecondsMax = 0n;
   for (let index = 1; index < rows.length; index += 1) {
     const before = rows[index - 1];
     const after = rows[index];
@@ -77,6 +80,23 @@ function summarizeProcessRusageSeries(snapshots, eventLimit = 256, expectedSnaps
     assert.ok(monotonicGapNanoseconds <= maxSafeInteger && wallGapNanoseconds <= maxSafeInteger, `snapshot ${index} sampling gap exceeds Number.MAX_SAFE_INTEGER`);
     const crossClockDrift = wallGapNanoseconds - monotonicGapNanoseconds;
     assert.ok(crossClockDrift >= -100_000_000n && crossClockDrift <= 100_000_000n, `snapshot ${index} wall and monotonic clocks diverged by more than 100 ms`);
+    const absoluteGapDrift = crossClockDrift < 0n ? -crossClockDrift : crossClockDrift;
+    crossClockDriftNanosecondsMax = absoluteGapDrift > crossClockDriftNanosecondsMax
+      ? absoluteGapDrift
+      : crossClockDriftNanosecondsMax;
+    const monotonicOffsetNanoseconds = after.monotonicNanoseconds - first.monotonicNanoseconds;
+    const wallOffsetNanoseconds = (after.wallClockUnixMicroseconds - first.wallClockUnixMicroseconds) * 1000n;
+    const cumulativeCrossClockDrift = wallOffsetNanoseconds - monotonicOffsetNanoseconds;
+    assert.ok(
+      cumulativeCrossClockDrift >= -100_000_000n && cumulativeCrossClockDrift <= 100_000_000n,
+      `snapshot ${index} cumulative wall and monotonic clock drift exceeds 100 ms`,
+    );
+    const absoluteCumulativeDrift = cumulativeCrossClockDrift < 0n
+      ? -cumulativeCrossClockDrift
+      : cumulativeCrossClockDrift;
+    crossClockDriftNanosecondsMax = absoluteCumulativeDrift > crossClockDriftNanosecondsMax
+      ? absoluteCumulativeDrift
+      : crossClockDriftNanosecondsMax;
     const samplingGapSeconds = Number(monotonicGapNanoseconds) / 1e9;
     samplingGapSecondsMin = Math.min(samplingGapSecondsMin, samplingGapSeconds);
     samplingGapSecondsMax = Math.max(samplingGapSecondsMax, samplingGapSeconds);
@@ -114,31 +134,40 @@ function summarizeProcessRusageSeries(snapshots, eventLimit = 256, expectedSnaps
   assert.ok(packageIdleWakeups <= interruptWakeups, "package-idle wakeups exceed interrupt wakeups");
 
   return {
-    available: true,
-    reason: null,
-    snapshotCount: rows.length,
-    elapsedSeconds,
-    processStartAbsoluteTime: first.processStartAbsoluteTime.toString(),
-    processStartUnixMicroseconds: first.processStartUnixMicroseconds.toString(),
-    firstSnapshotUnixMicroseconds: first.wallClockUnixMicroseconds.toString(),
-    lastSnapshotUnixMicroseconds: last.wallClockUnixMicroseconds.toString(),
-    samplingGapSecondsMin,
-    samplingGapSecondsMax,
-    physicalFootprintBytesP95: physicalFootprintBytesP95.toString(),
-    physicalFootprintBytesMax: physicalFootprintBytesMax.toString(),
-    physicalFootprintMiBP95: Number(physicalFootprintBytesP95) / (1024 * 1024),
-    physicalFootprintMiBMax: Number(physicalFootprintBytesMax) / (1024 * 1024),
-    packageIdleWakeups,
-    interruptWakeups,
-    totalWakeups: interruptWakeups,
-    wakeupsPerMinute: interruptWakeups * 60 / elapsedSeconds,
-    diskReadBytes: safeDelta(last, first, "diskReadBytes"),
-    diskWrittenBytes: safeDelta(last, first, "diskWrittenBytes"),
-    activityEventCount,
-    reportedActivityEventCount: activityEvents.length,
-    activityEventsTruncated: activityEventCount > activityEvents.length,
-    activityEvents,
+    summary: {
+      available: true,
+      reason: null,
+      snapshotCount: rows.length,
+      elapsedSeconds,
+      processStartAbsoluteTime: first.processStartAbsoluteTime.toString(),
+      processStartUnixMicroseconds: first.processStartUnixMicroseconds.toString(),
+      firstSnapshotUnixMicroseconds: first.wallClockUnixMicroseconds.toString(),
+      lastSnapshotUnixMicroseconds: last.wallClockUnixMicroseconds.toString(),
+      samplingGapSecondsMin,
+      samplingGapSecondsMax,
+      physicalFootprintBytesP95: physicalFootprintBytesP95.toString(),
+      physicalFootprintBytesMax: physicalFootprintBytesMax.toString(),
+      physicalFootprintMiBP95: Number(physicalFootprintBytesP95) / (1024 * 1024),
+      physicalFootprintMiBMax: Number(physicalFootprintBytesMax) / (1024 * 1024),
+      packageIdleWakeups,
+      interruptWakeups,
+      totalWakeups: interruptWakeups,
+      wakeupsPerMinute: interruptWakeups * 60 / elapsedSeconds,
+      diskReadBytes: safeDelta(last, first, "diskReadBytes"),
+      diskWrittenBytes: safeDelta(last, first, "diskWrittenBytes"),
+      activityEventCount,
+      reportedActivityEventCount: activityEvents.length,
+      activityEventsTruncated: activityEventCount > activityEvents.length,
+      activityEvents,
+    },
+    qualificationProof: {
+      crossClockDriftMillisecondsMaximum: Number(crossClockDriftNanosecondsMax) / 1e6,
+    },
   };
+}
+
+export function summarizeProcessRusageSeries(snapshots, eventLimit = 256, expectedSnapshotCount = null) {
+  return analyzeProcessRusageSeries(snapshots, eventLimit, expectedSnapshotCount).summary;
 }
 
 function makeSnapshot(overrides = {}) {
@@ -162,7 +191,8 @@ function runSelfTest() {
     makeSnapshot({ monotonicNanoseconds: "2000000000", wallClockUnixMicroseconds: "1700000001000000", physicalFootprintBytes: "20971520", interruptWakeups: "11" }),
     makeSnapshot({ monotonicNanoseconds: "3000000000", wallClockUnixMicroseconds: "1700000002000000", physicalFootprintBytes: "31457280", packageIdleWakeups: "6", interruptWakeups: "12", diskReadBytes: "164", diskWrittenBytes: "32" }),
   ];
-  const summary = summarizeProcessRusageSeries(rows, 1, 3);
+  const analysis = analyzeProcessRusageSeries(rows, 1, 3);
+  const summary = analysis.summary;
   assert.equal(summary.snapshotCount, 3);
   assert.equal(summary.elapsedSeconds, 2);
   assert.equal(summary.processStartAbsoluteTime, "42");
@@ -171,6 +201,7 @@ function runSelfTest() {
   assert.equal(summary.lastSnapshotUnixMicroseconds, "1700000002000000");
   assert.equal(summary.samplingGapSecondsMin, 1);
   assert.equal(summary.samplingGapSecondsMax, 1);
+  assert.equal(analysis.qualificationProof.crossClockDriftMillisecondsMaximum, 0);
   assert.equal(summary.physicalFootprintBytesP95, "31457280");
   assert.equal(summary.physicalFootprintBytesMax, "31457280");
   assert.equal(summary.physicalFootprintMiBP95, 30);
@@ -198,6 +229,22 @@ function runSelfTest() {
   assert.throws(() => summarizeProcessRusageSeries([rows[0], { ...rows[1], monotonicNanoseconds: rows[0].monotonicNanoseconds }]), /monotonic time did not advance|elapsed time is invalid/);
   assert.throws(() => summarizeProcessRusageSeries([rows[0], { ...rows[1], wallClockUnixMicroseconds: rows[0].wallClockUnixMicroseconds }]), /wall clock did not advance/);
   assert.throws(() => summarizeProcessRusageSeries([rows[0], { ...rows[1], wallClockUnixMicroseconds: "1700000002000000" }]), /diverged/);
+  const boundedClockDrift = analyzeProcessRusageSeries([
+    rows[0],
+    { ...rows[1], wallClockUnixMicroseconds: "1700000001099000" },
+  ]);
+  assert.equal(boundedClockDrift.qualificationProof.crossClockDriftMillisecondsMaximum, 99);
+  const alternatingBoundedClockDrift = analyzeProcessRusageSeries([
+    rows[0],
+    { ...rows[1], wallClockUnixMicroseconds: "1700000001050000" },
+    { ...rows[2], wallClockUnixMicroseconds: "1700000001950000" },
+  ]);
+  assert.equal(alternatingBoundedClockDrift.qualificationProof.crossClockDriftMillisecondsMaximum, 100);
+  assert.throws(() => analyzeProcessRusageSeries([
+    rows[0],
+    { ...rows[1], wallClockUnixMicroseconds: "1700000001060000" },
+    { ...rows[2], wallClockUnixMicroseconds: "1700000002120000" },
+  ]), /cumulative wall and monotonic clock drift exceeds 100 ms/);
   const gaugeOnly = summarizeProcessRusageSeries([
     makeSnapshot(),
     makeSnapshot({ monotonicNanoseconds: "2000000000", wallClockUnixMicroseconds: "1700000001000000", physicalFootprintBytes: "20971520" }),
@@ -214,7 +261,7 @@ function runSelfTest() {
   assert.equal(percentileSummary.physicalFootprintMiBMax, 20);
   assert.equal(percentileSummary.activityEventCount, 0);
   assert.throws(() => summarizeProcessRusageSeries([rows[0], { ...rows[1], physicalFootprintBytes: "0" }]), /physical footprint must be positive/);
-  console.log("process-rusage series self-test: 15 positive/negative cases passed");
+  console.log("process-rusage series self-test: 18 positive/negative cases passed");
 }
 
 async function readStdin() {
@@ -245,7 +292,9 @@ async function main() {
   process.stdout.write(`${JSON.stringify(summarizeProcessRusageSeries(snapshots, eventLimit, expectedSnapshotCount))}\n`);
 }
 
-main().catch((error) => {
-  console.error(`process-rusage series validation failed: ${error.message}`);
-  process.exitCode = 1;
-});
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  main().catch((error) => {
+    console.error(`process-rusage series validation failed: ${error.message}`);
+    process.exitCode = 1;
+  });
+}

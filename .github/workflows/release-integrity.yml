@@ -67,6 +67,8 @@ jobs:
         run: node script/validate_m4_static_wakeup_qualification.mjs
       - name: Validate base-M4 static-wakeup automated preflight
         run: node script/validate_m4_static_wakeup_preflight.mjs
+      - name: Validate base-M4 static-wakeup collector protocol
+        run: node script/collect_m4_static_wakeup_qualification.mjs --self-test
       - name: Validate macOS media capability probe contract
         run: node script/validate_macos_media_capability_probe.mjs --self-test
       - name: Validate the exhaustive Aerial semantic-parity launch matrix

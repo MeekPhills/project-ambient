@@ -12,10 +12,28 @@ coverage advance, or tracker credit. The sibling automated-preflight schema and
 native evaluator now define a closed future stop/pass boundary, but the active
 schema accepts only the current null-still stop, reached before any host
 callback, and the production host-fact adapter remains deliberately
-unavailable. A strict collector, collection-ready
-public host adapter, fixed non-personal still, and complete reviewed run remain
-separate prerequisites. Future sanitized windows must retain timing extrema and
-closed continuity/stability proof after temporary raw rows are deleted.
+unavailable. The sibling strict collector protocol engine now freezes the
+five-trial orchestration and reduction rules behind synthetic-only test seams.
+The engine owns a one-shot launch capability consumed exactly once per trial,
+binds the launcher-returned process identity to every adapter observation, and
+owns paired-clock warm-up, 901 absolute sample calls, final observation, and
+cleanup even when wrapper or adapter validation fails. A collector-minted
+receiver must synchronously accept graceful/forced termination and
+identity-bound exit confirmation before it issues the ownership receipt needed
+to return a process handle. Collector-owned timeouts and abort signals bound
+every host operation; stalled work enters cleanup, and a later trial cannot
+begin until exit is confirmed. It also requires all six closed owner
+attestations before a synthetic trial can begin. Alternate plans, complete
+results, and execution stay
+module-private; the only exported qualification helper is pinned to the exact
+active null-still plan and resource fixture.
+Its production entry point
+validates the active plan and stops before any adapter or launch while the still
+digest is null; it emits no result artifact.
+A collection-ready public host adapter, fixed non-personal still, reviewed plan
+activation, and complete reviewed run remain separate prerequisites. Future
+sanitized windows must retain timing extrema and closed continuity/stability
+proof after temporary raw rows are deleted.
 
 The still cannot be added or frozen by inference: its delivery class,
 rightsholder, license, provenance, and rights-manifest binding require explicit

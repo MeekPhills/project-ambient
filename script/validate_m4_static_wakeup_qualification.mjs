@@ -171,6 +171,12 @@ function approximatelyEqual(left, right) {
   return Math.abs(left - right) <= 1e-12;
 }
 
+function deepFreeze(value) {
+  if (!value || typeof value !== "object" || Object.isFrozen(value)) return value;
+  for (const child of Object.values(value)) deepFreeze(child);
+  return Object.freeze(value);
+}
+
 function makePlanBinding(revision, bytes) {
   assert.match(revision, revisionPattern, "plan binding revision must be a commit SHA");
   assert.notEqual(revision, "0".repeat(40), "plan binding revision cannot be a placeholder");
@@ -232,6 +238,17 @@ function validatePlan(plan, resourceFixtureBytes, resourceFixture, expectedFixed
     coverage: { scenarioWakeups: "unmeasured", globalWakeups: "unmeasured" },
     qualification: "plan-only",
   }, "plan must remain uncollected and unmeasured");
+}
+
+export function makeValidatedActiveStaticWakeupPlanBinding(
+  planBytes,
+  resourceFixtureBytes,
+  resourceFixture,
+) {
+  const binding = makePlanBinding(expectedPlanRevision, planBytes);
+  assert.equal(binding.sha256, expectedPlanSHA256, "active qualification plan bytes drifted");
+  validatePlan(binding.plan, resourceFixtureBytes, resourceFixture, null);
+  return deepFreeze(binding);
 }
 
 function validateSchemaContract(schema) {
@@ -641,12 +658,26 @@ function makeIncomplete(planBinding) {
 function runSelfTests(plan, schema, schemaBytes, planBytes, resourceFixtureBytes, resourceFixture) {
   assert.equal(createHash("sha256").update(schemaBytes).digest("hex"), expectedSchemaSHA256, "qualification schema bytes drifted");
   assert.equal(createHash("sha256").update(planBytes).digest("hex"), expectedPlanSHA256, "qualification plan bytes drifted");
-  const currentPlanBinding = makePlanBinding(expectedPlanRevision, planBytes);
+  const currentPlanBinding = makeValidatedActiveStaticWakeupPlanBinding(
+    planBytes,
+    resourceFixtureBytes,
+    resourceFixture,
+  );
   assert.deepEqual(currentPlanBinding.plan, plan, "parsed plan binding must match the reviewed plan bytes");
+  assert.equal(Object.isFrozen(currentPlanBinding), true, "active plan binding must be immutable");
+  assert.equal(Object.isFrozen(currentPlanBinding.plan), true, "active plan must be immutable");
   const collectionReadyPlan = structuredClone(plan);
   collectionReadyPlan.scenario.fixedNonPersonalStillSHA256 = "4".repeat(64);
   const collectionReadyPlanBytes = Buffer.from(`${JSON.stringify(collectionReadyPlan)}\n`);
   const collectionReadyPlanBinding = makePlanBinding("a".repeat(40), collectionReadyPlanBytes);
+  assert.throws(
+    () => makeValidatedActiveStaticWakeupPlanBinding(
+      collectionReadyPlanBytes,
+      resourceFixtureBytes,
+      resourceFixture,
+    ),
+    /active qualification plan bytes drifted/,
+  );
   validateSchemaContract(schema);
   validatePlan(plan, resourceFixtureBytes, resourceFixture);
   validatePlan(collectionReadyPlanBinding.plan, resourceFixtureBytes, resourceFixture, "4".repeat(64));
@@ -818,6 +849,12 @@ function runSelfTests(plan, schema, schemaBytes, planBytes, resourceFixtureBytes
 
 async function main() {
   assert.equal(process.argv.length, 2, "usage: validate_m4_static_wakeup_qualification.mjs");
+  const publicAPI = await import(import.meta.url);
+  assert.deepEqual(
+    Object.keys(publicAPI),
+    ["makeValidatedActiveStaticWakeupPlanBinding"],
+    "qualification validator exposed an inactive plan or result seam",
+  );
   const [schemaBytes, planBytes, resourceFixtureBytes] = await Promise.all([
     readFile(schemaPath),
     readFile(planPath),
@@ -830,7 +867,9 @@ async function main() {
   console.log(`Static-wakeup qualification contract valid: plan only, ${counts.positives} positive and ${counts.negatives} fail-closed cases passed; no host evidence collected.`);
 }
 
-main().catch((error) => {
-  console.error(`Static-wakeup qualification validation failed: ${error.message}`);
-  process.exitCode = 1;
-});
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  main().catch((error) => {
+    console.error(`Static-wakeup qualification validation failed: ${error.message}`);
+    process.exitCode = 1;
+  });
+}
