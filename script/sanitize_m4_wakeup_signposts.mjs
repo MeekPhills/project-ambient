@@ -3,7 +3,7 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { constants as fsConstants } from "node:fs";
-import { access, lstat, readFile } from "node:fs/promises";
+import { access, open } from "node:fs/promises";
 import path from "node:path";
 
 const artifactVersion = 1;
@@ -18,6 +18,7 @@ const maxSignpostRecords = 256;
 const maxLogStderrBytes = 64 * 1024;
 const maxPid = 2_147_483_647;
 const microsecondsPerSecond = 1_000_000n;
+const maxUInt64 = (1n << 64n) - 1n;
 
 const eventNames = [
   "lifecycle.launch",
@@ -53,6 +54,12 @@ const processSeriesKeys = [
   "reason",
   "snapshotCount",
   "elapsedSeconds",
+  "processStartAbsoluteTime",
+  "processStartUnixMicroseconds",
+  "firstSnapshotUnixMicroseconds",
+  "lastSnapshotUnixMicroseconds",
+  "samplingGapSecondsMin",
+  "samplingGapSecondsMax",
   "packageIdleWakeups",
   "interruptWakeups",
   "totalWakeups",
@@ -66,6 +73,7 @@ const processSeriesKeys = [
 ];
 const activityEventKeys = [
   "offsetSeconds",
+  "endUnixMicroseconds",
   "interruptWakeups",
   "packageIdleWakeups",
   "diskReadBytes",
@@ -87,6 +95,14 @@ function assertSafeInteger(value, label, minimum = 0, maximum = Number.MAX_SAFE_
 
 function assertFiniteNumber(value, label, minimum = 0) {
   assert.ok(Number.isFinite(value) && value >= minimum, `${label} must be a finite number no less than ${minimum}`);
+}
+
+function parseCanonicalUInt64(value, label) {
+  assert.equal(typeof value, "string", `${label} must be a canonical decimal uint64 string`);
+  assert.match(value, /^(0|[1-9][0-9]*)$/, `${label} must be a canonical decimal uint64 string`);
+  const parsed = BigInt(value);
+  assert.ok(parsed <= maxUInt64, `${label} exceeds uint64`);
+  return parsed;
 }
 
 function parseTimestampParts(value, label) {
@@ -138,6 +154,23 @@ function parseCanonicalUTCSecond(value, label) {
   return parseTimestampParts(value, label);
 }
 
+function parseCanonicalUTCMicrosecond(value, label) {
+  assert.match(value, /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$/, `${label} must be canonical microsecond UTC RFC 3339`);
+  return parseTimestampParts(value, label);
+}
+
+function formatUnixMicroseconds(value) {
+  assert.ok(value >= 0n && value <= maxUInt64, "timestamp is outside uint64 range");
+  const seconds = value / microsecondsPerSecond;
+  const fraction = (value % microsecondsPerSecond).toString().padStart(6, "0");
+  assert.ok(seconds <= BigInt(Number.MAX_SAFE_INTEGER), "timestamp seconds exceed Number.MAX_SAFE_INTEGER");
+  return `${new Date(Number(seconds) * 1000).toISOString().slice(0, 19)}.${fraction}Z`;
+}
+
+function ceilToWholeSecond(value) {
+  return ((value + microsecondsPerSecond - 1n) / microsecondsPerSecond) * microsecondsPerSecond;
+}
+
 function approximatelyEqual(actual, expected) {
   const scale = Math.max(1, Math.abs(actual), Math.abs(expected));
   return Math.abs(actual - expected) <= Number.EPSILON * scale * 4;
@@ -152,8 +185,8 @@ function validateSeries(series) {
   assert.equal(series.intervalSeconds, 1, "correlation requires the one-second sampling interval");
   assert.ok((series.samples - 1) * series.intervalSeconds <= 259_200, "series planned duration exceeds 72 hours");
 
-  const startedMicros = parseCanonicalUTCSecond(series.startedAt, "series.startedAt");
-  const completedMicros = parseCanonicalUTCSecond(series.completedAt, "series.completedAt");
+  const startedMicros = parseCanonicalUTCMicrosecond(series.startedAt, "series.startedAt");
+  const completedMicros = parseCanonicalUTCMicrosecond(series.completedAt, "series.completedAt");
   assert.ok(startedMicros < completedMicros, "series wall-clock window must advance");
 
   assertExactKeys(series.processRusageSeries, processSeriesKeys, "series.processRusageSeries");
@@ -163,6 +196,20 @@ function validateSeries(series) {
   assertSafeInteger(processSeries.snapshotCount, "processRusageSeries.snapshotCount", 2, 259_201);
   assert.equal(processSeries.snapshotCount, series.samples, "snapshot count does not match requested samples");
   assertFiniteNumber(processSeries.elapsedSeconds, "processRusageSeries.elapsedSeconds", Number.MIN_VALUE);
+  const processStartAbsoluteTime = parseCanonicalUInt64(processSeries.processStartAbsoluteTime, "processRusageSeries.processStartAbsoluteTime");
+  const processStartMicros = parseCanonicalUInt64(processSeries.processStartUnixMicroseconds, "processRusageSeries.processStartUnixMicroseconds");
+  const firstSnapshotMicros = parseCanonicalUInt64(processSeries.firstSnapshotUnixMicroseconds, "processRusageSeries.firstSnapshotUnixMicroseconds");
+  const lastSnapshotMicros = parseCanonicalUInt64(processSeries.lastSnapshotUnixMicroseconds, "processRusageSeries.lastSnapshotUnixMicroseconds");
+  assert.ok(processStartAbsoluteTime > 0n && processStartMicros > 0n, "process-start identity must be positive");
+  assert.ok(processStartMicros <= firstSnapshotMicros, "process start follows the first snapshot");
+  assert.ok(firstSnapshotMicros < lastSnapshotMicros, "exact snapshot window must advance");
+  assert.equal(startedMicros, firstSnapshotMicros, "series.startedAt does not match the first snapshot anchor");
+  assert.equal(completedMicros, lastSnapshotMicros, "series.completedAt does not match the last snapshot anchor");
+  assertFiniteNumber(processSeries.samplingGapSecondsMin, "processRusageSeries.samplingGapSecondsMin", Number.MIN_VALUE);
+  assertFiniteNumber(processSeries.samplingGapSecondsMax, "processRusageSeries.samplingGapSecondsMax", Number.MIN_VALUE);
+  assert.ok(processSeries.samplingGapSecondsMin <= processSeries.samplingGapSecondsMax, "sampling-gap bounds are inverted");
+  assert.ok(processSeries.samplingGapSecondsMin >= 0.5, "sampling cadence contains a sub-half-second gap");
+  assert.ok(processSeries.samplingGapSecondsMax <= 2, "sampling cadence contains a gap over two seconds");
 
   for (const key of [
     "packageIdleWakeups",
@@ -192,19 +239,26 @@ function validateSeries(series) {
     diskWrittenBytes: 0,
   };
   let priorOffset = 0;
+  let priorEventEndMicros = firstSnapshotMicros;
   for (const [index, event] of processSeries.activityEvents.entries()) {
     assertExactKeys(event, activityEventKeys, `activity event ${index}`);
     assertFiniteNumber(event.offsetSeconds, `activity event ${index}.offsetSeconds`, Number.MIN_VALUE);
     assert.ok(event.offsetSeconds > priorOffset, `activity event ${index} offset must advance strictly`);
     assert.ok(event.offsetSeconds <= processSeries.elapsedSeconds, `activity event ${index} exceeds the measurement window`);
     priorOffset = event.offsetSeconds;
+    const eventEndMicros = parseCanonicalUInt64(event.endUnixMicroseconds, `activity event ${index}.endUnixMicroseconds`);
+    assert.ok(eventEndMicros > priorEventEndMicros, `activity event ${index} wall-clock end must advance strictly`);
+    assert.ok(eventEndMicros <= lastSnapshotMicros, `activity event ${index} wall-clock end exceeds the measurement window`);
+    priorEventEndMicros = eventEndMicros;
+    const wallOffsetSeconds = Number(eventEndMicros - firstSnapshotMicros) / 1e6;
+    assert.ok(Math.abs(wallOffsetSeconds - event.offsetSeconds) <= 0.1, `activity event ${index} wall and monotonic offsets diverged by more than 100 ms`);
     for (const key of ["interruptWakeups", "packageIdleWakeups", "diskReadBytes", "diskWrittenBytes"]) {
       assertSafeInteger(event[key], `activity event ${index}.${key}`);
       sums[key] += event[key];
       assert.ok(Number.isSafeInteger(sums[key]), `activity event ${key} sum exceeds Number.MAX_SAFE_INTEGER`);
     }
     assert.ok(event.packageIdleWakeups <= event.interruptWakeups, `activity event ${index} package-idle wakeups exceed interrupt wakeups`);
-    assert.ok(activityEventKeys.slice(1).some((key) => event[key] > 0), `activity event ${index} contains no activity`);
+    assert.ok(["interruptWakeups", "packageIdleWakeups", "diskReadBytes", "diskWrittenBytes"].some((key) => event[key] > 0), `activity event ${index} contains no activity`);
   }
 
   for (const key of Object.keys(sums)) {
@@ -239,14 +293,25 @@ function validateSeries(series) {
   const wallElapsedSeconds = Number(completedMicros - startedMicros) / 1e6;
   assert.ok(wallElapsedSeconds <= 259_202, "series wall-clock window exceeds the bounded 72-hour protocol");
   assert.ok(processSeries.elapsedSeconds <= 259_202, "series monotonic window exceeds the bounded 72-hour protocol");
-  assert.ok(Math.abs(wallElapsedSeconds - processSeries.elapsedSeconds) <= 2, "wall-clock and monotonic windows differ by more than two seconds");
+  assert.ok(Math.abs(wallElapsedSeconds - processSeries.elapsedSeconds) <= 0.1, "wall-clock and monotonic windows differ by more than 100 ms");
+  const averageSamplingGap = processSeries.elapsedSeconds / (series.samples - 1);
+  assert.ok(averageSamplingGap >= processSeries.samplingGapSecondsMin - 1e-9, "average sampling gap is below the declared minimum");
+  assert.ok(averageSamplingGap <= processSeries.samplingGapSecondsMax + 1e-9, "average sampling gap exceeds the declared maximum");
 
-  return { series, processSeries, startedMicros, completedMicros };
+  return {
+    series,
+    processSeries,
+    startedMicros,
+    completedMicros,
+    processStartMicros,
+    queryEndMicros: ceilToWholeSecond(completedMicros),
+  };
 }
 
 function validateQueryStart(value, seriesInfo) {
   const queryStartMicros = parseCanonicalUTCSecond(value, "query start");
   assert.ok(queryStartMicros < seriesInfo.startedMicros, "query start must precede the measurement window");
+  assert.ok(queryStartMicros <= seriesInfo.processStartMicros, "query start must not follow the measured process start");
   const lookbackMicros = seriesInfo.startedMicros - queryStartMicros;
   assert.ok(lookbackMicros <= 3600n * microsecondsPerSecond, "query lookback exceeds 3600 seconds");
   return queryStartMicros;
@@ -333,7 +398,7 @@ class NDJSONSanitizer {
 
     const timestampMicros = parseTimestampParts(value.timestamp, "signpost timestamp");
     assert.ok(timestampMicros >= this.queryStartMicros, "signpost precedes the bounded query start");
-    assert.ok(timestampMicros <= this.seriesInfo.completedMicros, "signpost follows the measurement window end");
+    assert.ok(timestampMicros <= this.seriesInfo.queryEndMicros, "signpost follows the bounded query end");
     this.events.push({ eventName: value.signpostName, timestampMicros });
   }
 }
@@ -343,6 +408,8 @@ function correlate(seriesInfo, queryStartMicros, events) {
   assert.equal(launchEvents.length, 1, "exactly one lifecycle.launch marker is required");
   const launch = launchEvents[0];
   assert.ok(launch.timestampMicros < seriesInfo.startedMicros, "lifecycle.launch must precede the measurement window");
+  assert.ok(launch.timestampMicros >= seriesInfo.processStartMicros, "lifecycle.launch precedes the measured process incarnation");
+  assert.ok(launch.timestampMicros - seriesInfo.processStartMicros <= 30n * microsecondsPerSecond, "lifecycle.launch is too far from the measured process start");
   assert.ok(events.every((event) => event.timestampMicros >= launch.timestampMicros), "signposts preceding lifecycle.launch indicate ambiguous PID history");
 
   const grouped = new Map();
@@ -350,6 +417,7 @@ function correlate(seriesInfo, queryStartMicros, events) {
   for (const event of events) {
     if (event.timestampMicros < seriesInfo.startedMicros) continue;
     assert.notEqual(event.eventName, "lifecycle.launch", "lifecycle.launch inside the measurement window is invalid");
+    if (event.timestampMicros > seriesInfo.completedMicros) continue;
     const offsetSecond = Number((event.timestampMicros - seriesInfo.startedMicros) / microsecondsPerSecond);
     const key = `${offsetSecond}\u0000${event.eventName}`;
     const existing = grouped.get(key);
@@ -365,7 +433,8 @@ function correlate(seriesInfo, queryStartMicros, events) {
   const wakeupBuckets = seriesInfo.processSeries.activityEvents
     .filter((event) => event.interruptWakeups > 0)
     .map((event) => {
-      const wakeupSecond = Math.floor(event.offsetSeconds);
+      const eventEndMicros = parseCanonicalUInt64(event.endUnixMicroseconds, "activity-event wall-clock end");
+      const wakeupSecond = Number((eventEndMicros - seriesInfo.startedMicros) / microsecondsPerSecond);
       const nearbySignposts = signposts
         .filter((signpost) => Math.abs(signpost.offsetSecond - wakeupSecond) <= 1)
         .map((signpost) => ({
@@ -430,6 +499,11 @@ function toLogDate(canonicalUTC) {
   return canonicalUTC.replace("T", " ").replace("Z", "+0000");
 }
 
+function toLogDateFromWholeMicroseconds(value) {
+  assert.equal(value % microsecondsPerSecond, 0n, "log query bound must be a whole second");
+  return formatUnixMicroseconds(value).replace("T", " ").replace(".000000Z", "+0000");
+}
+
 async function runLogQuery(seriesInfo, queryStart, queryStartMicros) {
   await access("/usr/bin/log", fsConstants.X_OK);
   const predicate = `type == "lossEvent" OR (type == "signpostEvent" AND processIdentifier == ${seriesInfo.series.pid} AND subsystem == "${subsystem}" AND category == "${category}")`;
@@ -445,7 +519,7 @@ async function runLogQuery(seriesInfo, queryStart, queryStartMicros) {
     "--color", "none",
     "--timezone", "UTC",
     "--start", toLogDate(queryStart),
-    "--end", toLogDate(seriesInfo.series.completedAt),
+    "--end", toLogDateFromWholeMicroseconds(seriesInfo.queryEndMicros),
     "--predicate", predicate,
   ];
   const parser = new NDJSONSanitizer(seriesInfo, queryStartMicros);
@@ -482,8 +556,11 @@ async function runLogQuery(seriesInfo, queryStart, queryStartMicros) {
 }
 
 function makeActivityEvent(overrides = {}) {
+  const offsetSeconds = overrides.offsetSeconds ?? 1.2;
+  const firstSnapshotMicros = parseCanonicalUTCMicrosecond("2026-08-23T11:00:00.100000Z", "synthetic first snapshot");
   return {
-    offsetSeconds: 1.2,
+    offsetSeconds,
+    endUnixMicroseconds: (firstSnapshotMicros + BigInt(Math.round(offsetSeconds * 1e6))).toString(),
     interruptWakeups: 1,
     packageIdleWakeups: 0,
     diskReadBytes: 0,
@@ -509,8 +586,8 @@ function makeSeries(activityEvents = [
   return {
     fixtureId,
     pid: 1042,
-    startedAt: "2026-08-23T11:00:00Z",
-    completedAt: "2026-08-23T11:00:04Z",
+    startedAt: "2026-08-23T11:00:00.100000Z",
+    completedAt: "2026-08-23T11:00:04.100000Z",
     samples: 5,
     intervalSeconds: 1,
     processRusageSeries: {
@@ -518,6 +595,12 @@ function makeSeries(activityEvents = [
       reason: null,
       snapshotCount: 5,
       elapsedSeconds,
+      processStartAbsoluteTime: "42",
+      processStartUnixMicroseconds: parseCanonicalUTCMicrosecond("2026-08-23T10:59:49.800000Z", "synthetic process start").toString(),
+      firstSnapshotUnixMicroseconds: parseCanonicalUTCMicrosecond("2026-08-23T11:00:00.100000Z", "synthetic first snapshot").toString(),
+      lastSnapshotUnixMicroseconds: parseCanonicalUTCMicrosecond("2026-08-23T11:00:04.100000Z", "synthetic last snapshot").toString(),
+      samplingGapSecondsMin: 1,
+      samplingGapSecondsMax: 1,
       packageIdleWakeups: sums.packageIdleWakeups,
       interruptWakeups: sums.interruptWakeups,
       totalWakeups: sums.interruptWakeups,
@@ -573,7 +656,8 @@ function runSelfTest() {
     makeLogEvent("power.state_changed", "2026-08-23T11:00:01.100000Z"),
     makeLogEvent("power.state_changed", "2026-08-23T11:00:01.900000Z"),
     makeLogEvent("state.local_changed", "2026-08-23T11:00:02.100000Z"),
-    makeLogEvent("rotation.boundary_fired", "2026-08-23T11:00:04Z"),
+    makeLogEvent("rotation.boundary_fired", "2026-08-23T11:00:04.100000Z"),
+    makeLogEvent("power.state_changed", "2026-08-23T11:00:04.500000Z"),
   ];
   const output = parseAndCorrelate(makeSeries(), queryStart, makeNDJSON(records));
   assert.deepEqual(
@@ -640,7 +724,7 @@ function runSelfTest() {
     ["timezone-free timestamp", () => makeNDJSON([{ ...launch, timestamp: "2026-08-23 10:59:50" }])],
     ["impossible timestamp", () => makeNDJSON([{ ...launch, timestamp: "2026-02-30T10:59:50Z" }])],
     ["before query timestamp", () => makeNDJSON([{ ...launch, timestamp: "2026-08-23T10:58:59Z" }])],
-    ["after window timestamp", () => makeNDJSON([launch, makeLogEvent("power.state_changed", "2026-08-23T11:00:05Z")])],
+    ["after query timestamp", () => makeNDJSON([launch, makeLogEvent("power.state_changed", "2026-08-23T11:00:05.000001Z")])],
     ["ambiguous pid history", () => makeNDJSON([makeLogEvent("power.state_changed", "2026-08-23T10:59:40Z"), launch])],
   ];
   for (const [name, makeInput] of tamperCases) {
@@ -684,6 +768,9 @@ function runSelfTest() {
   const wrongInterval = makeSeries();
   wrongInterval.intervalSeconds = 2;
   assert.throws(() => parseAndCorrelate(wrongInterval, queryStart, makeNDJSON([launch])), /one-second/);
+  const delayedCadence = makeSeries();
+  delayedCadence.processRusageSeries.samplingGapSecondsMax = 3;
+  assert.throws(() => parseAndCorrelate(delayedCadence, queryStart, makeNDJSON([launch])), /gap over two seconds/);
   const truncated = makeSeries();
   truncated.processRusageSeries.activityEventsTruncated = true;
   assert.throws(() => parseAndCorrelate(truncated, queryStart, makeNDJSON([launch])), /truncated/);
@@ -703,11 +790,17 @@ function runSelfTest() {
   wrongStorage.storageObservation.writesObservedInWindow = true;
   assert.throws(() => parseAndCorrelate(wrongStorage, queryStart, makeNDJSON([launch])), /storage observation/);
   const wallMismatch = makeSeries();
-  wallMismatch.completedAt = "2026-08-23T11:00:20Z";
-  assert.throws(() => parseAndCorrelate(wallMismatch, queryStart, makeNDJSON([launch])), /differ/);
+  wallMismatch.completedAt = "2026-08-23T11:00:04.200000Z";
+  assert.throws(() => parseAndCorrelate(wallMismatch, queryStart, makeNDJSON([launch])), /does not match/);
+  const activityAnchorMismatch = makeSeries();
+  activityAnchorMismatch.processRusageSeries.activityEvents[0].endUnixMicroseconds = parseCanonicalUTCMicrosecond("2026-08-23T11:00:01.800000Z", "synthetic drift").toString();
+  assert.throws(() => parseAndCorrelate(activityAnchorMismatch, queryStart, makeNDJSON([launch])), /diverged/);
+  const staleLaunchIdentity = makeSeries();
+  staleLaunchIdentity.processRusageSeries.processStartUnixMicroseconds = parseCanonicalUTCMicrosecond("2026-08-23T10:59:55.000000Z", "synthetic replaced process").toString();
+  assert.throws(() => parseAndCorrelate(staleLaunchIdentity, queryStart, makeNDJSON([launch])), /measured process incarnation/);
   assert.throws(() => parseAndCorrelate(makeSeries(), "2026-08-23T09:59:59Z", makeNDJSON([launch])), /lookback/);
 
-  console.log("wakeup-signpost sanitizer self-test: 46 positive/negative cases passed; raw records are synthetic and retained output is closed");
+  console.log("wakeup-signpost sanitizer self-test: 49 positive/negative cases passed; raw records are synthetic and retained output is closed");
 }
 
 function parseArguments(argv) {
@@ -727,25 +820,47 @@ function parseArguments(argv) {
 
 async function readSeriesFile(seriesPath) {
   const resolvedPath = path.resolve(seriesPath);
-  let metadata;
+  let handle;
   try {
-    metadata = await lstat(resolvedPath);
+    const flags = fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW | (fsConstants.O_CLOEXEC ?? 0);
+    handle = await open(resolvedPath, flags);
   } catch {
-    throw new Error("series file could not be inspected");
-  }
-  assert.equal(metadata.isSymbolicLink(), false, "series path must not be a symbolic link");
-  assert.equal(metadata.isFile(), true, "series path must be a regular file");
-  assert.ok(metadata.size > 0 && metadata.size <= maxSeriesBytes, "series file must contain no more than 1 MiB");
-  let input;
-  try {
-    input = await readFile(resolvedPath, "utf8");
-  } catch {
-    throw new Error("series file could not be read");
+    throw new Error("series file could not be opened without following links");
   }
   try {
+    const before = await handle.stat({ bigint: true });
+    assert.equal(before.isFile(), true, "series path must be a regular file");
+    assert.ok(before.size > 0n && before.size <= BigInt(maxSeriesBytes), "series file must contain no more than 1 MiB");
+
+    const chunks = [];
+    let totalBytes = 0;
+    while (totalBytes <= maxSeriesBytes) {
+      const capacity = Math.min(64 * 1024, maxSeriesBytes + 1 - totalBytes);
+      const buffer = Buffer.allocUnsafe(capacity);
+      const { bytesRead } = await handle.read(buffer, 0, capacity, totalBytes);
+      if (bytesRead === 0) break;
+      chunks.push(buffer.subarray(0, bytesRead));
+      totalBytes += bytesRead;
+    }
+    assert.ok(totalBytes > 0 && totalBytes <= maxSeriesBytes, "series file must contain no more than 1 MiB");
+
+    const after = await handle.stat({ bigint: true });
+    for (const key of ["dev", "ino", "size", "mtimeNs", "ctimeNs"]) {
+      assert.equal(after[key], before[key], "series file changed while it was being read");
+    }
+    assert.equal(BigInt(totalBytes), before.size, "series file size changed while it was being read");
+
+    let input;
+    try {
+      input = new TextDecoder("utf-8", { fatal: true }).decode(Buffer.concat(chunks, totalBytes));
+    } catch {
+      throw new Error("series file is not valid UTF-8");
+    }
     return JSON.parse(input);
   } catch {
-    throw new Error("series file is not valid JSON");
+    throw new Error("series file failed closed validation");
+  } finally {
+    await handle.close();
   }
 }
 

@@ -4,7 +4,9 @@ import assert from "node:assert/strict";
 
 const snapshotKeys = [
   "monotonicNanoseconds",
+  "wallClockUnixMicroseconds",
   "processStartAbsoluteTime",
+  "processStartUnixMicroseconds",
   "packageIdleWakeups",
   "interruptWakeups",
   "diskReadBytes",
@@ -44,17 +46,31 @@ function summarizeProcessRusageSeries(snapshots, eventLimit = 256, expectedSnaps
   const first = rows[0];
   const last = rows.at(-1);
   assert.ok(first.processStartAbsoluteTime > 0n, "process start token must be positive");
+  assert.ok(first.processStartUnixMicroseconds > 0n, "process start wall-clock token must be positive");
   assert.ok(rows.every((row) => row.processStartAbsoluteTime === first.processStartAbsoluteTime), "pid identity changed during measurement");
+  assert.ok(rows.every((row) => row.processStartUnixMicroseconds === first.processStartUnixMicroseconds), "pid wall-clock identity changed during measurement");
+  assert.ok(first.processStartUnixMicroseconds <= first.wallClockUnixMicroseconds, "process start follows the first snapshot");
 
   const elapsedNanoseconds = last.monotonicNanoseconds - first.monotonicNanoseconds;
   assert.ok(elapsedNanoseconds > 0n && elapsedNanoseconds <= maxSafeInteger, "elapsed time is invalid");
 
   const activityEvents = [];
   let activityEventCount = 0;
+  let samplingGapSecondsMin = Number.POSITIVE_INFINITY;
+  let samplingGapSecondsMax = 0;
   for (let index = 1; index < rows.length; index += 1) {
     const before = rows[index - 1];
     const after = rows[index];
     assert.ok(after.monotonicNanoseconds > before.monotonicNanoseconds, `snapshot ${index} monotonic time did not advance`);
+    assert.ok(after.wallClockUnixMicroseconds > before.wallClockUnixMicroseconds, `snapshot ${index} wall clock did not advance`);
+    const monotonicGapNanoseconds = after.monotonicNanoseconds - before.monotonicNanoseconds;
+    const wallGapNanoseconds = (after.wallClockUnixMicroseconds - before.wallClockUnixMicroseconds) * 1000n;
+    assert.ok(monotonicGapNanoseconds <= maxSafeInteger && wallGapNanoseconds <= maxSafeInteger, `snapshot ${index} sampling gap exceeds Number.MAX_SAFE_INTEGER`);
+    const crossClockDrift = wallGapNanoseconds - monotonicGapNanoseconds;
+    assert.ok(crossClockDrift >= -100_000_000n && crossClockDrift <= 100_000_000n, `snapshot ${index} wall and monotonic clocks diverged by more than 100 ms`);
+    const samplingGapSeconds = Number(monotonicGapNanoseconds) / 1e9;
+    samplingGapSecondsMin = Math.min(samplingGapSecondsMin, samplingGapSeconds);
+    samplingGapSecondsMax = Math.max(samplingGapSecondsMax, samplingGapSeconds);
 
     const interruptWakeups = safeDelta(after, before, "interruptWakeups");
     const packageIdleWakeups = safeDelta(after, before, "packageIdleWakeups");
@@ -69,6 +85,7 @@ function summarizeProcessRusageSeries(snapshots, eventLimit = 256, expectedSnaps
         assert.ok(offsetNanoseconds <= maxSafeInteger, `snapshot ${index} event offset exceeds Number.MAX_SAFE_INTEGER`);
         activityEvents.push({
           offsetSeconds: Number(offsetNanoseconds) / 1e9,
+          endUnixMicroseconds: after.wallClockUnixMicroseconds.toString(),
           interruptWakeups,
           packageIdleWakeups,
           diskReadBytes,
@@ -88,6 +105,12 @@ function summarizeProcessRusageSeries(snapshots, eventLimit = 256, expectedSnaps
     reason: null,
     snapshotCount: rows.length,
     elapsedSeconds,
+    processStartAbsoluteTime: first.processStartAbsoluteTime.toString(),
+    processStartUnixMicroseconds: first.processStartUnixMicroseconds.toString(),
+    firstSnapshotUnixMicroseconds: first.wallClockUnixMicroseconds.toString(),
+    lastSnapshotUnixMicroseconds: last.wallClockUnixMicroseconds.toString(),
+    samplingGapSecondsMin,
+    samplingGapSecondsMax,
     packageIdleWakeups,
     interruptWakeups,
     totalWakeups: interruptWakeups,
@@ -104,7 +127,9 @@ function summarizeProcessRusageSeries(snapshots, eventLimit = 256, expectedSnaps
 function makeSnapshot(overrides = {}) {
   return {
     monotonicNanoseconds: "1000000000",
+    wallClockUnixMicroseconds: "1700000000000000",
     processStartAbsoluteTime: "42",
+    processStartUnixMicroseconds: "1699999999000000",
     packageIdleWakeups: "5",
     interruptWakeups: "10",
     diskReadBytes: "100",
@@ -116,12 +141,18 @@ function makeSnapshot(overrides = {}) {
 function runSelfTest() {
   const rows = [
     makeSnapshot(),
-    makeSnapshot({ monotonicNanoseconds: "2000000000", interruptWakeups: "11" }),
-    makeSnapshot({ monotonicNanoseconds: "3000000000", packageIdleWakeups: "6", interruptWakeups: "12", diskReadBytes: "164", diskWrittenBytes: "32" }),
+    makeSnapshot({ monotonicNanoseconds: "2000000000", wallClockUnixMicroseconds: "1700000001000000", interruptWakeups: "11" }),
+    makeSnapshot({ monotonicNanoseconds: "3000000000", wallClockUnixMicroseconds: "1700000002000000", packageIdleWakeups: "6", interruptWakeups: "12", diskReadBytes: "164", diskWrittenBytes: "32" }),
   ];
   const summary = summarizeProcessRusageSeries(rows, 1, 3);
   assert.equal(summary.snapshotCount, 3);
   assert.equal(summary.elapsedSeconds, 2);
+  assert.equal(summary.processStartAbsoluteTime, "42");
+  assert.equal(summary.processStartUnixMicroseconds, "1699999999000000");
+  assert.equal(summary.firstSnapshotUnixMicroseconds, "1700000000000000");
+  assert.equal(summary.lastSnapshotUnixMicroseconds, "1700000002000000");
+  assert.equal(summary.samplingGapSecondsMin, 1);
+  assert.equal(summary.samplingGapSecondsMax, 1);
   assert.equal(summary.packageIdleWakeups, 1);
   assert.equal(summary.interruptWakeups, 2);
   assert.equal(summary.totalWakeups, 2, "package-idle subset must not be added twice");
@@ -131,16 +162,20 @@ function runSelfTest() {
   assert.equal(summary.activityEventCount, 2);
   assert.equal(summary.reportedActivityEventCount, 1);
   assert.equal(summary.activityEventsTruncated, true);
+  assert.equal(summary.activityEvents[0].endUnixMicroseconds, "1700000001000000");
 
   assert.throws(() => summarizeProcessRusageSeries([rows[0]]), /at least two snapshots/);
   assert.throws(() => summarizeProcessRusageSeries(rows, 1, 4), /expected 4 snapshots but received 3/);
   assert.throws(() => summarizeProcessRusageSeries([rows[0], { ...rows[1], processStartAbsoluteTime: "43" }]), /pid identity changed/);
+  assert.throws(() => summarizeProcessRusageSeries([rows[0], { ...rows[1], processStartUnixMicroseconds: "1699999998000000" }]), /wall-clock identity changed/);
   assert.throws(() => summarizeProcessRusageSeries([rows[0], { ...rows[1], interruptWakeups: "9" }]), /counter regressed/);
   assert.throws(() => summarizeProcessRusageSeries([rows[0], { ...rows[1], packageIdleWakeups: "7", interruptWakeups: "11" }]), /package-idle wakeups exceed/);
   assert.throws(() => summarizeProcessRusageSeries([rows[0], { ...rows[1], extra: "0" }]), /unexpected or missing keys/);
   assert.throws(() => summarizeProcessRusageSeries([rows[0], { ...rows[1], diskReadBytes: "9007199254741092" }]), /Number.MAX_SAFE_INTEGER/);
   assert.throws(() => summarizeProcessRusageSeries([rows[0], { ...rows[1], monotonicNanoseconds: rows[0].monotonicNanoseconds }]), /monotonic time did not advance|elapsed time is invalid/);
-  console.log("process-rusage series self-test: 9 positive/negative cases passed");
+  assert.throws(() => summarizeProcessRusageSeries([rows[0], { ...rows[1], wallClockUnixMicroseconds: rows[0].wallClockUnixMicroseconds }]), /wall clock did not advance/);
+  assert.throws(() => summarizeProcessRusageSeries([rows[0], { ...rows[1], wallClockUnixMicroseconds: "1700000002000000" }]), /diverged/);
+  console.log("process-rusage series self-test: 12 positive/negative cases passed");
 }
 
 async function readStdin() {

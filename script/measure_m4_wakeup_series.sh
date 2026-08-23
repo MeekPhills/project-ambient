@@ -46,12 +46,10 @@ RUSAGE_PROBE="$MEASURE_DIR/macos_process_rusage"
 SNAPSHOTS="$MEASURE_DIR/snapshots.jsonl"
 
 xcrun clang -std=c11 -Wall -Wextra -Werror "$RUSAGE_SOURCE" -o "$RUSAGE_PROBE"
-started_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 for ((sample = 0; sample < SAMPLES; sample += 1)); do
   "$RUSAGE_PROBE" "$PID" Ambient >> "$SNAPSHOTS"
   if (( sample + 1 < SAMPLES )); then sleep "$INTERVAL"; fi
 done
-completed_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
 summary="$(node "$SUMMARIZER" 256 "$SAMPLES" < "$SNAPSHOTS")"
-node -e 'const summary = JSON.parse(process.argv[1]); const ceiling = Number(process.argv[7]); const output = { fixtureId: process.argv[2], pid: Number(process.argv[3]), startedAt: process.argv[4], completedAt: process.argv[5], samples: summary.snapshotCount, intervalSeconds: Number(process.argv[6]), processRusageSeries: summary, budgetObservation: { wakeupsPerMinuteCeiling: ceiling, observedWindowRateWithinCeiling: summary.wakeupsPerMinute <= ceiling, contractConformance: null, contractConformanceReason: "requires-p95-after-warm-up-and-complete-fixture" }, storageObservation: { writesObservedInWindow: summary.diskWrittenBytes > 0 }, measurementCoverage: { wakeups: "partial", storageChurn: "partial" }, qualification: "partial-wakeup-series-only" }; process.stdout.write(`${JSON.stringify(output, null, 2)}\n`);' "$summary" "$fixture_id" "$PID" "$started_at" "$completed_at" "$INTERVAL" "$wakeup_ceiling"
+node -e 'const summary = JSON.parse(process.argv[1]); const formatMicroseconds = (value) => { const microseconds = BigInt(value); const seconds = microseconds / 1000000n; const fraction = (microseconds % 1000000n).toString().padStart(6, "0"); return `${new Date(Number(seconds) * 1000).toISOString().slice(0, 19)}.${fraction}Z`; }; const ceiling = Number(process.argv[5]); const output = { fixtureId: process.argv[2], pid: Number(process.argv[3]), startedAt: formatMicroseconds(summary.firstSnapshotUnixMicroseconds), completedAt: formatMicroseconds(summary.lastSnapshotUnixMicroseconds), samples: summary.snapshotCount, intervalSeconds: Number(process.argv[4]), processRusageSeries: summary, budgetObservation: { wakeupsPerMinuteCeiling: ceiling, observedWindowRateWithinCeiling: summary.wakeupsPerMinute <= ceiling, contractConformance: null, contractConformanceReason: "requires-p95-after-warm-up-and-complete-fixture" }, storageObservation: { writesObservedInWindow: summary.diskWrittenBytes > 0 }, measurementCoverage: { wakeups: "partial", storageChurn: "partial" }, qualification: "partial-wakeup-series-only" }; process.stdout.write(`${JSON.stringify(output, null, 2)}\n`);' "$summary" "$fixture_id" "$PID" "$INTERVAL" "$wakeup_ceiling"
