@@ -74,6 +74,7 @@ const processSeriesKeys = [
 ];
 const activityEventKeys = [
   "offsetSeconds",
+  "startUnixMicroseconds",
   "endUnixMicroseconds",
   "interruptWakeups",
   "packageIdleWakeups",
@@ -247,10 +248,14 @@ function validateSeries(series) {
     assert.ok(event.offsetSeconds > priorOffset, `activity event ${index} offset must advance strictly`);
     assert.ok(event.offsetSeconds <= processSeries.elapsedSeconds, `activity event ${index} exceeds the measurement window`);
     priorOffset = event.offsetSeconds;
+    const eventStartMicros = parseCanonicalUInt64(event.startUnixMicroseconds, `activity event ${index}.startUnixMicroseconds`);
     const eventEndMicros = parseCanonicalUInt64(event.endUnixMicroseconds, `activity event ${index}.endUnixMicroseconds`);
-    assert.ok(eventEndMicros > priorEventEndMicros, `activity event ${index} wall-clock end must advance strictly`);
+    assert.ok(eventStartMicros >= priorEventEndMicros, `activity event ${index} wall-clock interval overlaps or regresses`);
+    assert.ok(eventEndMicros > eventStartMicros, `activity event ${index} wall-clock interval must advance`);
     assert.ok(eventEndMicros <= lastSnapshotMicros, `activity event ${index} wall-clock end exceeds the measurement window`);
     priorEventEndMicros = eventEndMicros;
+    const intervalSeconds = Number(eventEndMicros - eventStartMicros) / 1e6;
+    assert.ok(intervalSeconds >= 0.5 && intervalSeconds <= 2, `activity event ${index} interval is outside the accepted cadence`);
     const wallOffsetSeconds = Number(eventEndMicros - firstSnapshotMicros) / 1e6;
     assert.ok(Math.abs(wallOffsetSeconds - event.offsetSeconds) <= 0.1, `activity event ${index} wall and monotonic offsets diverged by more than 100 ms`);
     for (const key of ["interruptWakeups", "packageIdleWakeups", "diskReadBytes", "diskWrittenBytes"]) {
@@ -410,15 +415,16 @@ function correlate(seriesInfo, queryStartMicros, events) {
   const launch = launchEvents[0];
   assert.ok(launch.timestampMicros < seriesInfo.startedMicros, "lifecycle.launch must precede the measurement window");
   assert.ok(launch.timestampMicros >= seriesInfo.processStartMicros, "lifecycle.launch precedes the measured process incarnation");
-  assert.ok(launch.timestampMicros - seriesInfo.processStartMicros <= 30n * microsecondsPerSecond, "lifecycle.launch is too far from the measured process start");
   assert.ok(events.every((event) => event.timestampMicros >= launch.timestampMicros), "signposts preceding lifecycle.launch indicate ambiguous PID history");
 
   const grouped = new Map();
+  const windowEvents = [];
   let signpostEventCount = 0;
   for (const event of events) {
     if (event.timestampMicros < seriesInfo.startedMicros) continue;
     assert.notEqual(event.eventName, "lifecycle.launch", "lifecycle.launch inside the measurement window is invalid");
     if (event.timestampMicros > seriesInfo.completedMicros) continue;
+    windowEvents.push(event);
     const offsetSecond = Number((event.timestampMicros - seriesInfo.startedMicros) / microsecondsPerSecond);
     const key = `${offsetSecond}\u0000${event.eventName}`;
     const existing = grouped.get(key);
@@ -434,18 +440,26 @@ function correlate(seriesInfo, queryStartMicros, events) {
   const wakeupBuckets = seriesInfo.processSeries.activityEvents
     .filter((event) => event.interruptWakeups > 0)
     .map((event) => {
+      const eventStartMicros = parseCanonicalUInt64(event.startUnixMicroseconds, "activity-event wall-clock start");
       const eventEndMicros = parseCanonicalUInt64(event.endUnixMicroseconds, "activity-event wall-clock end");
-      const wakeupSecond = Number((eventEndMicros - seriesInfo.startedMicros) / microsecondsPerSecond);
-      const nearbySignposts = signposts
-        .filter((signpost) => Math.abs(signpost.offsetSecond - wakeupSecond) <= 1)
-        .map((signpost) => ({
-          eventName: signpost.eventName,
-          offsetSecond: signpost.offsetSecond,
-          relation: signpost.offsetSecond === wakeupSecond
-            ? "same"
-            : signpost.offsetSecond < wakeupSecond ? "adjacent-before" : "adjacent-after",
-          count: signpost.count,
-        }));
+      const nearby = new Map();
+      for (const signpost of windowEvents) {
+        if (signpost.timestampMicros < eventStartMicros - microsecondsPerSecond
+          || signpost.timestampMicros > eventEndMicros + microsecondsPerSecond) continue;
+        const offsetSecond = Number((signpost.timestampMicros - seriesInfo.startedMicros) / microsecondsPerSecond);
+        const relation = signpost.timestampMicros < eventStartMicros
+          ? "adjacent-before"
+          : signpost.timestampMicros > eventEndMicros ? "adjacent-after" : "same";
+        const key = `${offsetSecond}\u0000${signpost.eventName}\u0000${relation}`;
+        const existing = nearby.get(key);
+        if (existing) existing.count += 1;
+        else nearby.set(key, { eventName: signpost.eventName, offsetSecond, relation, count: 1 });
+      }
+      const nearbySignposts = [...nearby.values()].sort(
+        (left, right) => left.offsetSecond - right.offsetSecond
+          || eventOrder.get(left.eventName) - eventOrder.get(right.eventName)
+          || left.relation.localeCompare(right.relation),
+      );
       return {
         endOffsetSeconds: event.offsetSeconds,
         interruptWakeups: event.interruptWakeups,
@@ -557,16 +571,17 @@ async function runLogQuery(seriesInfo, queryStart, queryStartMicros) {
 }
 
 function makeActivityEvent(overrides = {}) {
-  const offsetSeconds = overrides.offsetSeconds ?? 1.2;
+  const { offsetSeconds = 1.2, startOffsetSeconds = Math.max(0, offsetSeconds - 1), ...fieldOverrides } = overrides;
   const firstSnapshotMicros = parseCanonicalUTCMicrosecond("2026-08-23T11:00:00.100000Z", "synthetic first snapshot");
   return {
     offsetSeconds,
+    startUnixMicroseconds: (firstSnapshotMicros + BigInt(Math.round(startOffsetSeconds * 1e6))).toString(),
     endUnixMicroseconds: (firstSnapshotMicros + BigInt(Math.round(offsetSeconds * 1e6))).toString(),
     interruptWakeups: 1,
     packageIdleWakeups: 0,
     diskReadBytes: 0,
     diskWrittenBytes: 0,
-    ...overrides,
+    ...fieldOverrides,
   };
 }
 
@@ -597,7 +612,7 @@ function makeSeries(activityEvents = [
       snapshotCount: 5,
       elapsedSeconds,
       processStartAbsoluteTime: "42",
-      processStartUnixMicroseconds: parseCanonicalUTCMicrosecond("2026-08-23T10:59:49.800000Z", "synthetic process start").toString(),
+      processStartUnixMicroseconds: parseCanonicalUTCMicrosecond("2026-08-23T10:59:00.000000Z", "synthetic process start").toString(),
       firstSnapshotUnixMicroseconds: parseCanonicalUTCMicrosecond("2026-08-23T11:00:00.100000Z", "synthetic first snapshot").toString(),
       lastSnapshotUnixMicroseconds: parseCanonicalUTCMicrosecond("2026-08-23T11:00:04.100000Z", "synthetic last snapshot").toString(),
       samplingGapSecondsMin: 1,
@@ -697,6 +712,18 @@ function runSelfTest() {
   assert.ok(output.wakeupBuckets[0].nearbySignposts.some((event) => event.relation === "adjacent-after"));
   assert.ok(output.wakeupBuckets[1].nearbySignposts.some((event) => event.relation === "adjacent-before"));
   assert.ok(output.wakeupBuckets[1].nearbySignposts.some((event) => event.relation === "adjacent-after"));
+  const twoSecondGap = makeSeries([makeActivityEvent({ offsetSeconds: 5, startOffsetSeconds: 3 })]);
+  twoSecondGap.completedAt = "2026-08-23T11:00:05.100000Z";
+  twoSecondGap.processRusageSeries.elapsedSeconds = 5;
+  twoSecondGap.processRusageSeries.lastSnapshotUnixMicroseconds = parseCanonicalUTCMicrosecond("2026-08-23T11:00:05.100000Z", "synthetic delayed last snapshot").toString();
+  twoSecondGap.processRusageSeries.wakeupsPerMinute = 12;
+  twoSecondGap.processRusageSeries.samplingGapSecondsMax = 2;
+  const intervalBound = parseAndCorrelate(
+    twoSecondGap,
+    queryStart,
+    makeNDJSON([launch, makeLogEvent("power.state_changed", "2026-08-23T11:00:03.110000Z")]),
+  );
+  assert.equal(intervalBound.wakeupBuckets[0].nearbySignposts[0].relation, "same", "a handler inside a two-second activity interval must not be lost to bucket flooring");
   const serializedOutput = JSON.stringify(output);
   for (const prohibited of ["prohibited/raw/path", "eventMessage", "composedMessage", "formatString", "processImagePath", "signpostIdentifier", "threadIdentifier", "bootUUID"]) {
     assert.equal(serializedOutput.includes(prohibited), false, `raw metadata leaked into retained output: ${prohibited}`);
@@ -881,7 +908,7 @@ async function main() {
   if (options.selfTest) {
     runSelfTest();
     await runSeriesPathSelfTest();
-    console.log("wakeup-signpost sanitizer self-test: 50 positive/negative cases passed; raw records are synthetic, the FIFO is temporary, and retained output is closed");
+    console.log("wakeup-signpost sanitizer self-test: 51 positive/negative cases passed; raw records are synthetic, the FIFO is temporary, and retained output is closed");
     return;
   }
   assert.equal(process.platform, "darwin", "production signpost queries require macOS");

@@ -77,7 +77,7 @@ lookback from the exact first snapshot. Each public rusage snapshot carries the
 process's wall-clock start identity plus paired wall and monotonic sample times.
 The sanitizer validates the fixture identity, process incarnation, requested
 and observed sample counts, exact first/last anchors, wall/monotonic agreement,
-complete activity buckets, counter sums, wakeup rate, coverage, and
+complete activity intervals, counter sums, wakeup rate, coverage, and
 non-qualification fields before it queries any logs. Correlation accepts only
 the collector's exact one-second interval, observed gaps from 0.5 through 2.0
 seconds, and at most 256 complete activity rows; a delayed or wider series
@@ -100,8 +100,9 @@ is observed:
 - any unified-log loss record or unsuccessful query exit;
 - an unknown event name, wrong PID/subsystem/category/type, interval signpost,
   or message/format payload;
-- a missing, duplicate, in-window, or process-start-unbound `lifecycle.launch`
-  marker;
+- a missing, duplicate, in-window, or pre-process-start `lifecycle.launch`
+  marker; no arbitrary process-age upper bound is imposed because launch is
+  emitted after synchronous initialization;
 - a malformed, timezone-free, impossible, out-of-query, or out-of-window
   timestamp;
 - a query lookback over one hour, a measurement over the bounded 72-hour
@@ -115,7 +116,7 @@ The parser accepts at most 256 selected records, 64 KiB per NDJSON line, and
 4 MiB of child output. The series file is opened once with
 `O_NOFOLLOW | O_NONBLOCK`, so a FIFO cannot stall before the regular-file
 check; it is then bounded, stat-checked, and read through that same descriptor.
-Its 50-case release self-test uses synthetic in-memory records plus a temporary
+Its 51-case release self-test uses synthetic in-memory records plus a temporary
 FIFO rejection check; the repository contains no raw or raw-shaped unified-log
 fixture.
 
@@ -128,14 +129,15 @@ boot identity, disk counters, ceiling comparisons, or source qualification.
 The artifact is always marked
 `budgetEligibility: "ineligible-signposts-on-window"`.
 
-For correlation, an activity row with interrupt wakeups is treated as a bucket
-ending at its exact wall-clock snapshot anchor, relative to the exact first
-snapshot. Static signposts in the floored same second or one adjacent second are
-listed as `same`, `adjacent-before`, or `adjacent-after`; the displayed
-`endOffsetSeconds` remains the paired monotonic offset. Disk-only activity rows
-are not wakeup buckets. A nearby row means only that the named handler executed
-nearby; an empty list means only that no instrumented handler was observed
-nearby.
+For correlation, an activity row with interrupt wakeups retains the exact wall
+clock at both ends of its sampling interval. A static signpost inside that
+interval is listed as `same`; a signpost within one second before or after the
+actual interval is `adjacent-before` or `adjacent-after`. This avoids losing an
+in-interval handler when an accepted delayed sample crosses two floored wall
+seconds. The displayed `endOffsetSeconds` remains the paired monotonic offset.
+Disk-only activity rows are not wakeup buckets. A nearby row means only that
+the named handler executed nearby; an empty list means only that no instrumented
+handler was observed nearby.
 
 ### Runtime compatibility smoke
 

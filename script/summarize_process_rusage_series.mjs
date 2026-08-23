@@ -85,6 +85,7 @@ function summarizeProcessRusageSeries(snapshots, eventLimit = 256, expectedSnaps
         assert.ok(offsetNanoseconds <= maxSafeInteger, `snapshot ${index} event offset exceeds Number.MAX_SAFE_INTEGER`);
         activityEvents.push({
           offsetSeconds: Number(offsetNanoseconds) / 1e9,
+          startUnixMicroseconds: before.wallClockUnixMicroseconds.toString(),
           endUnixMicroseconds: after.wallClockUnixMicroseconds.toString(),
           interruptWakeups,
           packageIdleWakeups,
@@ -162,6 +163,7 @@ function runSelfTest() {
   assert.equal(summary.activityEventCount, 2);
   assert.equal(summary.reportedActivityEventCount, 1);
   assert.equal(summary.activityEventsTruncated, true);
+  assert.equal(summary.activityEvents[0].startUnixMicroseconds, "1700000000000000");
   assert.equal(summary.activityEvents[0].endUnixMicroseconds, "1700000001000000");
 
   assert.throws(() => summarizeProcessRusageSeries([rows[0]]), /at least two snapshots/);
