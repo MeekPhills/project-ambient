@@ -111,6 +111,7 @@ int main(int argc, char **argv) {
                                "\",\"wallClockUnixMicroseconds\":\"%" PRIu64
                                "\",\"processStartAbsoluteTime\":\"%" PRIu64
                                "\",\"processStartUnixMicroseconds\":\"%" PRIu64
+                               "\",\"physicalFootprintBytes\":\"%" PRIu64
                                "\",\"packageIdleWakeups\":\"%" PRIu64
                                "\",\"interruptWakeups\":\"%" PRIu64
                                "\",\"diskReadBytes\":\"%" PRIu64
@@ -119,6 +120,7 @@ int main(int argc, char **argv) {
                                wall_clock_us,
                                usage.ri_proc_start_abstime,
                                process_start_before,
+                               usage.ri_phys_footprint,
                                usage.ri_pkg_idle_wkups,
                                usage.ri_interrupt_wkups,
                                usage.ri_diskio_bytesread,

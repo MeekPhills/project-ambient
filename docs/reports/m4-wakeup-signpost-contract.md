@@ -78,7 +78,9 @@ process's wall-clock start identity plus paired wall and monotonic sample times.
 The sanitizer validates the fixture identity, process incarnation, requested
 and observed sample counts, exact first/last anchors, wall/monotonic agreement,
 complete activity intervals, counter sums, wakeup rate, coverage, and
-non-qualification fields before it queries any logs. Correlation accepts only
+non-qualification fields before it queries any logs. Physical-footprint P95 and
+maximum gauges are validated for producer consistency but never retained in the
+correlation artifact. Correlation accepts only
 the collector's exact one-second interval, observed gaps from 0.5 through 2.0
 seconds, active intervals consistent with those declared extrema within the
 100-millisecond cross-clock tolerance, and at most 256 complete activity rows;
@@ -118,7 +120,7 @@ The parser accepts at most 256 selected records, 64 KiB per NDJSON line, and
 4 MiB of child output. The series file is opened once with
 `O_NOFOLLOW | O_NONBLOCK`, so a FIFO cannot stall before the regular-file
 check; it is then bounded, stat-checked, and read through that same descriptor.
-Its 52-case release self-test uses synthetic in-memory records plus a temporary
+Its 53-case release self-test uses synthetic in-memory records plus a temporary
 FIFO rejection check; the repository contains no raw or raw-shaped unified-log
 fixture.
 

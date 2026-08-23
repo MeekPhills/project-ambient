@@ -7,6 +7,7 @@ const snapshotKeys = [
   "wallClockUnixMicroseconds",
   "processStartAbsoluteTime",
   "processStartUnixMicroseconds",
+  "physicalFootprintBytes",
   "packageIdleWakeups",
   "interruptWakeups",
   "diskReadBytes",
@@ -36,6 +37,13 @@ function safeDelta(after, before, field) {
   return Number(delta);
 }
 
+function nearestRankP95(values) {
+  assert.ok(values.length > 0, "physical-footprint samples are required");
+  const sorted = [...values].sort((left, right) => left < right ? -1 : left > right ? 1 : 0);
+  const rank = Math.floor((95 * sorted.length + 99) / 100) - 1;
+  return sorted[rank];
+}
+
 function summarizeProcessRusageSeries(snapshots, eventLimit = 256, expectedSnapshotCount = null) {
   assert.ok(Number.isSafeInteger(eventLimit) && eventLimit >= 1 && eventLimit <= 10_000, "event limit must be an integer from 1 through 10000");
   assert.ok(Array.isArray(snapshots) && snapshots.length >= 2, "at least two snapshots are required");
@@ -50,6 +58,7 @@ function summarizeProcessRusageSeries(snapshots, eventLimit = 256, expectedSnaps
   assert.ok(rows.every((row) => row.processStartAbsoluteTime === first.processStartAbsoluteTime), "pid identity changed during measurement");
   assert.ok(rows.every((row) => row.processStartUnixMicroseconds === first.processStartUnixMicroseconds), "pid wall-clock identity changed during measurement");
   assert.ok(first.processStartUnixMicroseconds <= first.wallClockUnixMicroseconds, "process start follows the first snapshot");
+  assert.ok(rows.every((row) => row.physicalFootprintBytes > 0n), "physical footprint must be positive");
 
   const elapsedNanoseconds = last.monotonicNanoseconds - first.monotonicNanoseconds;
   assert.ok(elapsedNanoseconds > 0n && elapsedNanoseconds <= maxSafeInteger, "elapsed time is invalid");
@@ -97,6 +106,9 @@ function summarizeProcessRusageSeries(snapshots, eventLimit = 256, expectedSnaps
   }
 
   const elapsedSeconds = Number(elapsedNanoseconds) / 1e9;
+  const physicalFootprintBytesP95 = nearestRankP95(rows.map((row) => row.physicalFootprintBytes));
+  const physicalFootprintBytesMax = rows.reduce((result, row) => row.physicalFootprintBytes > result ? row.physicalFootprintBytes : result, 0n);
+  assert.ok(physicalFootprintBytesP95 <= maxSafeInteger && physicalFootprintBytesMax <= maxSafeInteger, "physical footprint exceeds Number.MAX_SAFE_INTEGER");
   const interruptWakeups = safeDelta(last, first, "interruptWakeups");
   const packageIdleWakeups = safeDelta(last, first, "packageIdleWakeups");
   assert.ok(packageIdleWakeups <= interruptWakeups, "package-idle wakeups exceed interrupt wakeups");
@@ -112,6 +124,10 @@ function summarizeProcessRusageSeries(snapshots, eventLimit = 256, expectedSnaps
     lastSnapshotUnixMicroseconds: last.wallClockUnixMicroseconds.toString(),
     samplingGapSecondsMin,
     samplingGapSecondsMax,
+    physicalFootprintBytesP95: physicalFootprintBytesP95.toString(),
+    physicalFootprintBytesMax: physicalFootprintBytesMax.toString(),
+    physicalFootprintMiBP95: Number(physicalFootprintBytesP95) / (1024 * 1024),
+    physicalFootprintMiBMax: Number(physicalFootprintBytesMax) / (1024 * 1024),
     packageIdleWakeups,
     interruptWakeups,
     totalWakeups: interruptWakeups,
@@ -131,6 +147,7 @@ function makeSnapshot(overrides = {}) {
     wallClockUnixMicroseconds: "1700000000000000",
     processStartAbsoluteTime: "42",
     processStartUnixMicroseconds: "1699999999000000",
+    physicalFootprintBytes: "10485760",
     packageIdleWakeups: "5",
     interruptWakeups: "10",
     diskReadBytes: "100",
@@ -142,8 +159,8 @@ function makeSnapshot(overrides = {}) {
 function runSelfTest() {
   const rows = [
     makeSnapshot(),
-    makeSnapshot({ monotonicNanoseconds: "2000000000", wallClockUnixMicroseconds: "1700000001000000", interruptWakeups: "11" }),
-    makeSnapshot({ monotonicNanoseconds: "3000000000", wallClockUnixMicroseconds: "1700000002000000", packageIdleWakeups: "6", interruptWakeups: "12", diskReadBytes: "164", diskWrittenBytes: "32" }),
+    makeSnapshot({ monotonicNanoseconds: "2000000000", wallClockUnixMicroseconds: "1700000001000000", physicalFootprintBytes: "20971520", interruptWakeups: "11" }),
+    makeSnapshot({ monotonicNanoseconds: "3000000000", wallClockUnixMicroseconds: "1700000002000000", physicalFootprintBytes: "31457280", packageIdleWakeups: "6", interruptWakeups: "12", diskReadBytes: "164", diskWrittenBytes: "32" }),
   ];
   const summary = summarizeProcessRusageSeries(rows, 1, 3);
   assert.equal(summary.snapshotCount, 3);
@@ -154,6 +171,10 @@ function runSelfTest() {
   assert.equal(summary.lastSnapshotUnixMicroseconds, "1700000002000000");
   assert.equal(summary.samplingGapSecondsMin, 1);
   assert.equal(summary.samplingGapSecondsMax, 1);
+  assert.equal(summary.physicalFootprintBytesP95, "31457280");
+  assert.equal(summary.physicalFootprintBytesMax, "31457280");
+  assert.equal(summary.physicalFootprintMiBP95, 30);
+  assert.equal(summary.physicalFootprintMiBMax, 30);
   assert.equal(summary.packageIdleWakeups, 1);
   assert.equal(summary.interruptWakeups, 2);
   assert.equal(summary.totalWakeups, 2, "package-idle subset must not be added twice");
@@ -177,7 +198,23 @@ function runSelfTest() {
   assert.throws(() => summarizeProcessRusageSeries([rows[0], { ...rows[1], monotonicNanoseconds: rows[0].monotonicNanoseconds }]), /monotonic time did not advance|elapsed time is invalid/);
   assert.throws(() => summarizeProcessRusageSeries([rows[0], { ...rows[1], wallClockUnixMicroseconds: rows[0].wallClockUnixMicroseconds }]), /wall clock did not advance/);
   assert.throws(() => summarizeProcessRusageSeries([rows[0], { ...rows[1], wallClockUnixMicroseconds: "1700000002000000" }]), /diverged/);
-  console.log("process-rusage series self-test: 12 positive/negative cases passed");
+  const gaugeOnly = summarizeProcessRusageSeries([
+    makeSnapshot(),
+    makeSnapshot({ monotonicNanoseconds: "2000000000", wallClockUnixMicroseconds: "1700000001000000", physicalFootprintBytes: "20971520" }),
+  ]);
+  assert.equal(gaugeOnly.activityEventCount, 0, "a physical-footprint gauge change must not become an activity event");
+  const percentileMiB = [20, 1, 7, 13, 2, 18, 4, 16, 6, 11, 3, 19, 5, 14, 8, 17, 9, 15, 10, 12];
+  const percentileRows = percentileMiB.map((value, index) => makeSnapshot({
+    monotonicNanoseconds: String(1_000_000_000 + index * 1_000_000_000),
+    wallClockUnixMicroseconds: String(1_700_000_000_000_000 + index * 1_000_000),
+    physicalFootprintBytes: String(value * 1024 * 1024),
+  }));
+  const percentileSummary = summarizeProcessRusageSeries(percentileRows);
+  assert.equal(percentileSummary.physicalFootprintMiBP95, 19, "nearest-rank P95 must select rank 19 of 20");
+  assert.equal(percentileSummary.physicalFootprintMiBMax, 20);
+  assert.equal(percentileSummary.activityEventCount, 0);
+  assert.throws(() => summarizeProcessRusageSeries([rows[0], { ...rows[1], physicalFootprintBytes: "0" }]), /physical footprint must be positive/);
+  console.log("process-rusage series self-test: 15 positive/negative cases passed");
 }
 
 async function readStdin() {

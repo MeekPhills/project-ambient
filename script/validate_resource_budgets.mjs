@@ -8,8 +8,9 @@ import { fileURLToPath } from "node:url";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const schemaPath = path.join(root, "schemas/resource-budgets/v1/resource-budget.schema.json");
 const fixturePath = path.join(root, "fixtures/resource-budgets/v1/base-m4-mac-mini.json");
-const coverageKeys = ["cpu", "rss", "wakeups", "network", "decoder", "gpu", "framePacing", "storageChurn", "displayTopology", "pressure", "soak"];
+const coverageKeys = ["cpu", "rss", "physicalFootprint", "wakeups", "network", "decoder", "gpu", "framePacing", "storageChurn", "displayTopology", "pressure", "soak"];
 const budgetKeys = ["staticSettled", "settingsCatalog", "dualDisplay8k", "sameSourceVideo", "chat", "soakHours"];
+const staticBudgetKeys = ["cpuPercentP95Max", "wakeupsPerMinuteMax", "rssMiBMax", "physicalFootprintMiBP95Max", "continuousRenderer", "decoder", "network"];
 const exactKeys = (value, keys, at) => {
   assert.ok(value && typeof value === "object" && !Array.isArray(value), `${at}: expected object`);
   assert.deepEqual(Object.keys(value).sort(), [...keys].sort(), `${at}: unexpected or missing keys`);
@@ -35,9 +36,11 @@ function validate(fixture) {
   ], "required display modes drifted");
   exactKeys(fixture.budgets, budgetKeys, "budgets");
   const staticBudget = fixture.budgets.staticSettled;
+  exactKeys(staticBudget, staticBudgetKeys, "budgets.staticSettled");
   assert.equal(staticBudget.cpuPercentP95Max, 0.2, "static CPU ceiling drifted");
   assert.equal(staticBudget.wakeupsPerMinuteMax, 2, "static wakeup ceiling drifted");
   assert.equal(staticBudget.rssMiBMax, 40, "static RSS ceiling drifted");
+  assert.equal(staticBudget.physicalFootprintMiBP95Max, 40, "static physical-footprint ceiling drifted");
   assert.equal(staticBudget.continuousRenderer, false, "static mode cannot retain a renderer");
   assert.equal(staticBudget.decoder, false, "static mode cannot retain a decoder");
   assert.equal(staticBudget.network, false, "static mode cannot retain network activity");
@@ -57,10 +60,28 @@ function validate(fixture) {
   assert.ok(!Number.isNaN(Date.parse(fixture.evidence.verifiedAt)), "evidence.verifiedAt must be ISO date-time");
 }
 
+function validateSchemaContract(schema) {
+  assert.equal(schema?.properties?.schemaVersion?.const, 1, "schema must bind v1");
+  assert.equal(schema?.$defs?.budgets?.properties?.staticSettled?.$ref, "#/$defs/staticSettled", "schema must bind the closed static-settled definition");
+  const staticSchema = schema?.$defs?.staticSettled;
+  exactKeys(staticSchema, ["type", "additionalProperties", "required", "properties"], "schema.$defs.staticSettled");
+  assert.equal(staticSchema.type, "object", "static-settled schema must be an object");
+  assert.equal(staticSchema.additionalProperties, false, "static-settled schema must reject additional properties");
+  assert.deepEqual([...staticSchema.required].sort(), [...staticBudgetKeys].sort(), "static-settled schema required keys drifted");
+  exactKeys(staticSchema.properties, staticBudgetKeys, "schema.$defs.staticSettled.properties");
+  assert.equal(staticSchema.properties.physicalFootprintMiBP95Max.const, 40, "schema physical-footprint ceiling drifted");
+
+  const coverageSchema = schema?.$defs?.measurementCoverage;
+  assert.equal(coverageSchema?.additionalProperties, false, "measurement-coverage schema must reject additional properties");
+  assert.deepEqual([...coverageSchema.required].sort(), [...coverageKeys].sort(), "measurement-coverage schema required keys drifted");
+  exactKeys(coverageSchema.properties, coverageKeys, "schema.$defs.measurementCoverage.properties");
+  assert.equal(coverageSchema.properties.physicalFootprint.$ref, "#/$defs/coverageState", "physical-footprint coverage must use the closed coverage vocabulary");
+}
+
 const clone = (value) => structuredClone(value);
 const schema = JSON.parse(await readFile(schemaPath, "utf8"));
 const fixture = JSON.parse(await readFile(fixturePath, "utf8"));
-assert.equal(schema.properties.schemaVersion.const, 1, "schema must bind v1");
+validateSchemaContract(schema);
 validate(fixture);
 const tamperCases = [
   (x) => { x.fixtureId = "other"; }, (x) => { x.claimScope = "shipped_build"; },
@@ -69,7 +90,17 @@ const tamperCases = [
   (x) => { x.budgets.staticSettled.cpuPercentP95Max = 1; }, (x) => { x.budgets.sameSourceVideo.decoderSessionsMax = 2; },
   (x) => { x.budgets.chat.listenerAfterClose = true; }, (x) => { x.displayFixture.required = false; },
   (x) => { x.displayFixture.displays[0].refreshHz = 120; },
+  (x) => { delete x.budgets.staticSettled.physicalFootprintMiBP95Max; },
+  (x) => { x.budgets.staticSettled.physicalFootprintMiBP95Max = 64; },
+  (x) => { delete x.measurementCoverage.physicalFootprint; },
   (x) => { x.trackerCredit = 1; }
 ];
 for (const tamper of tamperCases) { const candidate = clone(fixture); tamper(candidate); assert.throws(() => validate(candidate)); }
-console.log(`Resource-budget contract valid: schema v1, base M4 fixture, ${tamperCases.length} negative/fail-closed checks passed.`);
+const schemaTamperCases = [
+  (x) => { x.$defs.staticSettled.additionalProperties = true; },
+  (x) => { x.$defs.staticSettled.required = x.$defs.staticSettled.required.filter((key) => key !== "physicalFootprintMiBP95Max"); },
+  (x) => { x.$defs.staticSettled.properties.physicalFootprintMiBP95Max.const = 64; },
+  (x) => { delete x.$defs.measurementCoverage.properties.physicalFootprint; },
+];
+for (const tamper of schemaTamperCases) { const candidate = clone(schema); tamper(candidate); assert.throws(() => validateSchemaContract(candidate)); }
+console.log(`Resource-budget contract valid: schema v1, base M4 fixture, ${tamperCases.length + schemaTamperCases.length} negative/fail-closed checks passed.`);
