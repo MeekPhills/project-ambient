@@ -2,13 +2,15 @@
 
 **Issue:** [#28](https://github.com/MeekPhills/project-ambient/issues/28)
 **Captured:** 2026-08-23
-**Producer contract:** `de6021c3b7e37bd06a3a44bf886543420bfc0e21`
+**Producer revision:** `5f23aebc55658b4b94b0adc37ef06b42c30bf117`
 **Qualification:** partial settled-static evidence only
 
-The exact output below is frozen to the producer contract finalized at that
-revision. Later collectors sample every rusage row, add physical-footprint
-gauges, and evaluate the RSS maximum under a renamed field; those changes do
-not rewrite this historical JSON.
+The exact output below is frozen to that producer revision.
+`de6021c3b7e37bd06a3a44bf886543420bfc0e21` subsequently corrected the wakeup-
+accounting semantics without changing these captured values because package-
+idle wakeups were zero. Later collectors sample every rusage row, add physical-
+footprint gauges, and evaluate the RSS maximum under a renamed field; those
+changes do not rewrite this historical JSON.
 
 ## Method
 

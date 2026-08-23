@@ -2,12 +2,16 @@
 
 **Issue:** [#28](https://github.com/MeekPhills/project-ambient/issues/28)
 **Captured:** 2026-08-23
-**Producer revision:** `76c633e8959954948c0bc310e86a4e6e3abd3b9f`
+**Producer revisions:** PR #60 row `5f23aebc55658b4b94b0adc37ef06b42c30bf117`;
+pre-review series `38347087c174c3a00ce9a49721a11cc87d20b25e`;
+corrected final series `76c633e8959954948c0bc310e86a4e6e3abd3b9f`
 **Qualification:** partial wakeup-distribution evidence only
 
-The final-script output below is frozen historical evidence from that revision.
-The current strict series contract also requires physical-footprint gauges, so
-this older JSON is not presented as current-input compatibility evidence.
+The final-script output below is frozen historical evidence from the corrected
+final-series revision; the comparison table also retains the earlier rows
+pinned above. The current strict series contract requires physical-footprint
+gauges, so this older JSON is not presented as current-input compatibility
+evidence.
 
 ## Reproducible collector
 

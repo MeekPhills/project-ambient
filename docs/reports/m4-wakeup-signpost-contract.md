@@ -145,11 +145,12 @@ handler was observed nearby.
 
 ### Runtime compatibility smoke
 
-The historical compatibility producer was finalized at PR #63 exact head
-`62bf7bc64a2ce672e0c6a760a529ac3a41549bb8`. That smoke predates the physical-
-footprint fields required by producer revision
-`91fc69c23597c308526fcdd25983d97939a34d4d`; it remains evidence for the PR #63
-query/sanitizer contract only, not for the widened current input shape.
+The historical compatibility smoke was produced at
+`7e6e882eff4abc9a94c50d9663793795dc6de68a`. It predates the physical-footprint
+fields required by producer revision
+`91fc69c23597c308526fcdd25983d97939a34d4d`; it remains compatibility evidence
+only for that PR #63 head's query/sanitizer shape, not for the widened current
+input shape.
 
 On 2026-08-23, the production CLI completed a six-snapshot, one-second-interval
 smoke against a deliberately instrumented Ambient launch. It retrieved exactly
@@ -159,7 +160,8 @@ wakeups with no nearby instrumented callback. The corrected producer bound the
 launch marker to the current process start and used exact first/last snapshot
 anchors; its sampling gaps stayed inside the accepted cadence. Raw NDJSON remained in the child
 pipe, the temporary process series was deleted, and no correlation artifact was
-written to the repository or filesystem. This proves parser/query compatibility only. The short
+written to the repository or filesystem. This establishes parser/query
+compatibility only for the pinned historical producer. The short
 signposts-on window is ineligible for budget, cadence, P95, attribution, or
 qualification claims.
 
