@@ -111,3 +111,7 @@ attached, one minute is not the required P95/endurance matrix, and decoder/GPU,
 frame pacing, pressure/failure behavior, the 1,000-item UI, and the 48-hour soak
 remain incomplete. The next measurement slice should reproduce and attribute
 the wakeup source with public tooling before any optimization or ceiling review.
+
+The follow-up [wakeup-series observation](m4-wakeup-attribution-observation.md)
+adds bounded event timing and records that independent five-minute windows vary
+across both sides of the ceiling without identifying a concrete source.
