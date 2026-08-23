@@ -246,6 +246,51 @@ public enum AmbientRuntimeEvent: Equatable, Sendable {
     case stateStoreChanged(revision: UInt64?)
 }
 
+public enum AmbientWakeupSignpostEvent: CaseIterable, Equatable, Sendable {
+    case lifecycleLaunch
+    case lifecycleWillSleep
+    case lifecycleDidWake
+    case lifecycleScreenLocked
+    case lifecycleScreenUnlocked
+    case displayConfigurationChanged
+    case powerStateChanged
+    case clockOrTimeZoneChanged
+    case stateLocalChanged
+    case stateExternalChanged
+    case rotationBoundaryFired
+
+    public var name: StaticString {
+        switch self {
+        case .lifecycleLaunch: "lifecycle.launch"
+        case .lifecycleWillSleep: "lifecycle.will_sleep"
+        case .lifecycleDidWake: "lifecycle.did_wake"
+        case .lifecycleScreenLocked: "lifecycle.screen_locked"
+        case .lifecycleScreenUnlocked: "lifecycle.screen_unlocked"
+        case .displayConfigurationChanged: "display.configuration_changed"
+        case .powerStateChanged: "power.state_changed"
+        case .clockOrTimeZoneChanged: "clock_or_timezone.changed"
+        case .stateLocalChanged: "state.local_changed"
+        case .stateExternalChanged: "state.external_changed"
+        case .rotationBoundaryFired: "rotation.boundary_fired"
+        }
+    }
+}
+
+private extension AmbientRuntimeEvent {
+    var wakeupSignpostEvent: AmbientWakeupSignpostEvent {
+        switch self {
+        case .willSleep: .lifecycleWillSleep
+        case .didWake: .lifecycleDidWake
+        case .screenLocked: .lifecycleScreenLocked
+        case .screenUnlocked: .lifecycleScreenUnlocked
+        case .displayConfigurationChanged: .displayConfigurationChanged
+        case .powerStateChanged: .powerStateChanged
+        case .clockOrTimeZoneChanged: .clockOrTimeZoneChanged
+        case .stateStoreChanged: .stateExternalChanged
+        }
+    }
+}
+
 public enum AmbientRuntimeNotification {
     public static let stateStoreChanged = Notification.Name("com.projectambient.state-store-changed")
 }
@@ -296,6 +341,7 @@ public final class AmbientRotationCoordinator {
     private let fixedCalendar: Calendar?
     private let cadenceProvider: @MainActor (AmbientState) -> AmbientRotationCadence
     private let now: @MainActor () -> Date
+    private let traceEvent: @MainActor (AmbientWakeupSignpostEvent) -> Void
     private let onChange: @MainActor () -> Void
     private let onError: @MainActor (Error) -> Void
 
@@ -316,6 +362,7 @@ public final class AmbientRotationCoordinator {
             .productionDefault
         },
         now: @escaping @MainActor () -> Date = Date.init,
+        traceEvent: @escaping @MainActor (AmbientWakeupSignpostEvent) -> Void = { _ in },
         onChange: @escaping @MainActor () -> Void = {},
         onError: @escaping @MainActor (Error) -> Void = { _ in }
     ) {
@@ -325,6 +372,7 @@ public final class AmbientRotationCoordinator {
         self.fixedCalendar = calendar
         self.cadenceProvider = cadenceProvider
         self.now = now
+        self.traceEvent = traceEvent
         self.onChange = onChange
         self.onError = onError
     }
@@ -332,6 +380,7 @@ public final class AmbientRotationCoordinator {
     public func start() {
         guard !isStarted else { return }
         isStarted = true
+        traceEvent(.lifecycleLaunch)
         events.start { [weak self] event in
             self?.handle(event)
         }
@@ -353,6 +402,7 @@ public final class AmbientRotationCoordinator {
     /// Call after a user or local control-plane mutation so a changed rule or timed
     /// pause replaces the existing one-shot timer immediately.
     public func stateDidChange() {
+        traceEvent(.stateLocalChanged)
         guard isStarted, !isSleeping else { return }
         let date = now()
         reconcile(at: date, reason: .stateStoreChanged)
@@ -360,6 +410,7 @@ public final class AmbientRotationCoordinator {
     }
 
     private func handle(_ event: AmbientRuntimeEvent) {
+        traceEvent(event.wakeupSignpostEvent)
         guard isStarted else { return }
 
         switch event {
@@ -489,6 +540,7 @@ public final class AmbientRotationCoordinator {
     }
 
     private func timerFired(_ boundary: AmbientRotationBoundary, generation: Int) {
+        traceEvent(.rotationBoundaryFired)
         guard isStarted, !isSleeping, generation == self.generation else { return }
         scheduledAction = nil
         nextBoundary = nil

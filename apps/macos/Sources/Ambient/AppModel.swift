@@ -43,6 +43,7 @@ final class AppModel: ObservableObject {
                         isLowPowerModeEnabled: ProcessInfo.processInfo.isLowPowerModeEnabled
                     )
                 },
+                traceEvent: MacWakeupSignposter.makeSink(),
                 onChange: { [weak self] in
                     self?.refresh(rescheduleRotation: false)
                 },
