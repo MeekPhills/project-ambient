@@ -74,7 +74,7 @@ Requirements: Node.js 20 or newer.
 
 ```bash
 cd services/mcp
-npm install
+npm ci --ignore-scripts
 npm run build
 npm test
 npm run dev:http

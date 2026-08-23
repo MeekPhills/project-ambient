@@ -23,7 +23,7 @@ Native idempotency is persisted by `ambientctl`, so a retry remains side-effect 
 ## Run locally
 
 ```sh
-npm install
+npm ci --ignore-scripts
 npm run build
 AMBIENT_ADAPTER=demo npm start
 ```
@@ -43,6 +43,10 @@ Build once, then adapt `claude-desktop.example.json` with the absolute path to `
 ```sh
 npm run pack:mcpb
 ```
+
+MCPB packaging currently requires Bash on macOS or Linux. Windows users may
+run it under WSL or Git Bash; native Windows `cmd.exe` packaging is not yet
+claimed.
 
 The resulting `.mcpb` is not cryptographically signed. The alpha bundle is published with the GitHub release so local clients can install and inspect it.
 

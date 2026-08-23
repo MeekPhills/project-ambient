@@ -3,7 +3,34 @@ name: Release integrity
 on:
   pull_request:
     paths:
-      - ".github/workflows/release-integrity.yml"
+      - ".github/workflows/**"
+      - ".github/actions/**"
+      - ".gitattributes"
+      - "package-lock.json"
+      - "**/package-lock.json"
+      - "npm-shrinkwrap.json"
+      - "**/npm-shrinkwrap.json"
+      - ".npmrc"
+      - "**/.npmrc"
+      - "**/*.sh"
+      - "**/*.bash"
+      - "**/*.zsh"
+      - "package.json"
+      - "**/package.json"
+      - "**/*.js"
+      - "**/*.jsx"
+      - "**/*.cjs"
+      - "**/*.mjs"
+      - "**/*.ts"
+      - "**/*.cts"
+      - "**/*.mts"
+      - "**/*.tsx"
+      - "Dockerfile"
+      - "**/Dockerfile"
+      - "CLAUDE.md"
+      - "CONTRIBUTING.md"
+      - "docs/reports/m0-issue-17-repository-baseline.md"
+      - "docs/security/**"
       - "distribution/**"
       - "docs/release-checklist.md"
       - "docs/launch-day-runbook.md"
@@ -57,6 +84,15 @@ jobs:
           npm ci --ignore-scripts --dry-run --prefix script/mcpb-tooling
       - name: Check deterministic SBOM generator syntax
         run: node --check script/generate_release_sbom.mjs
+      - name: Validate npm install-script and audit policy
+        run: node script/validate_npm_supply_chain.mjs
+      - name: Reject moderate or higher npm advisories
+        run: |
+          set -o pipefail
+          for workspace in apps/site script/mcpb-tooling services/mcp; do
+            npm --prefix "$workspace" audit --package-lock-only --audit-level=moderate --json |
+              node script/validate_npm_supply_chain.mjs --validate-audit-result "$workspace"
+          done
       - name: Validate platform capability and release-binding contracts
         run: node script/validate_capabilities.mjs
       - name: Validate media-rights and commercial-boundary contracts
@@ -94,8 +130,8 @@ jobs:
             script/mcpb-tooling/package-lock.json
       - name: Install locked JavaScript dependencies
         run: |
-          npm ci --prefix services/mcp
-          npm ci --prefix apps/site
+          npm ci --ignore-scripts --prefix services/mcp
+          npm ci --ignore-scripts --prefix apps/site
       - name: Determine release version
         id: version
         run: echo "value=$(node -p 'require("./services/mcp/package.json").version')" >> "$GITHUB_OUTPUT"

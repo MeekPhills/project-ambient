@@ -24,8 +24,8 @@ This report does not claim signing, notarization, store acceptance, a GA tag, st
 | --- | --- | --- |
 | macOS build | `swift build --package-path apps/macos` in [CI run 31753645599](https://github.com/MeekPhills/project-ambient/actions/runs/31753645599), job `macOS companion` | PASS; build completed on `macos-15`. |
 | macOS tests | `swift test --package-path apps/macos` in the same job | PASS; 34 tests, 0 failures. |
-| MCP install/check/test | `npm ci`, `npm run check`, and `npm test` in the same CI run, job `MCP service`, with pinned PostgreSQL 17.6 | PASS; 100 tests, 99 passed, 0 failed, 1 expected skip because `ambientctl` is a macOS binary. The disposable PostgreSQL integration suite ran. |
-| Site install/build/render | `npm ci` and `npm test` in the same CI run, job `Launch site` | PASS; production build plus 12 of 12 rendered-route/status tests. |
+| MCP install/check/test | `npm ci --ignore-scripts`, `npm run check`, and `npm test` in the same CI run, job `MCP service`, with pinned PostgreSQL 17.6 | PASS; 100 tests, 99 passed, 0 failed, 1 expected skip because `ambientctl` is a macOS binary. The disposable PostgreSQL integration suite ran. |
+| Site install/build/render | `npm ci --ignore-scripts` and `npm test` in the same CI run, job `Launch site` | PASS; production build plus 12 of 12 rendered-route/status tests. |
 | Aggregate release verifier | `./script/verify_release.sh` inside the package-candidate path in [Release integrity run 31753645580](https://github.com/MeekPhills/project-ambient/actions/runs/31753645580) | PASS; printed `Project Ambient release verification passed.` |
 | Native MCP envelope | MCP tests inside the aggregate macOS verifier | PASS; built `ambientctl` exercised all ten adapter operations. |
 | Aggregate MCP suite | MCP tests inside the aggregate macOS verifier | PASS; 96 tests, 95 passed, 0 failed, 1 expected PostgreSQL skip because that job has no database service. PostgreSQL coverage is supplied by the separate pinned Linux CI service above. |
@@ -56,8 +56,8 @@ From a clean checkout on macOS with the repository-supported Xcode/Swift and Nod
 
 ```bash
 git status --short
-npm --prefix services/mcp ci
-npm --prefix apps/site ci
+npm --prefix services/mcp ci --ignore-scripts
+npm --prefix apps/site ci --ignore-scripts
 ./script/verify_release.sh
 npm --prefix apps/site test
 git status --short

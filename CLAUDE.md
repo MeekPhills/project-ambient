@@ -80,8 +80,8 @@ Run the commands that exist on the branch. If a command is unavailable, record t
 For a clean full baseline, install the locked JavaScript dependencies and run the repository aggregate verifier:
 
 ```bash
-npm --prefix services/mcp ci
-npm --prefix apps/site ci
+npm --prefix services/mcp ci --ignore-scripts
+npm --prefix apps/site ci --ignore-scripts
 ./script/verify_release.sh
 ```
 
