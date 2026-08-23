@@ -34,9 +34,11 @@ function safeDelta(after, before, field) {
   return Number(delta);
 }
 
-function summarizeProcessRusageSeries(snapshots, eventLimit = 256) {
+function summarizeProcessRusageSeries(snapshots, eventLimit = 256, expectedSnapshotCount = null) {
   assert.ok(Number.isSafeInteger(eventLimit) && eventLimit >= 1 && eventLimit <= 10_000, "event limit must be an integer from 1 through 10000");
   assert.ok(Array.isArray(snapshots) && snapshots.length >= 2, "at least two snapshots are required");
+  assert.ok(expectedSnapshotCount === null || (Number.isSafeInteger(expectedSnapshotCount) && expectedSnapshotCount >= 2 && expectedSnapshotCount <= 259_201), "expected snapshot count must be null or an integer from 2 through 259201");
+  assert.ok(expectedSnapshotCount === null || snapshots.length === expectedSnapshotCount, `expected ${expectedSnapshotCount} snapshots but received ${snapshots.length}`);
 
   const rows = snapshots.map(parseSnapshot);
   const first = rows[0];
@@ -84,6 +86,7 @@ function summarizeProcessRusageSeries(snapshots, eventLimit = 256) {
   return {
     available: true,
     reason: null,
+    snapshotCount: rows.length,
     elapsedSeconds,
     packageIdleWakeups,
     interruptWakeups,
@@ -116,7 +119,8 @@ function runSelfTest() {
     makeSnapshot({ monotonicNanoseconds: "2000000000", interruptWakeups: "11" }),
     makeSnapshot({ monotonicNanoseconds: "3000000000", packageIdleWakeups: "6", interruptWakeups: "12", diskReadBytes: "164", diskWrittenBytes: "32" }),
   ];
-  const summary = summarizeProcessRusageSeries(rows, 1);
+  const summary = summarizeProcessRusageSeries(rows, 1, 3);
+  assert.equal(summary.snapshotCount, 3);
   assert.equal(summary.elapsedSeconds, 2);
   assert.equal(summary.packageIdleWakeups, 1);
   assert.equal(summary.interruptWakeups, 2);
@@ -129,13 +133,14 @@ function runSelfTest() {
   assert.equal(summary.activityEventsTruncated, true);
 
   assert.throws(() => summarizeProcessRusageSeries([rows[0]]), /at least two snapshots/);
+  assert.throws(() => summarizeProcessRusageSeries(rows, 1, 4), /expected 4 snapshots but received 3/);
   assert.throws(() => summarizeProcessRusageSeries([rows[0], { ...rows[1], processStartAbsoluteTime: "43" }]), /pid identity changed/);
   assert.throws(() => summarizeProcessRusageSeries([rows[0], { ...rows[1], interruptWakeups: "9" }]), /counter regressed/);
   assert.throws(() => summarizeProcessRusageSeries([rows[0], { ...rows[1], packageIdleWakeups: "7", interruptWakeups: "11" }]), /package-idle wakeups exceed/);
   assert.throws(() => summarizeProcessRusageSeries([rows[0], { ...rows[1], extra: "0" }]), /unexpected or missing keys/);
   assert.throws(() => summarizeProcessRusageSeries([rows[0], { ...rows[1], diskReadBytes: "9007199254741092" }]), /Number.MAX_SAFE_INTEGER/);
   assert.throws(() => summarizeProcessRusageSeries([rows[0], { ...rows[1], monotonicNanoseconds: rows[0].monotonicNanoseconds }]), /monotonic time did not advance|elapsed time is invalid/);
-  console.log("process-rusage series self-test: 8 positive/negative cases passed");
+  console.log("process-rusage series self-test: 9 positive/negative cases passed");
 }
 
 async function readStdin() {
@@ -151,8 +156,9 @@ async function main() {
     return;
   }
 
-  assert.ok(process.argv.length >= 2 && process.argv.length <= 3, "usage: summarize_process_rusage_series.mjs [event-limit]");
+  assert.ok(process.argv.length >= 2 && process.argv.length <= 4, "usage: summarize_process_rusage_series.mjs [event-limit] [expected-snapshot-count]");
   const eventLimit = process.argv[2] === undefined ? 256 : Number(process.argv[2]);
+  const expectedSnapshotCount = process.argv[3] === undefined ? null : Number(process.argv[3]);
   const input = (await readStdin()).trim();
   assert.ok(input.length > 0, "snapshot input is empty");
   const snapshots = input.split(/\n+/).map((line, index) => {
@@ -162,7 +168,7 @@ async function main() {
       throw new Error(`snapshot ${index} is invalid JSON: ${error.message}`);
     }
   });
-  process.stdout.write(`${JSON.stringify(summarizeProcessRusageSeries(snapshots, eventLimit))}\n`);
+  process.stdout.write(`${JSON.stringify(summarizeProcessRusageSeries(snapshots, eventLimit, expectedSnapshotCount))}\n`);
 }
 
 main().catch((error) => {
