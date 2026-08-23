@@ -22,14 +22,21 @@ elapsed time with `CLOCK_MONOTONIC_RAW`. It also bound both snapshots to the
 same process-start token and treated 64-bit counters as decimal strings until
 validated deltas were safely representable.
 
-The reported wakeup rate uses the process's interrupt-wakeup delta. Apple's
+At the pinned producer revision, the harness conservatively summed package-idle
+and interrupt-wakeup deltas and did not validate their subset relationship. The
+captured package-idle delta was zero, so its retained total and rate are
+numerically identical under the corrected accounting introduced by
+`de6021c3b7e37bd06a3a44bf886543420bfc0e21`.
+
+From that correction onward, the reported wakeup rate uses only the process's
+interrupt-wakeup delta. Apple's
 [XNU scheduler accounting](https://github.com/apple-oss-distributions/xnu/blob/f6217f891ac0bb64f3d375211650a4c1ff8ca1ea/osfmk/kern/sched_prim.c#L897-L902)
 credits every qualifying wakeup to the interrupt ledger and conditionally also
 credits the platform-idle ledger; the
 [rusage mapping](https://github.com/apple-oss-distributions/xnu/blob/f6217f891ac0bb64f3d375211650a4c1ff8ca1ea/osfmk/kern/bsd_kern.c#L1257-L1260)
 exposes those as interrupt and package-idle counters. Package-idle wakeups are
-therefore a diagnostic subset, so the harness validates that relationship and
-does not add the counters.
+therefore a diagnostic subset, so corrected and current harnesses validate that
+relationship and do not add the counters.
 Disk activity is the process-attributable read/write byte delta over the same
 interval. The helper needs no elevation, private API, identifier collection, or
 persistent service. When the compiler or either snapshot is unavailable, the
