@@ -1,8 +1,13 @@
 # Base-M4 public media capability boundary
 
-**Issue:** [#28](https://github.com/MeekPhills/project-ambient/issues/28)  
-**Captured:** 2026-08-23T13:36:35Z  
-**Producer revision:** `08c6b09845a218e02b6e8f6f10cba368a203dc59`  
+**Issue:** [#28](https://github.com/MeekPhills/project-ambient/issues/28)
+
+**Captured:** 2026-08-23T13:36:35Z
+
+**Producer revision:** `08c6b09845a218e02b6e8f6f10cba368a203dc59`
+
+**Validation revision:** `0c1ba07dd5bb3c2a98f3bab36c726a6395126dad`
+
 **Qualification:** host capability only — no runtime measurement, M4 certification, or tracker credit
 
 ## Method
@@ -18,8 +23,9 @@ It did not inspect Ambient or any other process.
 The probe emits only closed booleans and explicit null runtime fields. It emits
 no process identifier, path, media metadata, device name, registry identifier,
 hardware serial, host identity, location, credential, or user content. Its
-fail-closed validator enforces the exact output shape and source boundary, and
-the release aggregate compiles and runs the probe on macOS.
+fail-closed validator at the validation revision above enforces the canonical
+output encoding and exact reviewed source digest, and the release aggregate
+compiles and runs the probe on macOS.
 
 ## Exact sanitized output
 
