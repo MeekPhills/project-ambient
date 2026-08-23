@@ -6,9 +6,9 @@
 
 **Repository:** https://github.com/MeekPhills/project-ambient
 
-**Parent baseline for this handoff:** `9843e13df883f6b8e48570d1908bf53d9c46cf03` on `main`, including merged PR #57.
+**Parent baseline for this handoff:** `0d6b8a1ad3cbccfa934e80c77f27c3b19f544110` on `main`, including merged PR #58.
 
-**Working branch:** `feat/28-static-observation-contract` in `~/Developer/project-ambient`; the protected checkout is untouched. The historically specified #37 isolated worktree is not currently present or registered, so do not recreate or reconstruct it; its remaining product evidence is blocked pending an owner-directed safe workspace decision.
+**Working branch:** `feat/28-display-topology-observation` in `~/Developer/project-ambient`; the protected checkout is untouched. The historically specified #37 isolated worktree is not currently present or registered, so do not recreate or reconstruct it; its remaining product evidence is blocked pending an owner-directed safe workspace decision.
 
 **Current milestone:** M1 — Guided Static Foundation
 
@@ -37,7 +37,7 @@ Issue #51 merged through PR #53 as `cdf9074`: imported assets can carry the acce
 
 ## Base-M4 static-envelope checkpoint (2026-08-22)
 
-PR #55 merged as `a19bab4` from `feat/28-static-envelope-smoke`, adding a public-tool harness at `script/measure_m4_static_smoke.sh` and a deliberately non-qualifying report at `docs/reports/m4-base-m4-static-envelope-smoke.md`. PR #57 merged as `9843e13`, adding the versioned base-M4 resource-budget schema, fixture, fail-closed validator, and release/CI wiring. On the Apple M4 / 16 GB reference host, a 60-second settled-static capture observed P95 CPU 0.0%, P95 RSS 7.95 MiB, and zero open network endpoints for the sampled Ambient process. Wakeups, decoder/GPU activity, frame pacing, storage churn, 1,000-item UI, required dual-display fixture, pressure/failure behavior, and the 48-72 hour soak are explicitly **unmeasured**. This is neither M4 certification nor tracker credit; issue #28 remains open.
+PR #55 merged as `a19bab4` from `feat/28-static-envelope-smoke`, adding a public-tool harness at `script/measure_m4_static_smoke.sh` and a deliberately non-qualifying report at `docs/reports/m4-base-m4-static-envelope-smoke.md`. PR #57 merged as `9843e13`, adding the versioned base-M4 resource-budget schema, fixture, fail-closed validator, and release/CI wiring. PR #58 merged as `0d6b8a1`, binding the smoke output to that fixture and emitting explicit partial coverage. On the Apple M4 / 16 GB reference host, a 60-second settled-static capture observed P95 CPU 0.0%, P95 RSS 7.95 MiB, and zero open network endpoints. A later sanitized topology observation found only one online 1920×1080@120 Hz display, so the required dual-display fixture was not present. Wakeups, decoder/GPU activity, frame pacing, storage churn, pressure/failure behavior, and the 48-72 hour soak remain explicitly **unmeasured**. This is neither M4 certification nor tracker credit; issue #28 remains open.
 
 ## Next exact action
 

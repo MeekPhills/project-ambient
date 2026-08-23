@@ -4,7 +4,15 @@
   "claimScope": "contract_fixture",
   "qualificationStatus": "partial_evidence",
   "referenceMachine": { "chip": "Apple M4", "memoryGiB": 16, "storageGiB": 256 },
-  "displayFixture": { "required": true, "hdr": "off" },
+  "displayFixture": {
+    "required": true,
+    "requiredDisplayCount": 2,
+    "hdr": "off",
+    "displays": [
+      { "logicalResolution": "3008x1692", "refreshHz": 240 },
+      { "logicalResolution": "2560x1440", "refreshHz": 60 }
+    ]
+  },
   "budgets": {
     "staticSettled": { "cpuPercentP95Max": 0.2, "wakeupsPerMinuteMax": 2, "rssMiBMax": 40, "continuousRenderer": false, "decoder": false, "network": false },
     "settingsCatalog": { "items": 1000, "rssMiBP95Max": 180 },
