@@ -1,14 +1,14 @@
 # Current Handoff
 
-**Updated:** 2026-08-22
+**Updated:** 2026-08-23
 
-**Program state:** M0 is complete at 8/8. The canonical tracker remains publicly verified at 20/100 on schema v3; no M1 or M4 credit is awarded. Issue #37 remains open for its outstanding evidence, while issue #28 has one merged but deliberately partial base-M4 static-envelope evidence slice.
+**Program state:** M0 is complete at 8/8. The canonical tracker remains publicly verified at 20/100 on schema v3; no M1 or M4 credit is awarded. Issue #37 remains open for its outstanding evidence, while issue #28 has several merged but deliberately partial base-M4 static-envelope evidence slices and a current public-API process-resource observation.
 
 **Repository:** https://github.com/MeekPhills/project-ambient
 
-**Parent baseline for this handoff:** `0d6b8a1ad3cbccfa934e80c77f27c3b19f544110` on `main`, including merged PR #58.
+**Parent baseline for this handoff:** `e0c55a572d9a0ab61622f25a088519d78600cf24` on `main`, including merged PR #59.
 
-**Working branch:** `feat/28-display-topology-observation` in `~/Developer/project-ambient`; the protected checkout is untouched. The historically specified #37 isolated worktree is not currently present or registered, so do not recreate or reconstruct it; its remaining product evidence is blocked pending an owner-directed safe workspace decision.
+**Working branch:** `feat/28-process-rusage-probe` in `~/Developer/project-ambient`; the protected checkout is untouched. The historically specified #37 isolated worktree is not currently present or registered, so do not recreate or reconstruct it; its remaining product evidence is blocked pending an owner-directed safe workspace decision.
 
 **Current milestone:** M1 — Guided Static Foundation
 
@@ -35,13 +35,13 @@ The BetterDisplay-class display-management expansion's WS-DC-001 governance is m
 
 Issue #51 merged through PR #53 as `cdf9074`: imported assets can carry the accepted rights vocabulary's private-reference, public-domain, or attributed-license basis; `photo-manifest.tsv` sidecars map filename, creator, license, and source URL; unmatched rows are actionable import issues; attribution is visible in the macOS UI and returned in `ambientctl` JSON. Legacy assets and absent rights records remain compatible and fail closed. No tracker credit changes.
 
-## Base-M4 static-envelope checkpoint (2026-08-22)
+## Base-M4 static-envelope checkpoint (2026-08-22 through 2026-08-23)
 
-PR #55 merged as `a19bab4` from `feat/28-static-envelope-smoke`, adding a public-tool harness at `script/measure_m4_static_smoke.sh` and a deliberately non-qualifying report at `docs/reports/m4-base-m4-static-envelope-smoke.md`. PR #57 merged as `9843e13`, adding the versioned base-M4 resource-budget schema, fixture, fail-closed validator, and release/CI wiring. PR #58 merged as `0d6b8a1`, binding the smoke output to that fixture and emitting explicit partial coverage. On the Apple M4 / 16 GB reference host, a 60-second settled-static capture observed P95 CPU 0.0%, P95 RSS 7.95 MiB, and zero open network endpoints. A later sanitized topology observation found only one online 1920×1080@120 Hz display, so the required dual-display fixture was not present. Wakeups, decoder/GPU activity, frame pacing, storage churn, pressure/failure behavior, and the 48-72 hour soak remain explicitly **unmeasured**. This is neither M4 certification nor tracker credit; issue #28 remains open.
+PR #55 merged as `a19bab4` from `feat/28-static-envelope-smoke`, adding a public-tool harness at `script/measure_m4_static_smoke.sh` and a deliberately non-qualifying report at `docs/reports/m4-base-m4-static-envelope-smoke.md`. PR #57 merged as `9843e13`, adding the versioned base-M4 resource-budget schema, fixture, fail-closed validator, and release/CI wiring. PR #58 merged as `0d6b8a1`, binding the smoke output to that fixture and emitting explicit partial coverage. PR #59 merged as `e0c55a5`, correcting the exact two-display fixture and adding sanitized topology capture; the observed host exposed only one online 1920×1080@120 Hz display, so the fixture was unmatched. The current branch adds a no-elevation public `proc_pid_rusage` helper and records a final-code 60-second observation: P95 CPU 0.0%, P95 RSS 15.12 MiB, zero network endpoints, zero package-idle wakeups, three interrupt wakeups (2.9997/min, above the 2/min ceiling), and zero process-attributable disk I/O. Decoder/GPU activity, frame pacing, pressure/failure behavior, and the 48-hour soak remain explicitly **unmeasured**. This is neither M4 certification nor tracker credit; issue #28 remains open.
 
 ## Next exact action
 
-PR #44 and PR #48 delivered the first two #37 slices; PR #49 delivered import integrity and restore coverage; PR #50 delivered screen-lock-only rotation; PR #54 added an isolated clean-account smoke. Remaining #37 criteria are a real clean-account GUI smoke and the full base-M4 benchmark/dual-display/soak evidence. For #28, extend the merged static-envelope slice with measured wakeup, decoder/GPU, display-topology, pressure, and long-soak collection before requesting any M4 qualification. No continuous renderer or model service; issue #37 remains open until every acceptance criterion has evidence.
+PR #44 and PR #48 delivered the first two #37 slices; PR #49 delivered import integrity and restore coverage; PR #50 delivered screen-lock-only rotation; PR #54 added an isolated clean-account smoke. Remaining #37 criteria are a real clean-account GUI smoke and the full base-M4 benchmark/dual-display/soak evidence. For #28, merge the public process-resource probe only after exact-head review and green CI, then reproduce and attribute the observed wakeup-ceiling miss with public tooling before moving to decoder/GPU, frame pacing, pressure, and long-soak collection. No continuous renderer or model service; issue #37 remains open until every acceptance criterion has evidence.
 
 ## Read in this order
 
