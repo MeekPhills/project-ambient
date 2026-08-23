@@ -1,0 +1,135 @@
+{
+  "schemaVersion": 1,
+  "issue": "https://github.com/MeekPhills/project-ambient/issues/36",
+  "scope": "locked-npm-workspaces",
+  "installPolicy": {
+    "default": "deny-lifecycle-scripts",
+    "mechanism": "workspace-npmrc-and-explicit-cli-flag",
+    "npmrcBytes": "ignore-scripts=true\n",
+    "exceptions": [],
+    "workspaces": [
+      {
+        "path": "apps/site",
+        "lockfileSHA256": "d83748f2a50c99c2a6cb1aaa2b3fcc282d5180d6624592560bb2e145e02aa143",
+        "installScriptPackages": [
+          {
+            "path": "node_modules/@esbuild-kit/core-utils/node_modules/esbuild",
+            "version": "0.25.12",
+            "dev": true,
+            "optional": false,
+            "disposition": "disabled-by-default-no-exception"
+          },
+          {
+            "path": "node_modules/drizzle-kit/node_modules/esbuild",
+            "version": "0.25.12",
+            "dev": true,
+            "optional": false,
+            "disposition": "disabled-by-default-no-exception"
+          },
+          {
+            "path": "node_modules/esbuild",
+            "version": "0.28.1",
+            "dev": true,
+            "optional": false,
+            "disposition": "disabled-by-default-no-exception"
+          },
+          {
+            "path": "node_modules/fsevents",
+            "version": "2.3.3",
+            "dev": true,
+            "optional": true,
+            "disposition": "disabled-by-default-no-exception"
+          },
+          {
+            "path": "node_modules/workerd",
+            "version": "1.20260820.1",
+            "dev": true,
+            "optional": false,
+            "disposition": "disabled-by-default-no-exception"
+          }
+        ]
+      },
+      {
+        "path": "script/mcpb-tooling",
+        "lockfileSHA256": "105505cebdc9edcb85d53320c2bbb902d87cb6779cc78bac2006c39050b90cf1",
+        "installScriptPackages": []
+      },
+      {
+        "path": "services/mcp",
+        "lockfileSHA256": "038745ced3201a9ce91c832aaf111ebb0f3008258c4e6c5a1ce9b073a616e21c",
+        "installScriptPackages": [
+          {
+            "path": "node_modules/esbuild",
+            "version": "0.28.2",
+            "dev": true,
+            "optional": false,
+            "disposition": "disabled-by-default-no-exception"
+          },
+          {
+            "path": "node_modules/fsevents",
+            "version": "2.3.3",
+            "dev": true,
+            "optional": true,
+            "disposition": "disabled-by-default-no-exception"
+          }
+        ]
+      }
+    ]
+  },
+  "auditPolicy": {
+    "command": "npm audit --package-lock-only --audit-level=moderate --json",
+    "failAtOrAbove": "moderate",
+    "capturedAt": "2026-08-23",
+    "workspaces": [
+      {
+        "path": "apps/site",
+        "counts": {
+          "info": 0,
+          "low": 1,
+          "moderate": 0,
+          "high": 0,
+          "critical": 0,
+          "total": 1
+        }
+      },
+      {
+        "path": "script/mcpb-tooling",
+        "counts": {
+          "info": 0,
+          "low": 0,
+          "moderate": 0,
+          "high": 0,
+          "critical": 0,
+          "total": 0
+        }
+      },
+      {
+        "path": "services/mcp",
+        "counts": {
+          "info": 0,
+          "low": 0,
+          "moderate": 0,
+          "high": 0,
+          "critical": 0,
+          "total": 0
+        }
+      }
+    ],
+    "residualFindings": [
+      {
+        "advisory": "GHSA-4x5r-pxfx-6jf8",
+        "package": "@babel/core",
+        "nodePath": "node_modules/@babel/core",
+        "severity": "low",
+        "workspace": "apps/site",
+        "disposition": "tracked-development-only-major-fix-deferred",
+        "reason": "The affected source-map parser is reachable only from the local development/build toolchain; production dependencies omit it. The first patched release is Babel 8, so this low-severity major migration remains visible instead of being forced into the release-security slice."
+      }
+    ]
+  },
+  "tracker": {
+    "schema": 3,
+    "score": "20/100",
+    "creditChange": 0
+  }
+}

@@ -11,7 +11,7 @@ Drizzle support.
 ## Quick Start
 
 ```bash
-npm install
+npm ci --ignore-scripts
 npm run dev
 npm run build
 ```

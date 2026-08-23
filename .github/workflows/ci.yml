@@ -48,7 +48,7 @@ jobs:
           node-version: 22
           cache: npm
           cache-dependency-path: services/mcp/package-lock.json
-      - run: npm ci
+      - run: npm ci --ignore-scripts
       - run: npm run check
       - run: npm test
 
@@ -65,7 +65,7 @@ jobs:
           node-version: 22
           cache: npm
           cache-dependency-path: apps/site/package-lock.json
-      - run: npm ci
+      - run: npm ci --ignore-scripts
       - run: npm test
 
   secret-scan:

@@ -21,6 +21,7 @@ run() {
 run swift build "${SWIFT_FLAGS[@]}"
 run swift test "${SWIFT_FLAGS[@]}"
 run node "$ROOT_DIR/script/validate_capabilities.mjs"
+run node "$ROOT_DIR/script/validate_npm_supply_chain.mjs"
 run node "$ROOT_DIR/script/validate_rights.mjs"
 run node "$ROOT_DIR/script/validate_aerial_parity.mjs"
 run node "$ROOT_DIR/script/validate_display_control.mjs"
@@ -113,14 +114,14 @@ if [[ -d "$ROOT_DIR/services/mcp/node_modules" ]]; then
   run npm --prefix "$ROOT_DIR/services/mcp" test
   run npm --prefix "$ROOT_DIR/services/mcp" run build
 else
-  printf '\nMCP dependencies are not installed; run npm ci in services/mcp first.\n' >&2
+  printf '\nMCP dependencies are not installed; run npm ci --ignore-scripts in services/mcp first.\n' >&2
   exit 1
 fi
 
 if [[ -d "$ROOT_DIR/apps/site/node_modules" ]]; then
   run npm --prefix "$ROOT_DIR/apps/site" run build
 else
-  printf '\nSite dependencies are not installed; run npm ci in apps/site first.\n' >&2
+  printf '\nSite dependencies are not installed; run npm ci --ignore-scripts in apps/site first.\n' >&2
   exit 1
 fi
 

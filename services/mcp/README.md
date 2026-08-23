@@ -23,7 +23,7 @@ Native idempotency is persisted by `ambientctl`, so a retry remains side-effect 
 ## Run locally
 
 ```sh
-npm install
+npm ci --ignore-scripts
 npm run build
 AMBIENT_ADAPTER=demo npm start
 ```

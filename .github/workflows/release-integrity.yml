@@ -57,6 +57,13 @@ jobs:
           npm ci --ignore-scripts --dry-run --prefix script/mcpb-tooling
       - name: Check deterministic SBOM generator syntax
         run: node --check script/generate_release_sbom.mjs
+      - name: Validate npm install-script and audit policy
+        run: node script/validate_npm_supply_chain.mjs
+      - name: Reject moderate or higher npm advisories
+        run: |
+          npm --prefix apps/site audit --package-lock-only --audit-level=moderate
+          npm --prefix services/mcp audit --package-lock-only --audit-level=moderate
+          npm --prefix script/mcpb-tooling audit --package-lock-only --audit-level=moderate
       - name: Validate platform capability and release-binding contracts
         run: node script/validate_capabilities.mjs
       - name: Validate media-rights and commercial-boundary contracts
@@ -94,8 +101,8 @@ jobs:
             script/mcpb-tooling/package-lock.json
       - name: Install locked JavaScript dependencies
         run: |
-          npm ci --prefix services/mcp
-          npm ci --prefix apps/site
+          npm ci --ignore-scripts --prefix services/mcp
+          npm ci --ignore-scripts --prefix apps/site
       - name: Determine release version
         id: version
         run: echo "value=$(node -p 'require("./services/mcp/package.json").version')" >> "$GITHUB_OUTPUT"
