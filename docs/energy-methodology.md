@@ -42,6 +42,17 @@ it does not replace a P95 ceiling. Missing, malformed, interrupted, identity-
 changed, or fixture-mismatched samples make that measure unqualified rather
 than permitting extrapolation from a shorter window.
 
+Hardware capability is not runtime activity. A public report that HEVC hardware
+decode is supported does not prove that a decoder session was created, that a
+particular session is hardware-backed, or that resources remain available for
+a particular profile, level, resolution, frame rate, HDR mode, or rendition.
+Likewise, discovering a Metal device does not measure
+GPU work, utilization, frame pacing, or downstream compositor activity. Keep
+decoder and GPU coverage `unmeasured` until an app-owned playback pipeline can
+count its own decompression sessions and command submissions, and until the
+required runtime fixture is observed. Never infer those metrics from device
+availability or from one logical `AVPlayer` instance.
+
 ## Alpha budgets
 
 - User-paused state: no media decoding and no repeating sub-minute poll.
