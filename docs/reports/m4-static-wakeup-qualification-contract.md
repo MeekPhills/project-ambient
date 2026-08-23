@@ -141,13 +141,36 @@ The scenario is also fixed:
 
 The fixed non-personal still and its reviewed digest do not yet exist in the
 repository. They are prerequisites for evidence collection; arbitrary or
-personal media cannot substitute for them.
+personal media cannot substitute for them. Before the still is added or frozen
+into a collection-ready plan, the owner must approve its delivery class and
+rights disposition, and the repository must bind its provenance, actual
+rightsholder, license, immutable asset digest, and complete rights manifest.
 
-## Automated checks and owner attestation
+## Automated preflight, checks, and owner attestation
 
-The future collector and public-API preflight must automate every fact that can
-be checked safely and deterministically. Owner attestation is limited to facts
-for which this contract has no reviewed, non-identifying public probe.
+The bounded automated-preflight contract now exists at
+`schemas/resource-budgets/v1/static-wakeup-preflight.schema.json`, with a native
+evaluator in `script/macos_static_wakeup_preflight.m` and fail-closed validation
+in `script/validate_m4_static_wakeup_preflight.mjs`. It emits one canonical,
+closed JSON line containing only the exact plan digest, candidate and macOS
+bindings when available, twelve fixed booleans, a stop/pass state, and the six
+remaining owner attestations. Under the active null-still plan, the schema and
+wire validator accept only the current precheck stop; checked-stop and pass
+definitions remain inactive synthetic evaluator cases. A future `pass` means
+only that automated preflight checks passed; it is not collection authority,
+conformance, evidence, or a coverage/credit change.
+
+The active plan still has a null fixed-still digest. The production evaluator
+therefore returns `plan-not-collection-ready` before invoking its host-fact
+callback. The callback is also fail-closed and unavailable in this slice, so a
+future collection-ready revision still requires a separately reviewed public
+host adapter. Synthetic facts are compiled only for the native self-test; no
+production flag can inject them, and CI never invokes a live host probe.
+
+The future collector and collection-ready public host adapter must automate
+every fact that can be checked safely and deterministically. Owner attestation
+is limited to facts for which this contract has no reviewed, non-identifying
+public probe.
 
 | Requirement | Enforcement before a result is eligible |
 | --- | --- |
@@ -169,8 +192,9 @@ verified, collection stops incomplete.
 
 ## Tooling and privacy boundary
 
-The strict collector and purpose-built preflight are later prerequisites. They
-must use documented public APIs and fixed protocol constants: callers may not
+The strict collector and collection-ready host adapter remain later
+prerequisites. They must use documented public APIs and fixed protocol
+constants: callers may not
 change the warm-up, duration, cadence, repeat count, percentile method, rank,
 or ceiling. They must not use private Apple SPI, elevation, a privileged
 helper, EDID or I/O Registry inspection, a profiler, System Trace, unified-log
@@ -216,17 +240,29 @@ result is unmeasured; the separate synthetic partial result exercises retained
 global-proof requirements. The command accepts no result path, runs no host
 probe, and collects no evidence.
 
+`node script/validate_m4_static_wakeup_preflight.mjs` pins the active plan and
+native evaluator, byte-pins the schema, and runs current/future synthetic cases
+through strict Draft 2020-12 validation. It exercises 15 pass/stop cases and
+rejects 75 claim, privacy, framing, schema, source, and semantic tamper cases.
+The Darwin release gate compiles both production and test configurations,
+validates the real current-plan stopped output and argument rejection, and
+proves that the active null-still plan invokes zero host callbacks. Neither
+validator runs a live host preflight or creates evidence.
+
 ## Prerequisites and next action
 
-Before any qualifying collection begins, a separate reviewed slice must add:
+Before any qualifying collection begins, separate reviewed slices must add:
 
 - a strict collector/orchestrator that enforces this fixed five-trial protocol,
   uses absolute monotonic deadlines, retains raw rows only temporarily, and
   emits a closed sanitized result;
-- a purpose-built public-API preflight for candidate identity, native
-  architecture, prohibited-argument absence, non-identifying machine facts,
-  and exact display topology; and
-- the fixed non-personal SDR still plus its immutable reviewed digest.
+- the collection-ready public host adapter behind the closed preflight boundary
+  for candidate identity, native architecture, prohibited-argument absence,
+  non-identifying machine facts, persisted Ambient state, and exact display
+  topology; and
+- an owner-approved rights disposition for the fixed non-personal SDR still,
+  followed by its provenance/rightsholder/license manifest and immutable
+  reviewed asset digest.
 
 Those tools must be synthetically tested against timing, arithmetic, identity,
 fixture, privacy, and tamper failures before they collect host evidence. Until

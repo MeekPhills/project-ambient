@@ -1,0 +1,352 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://project-ambient.meekphillies.chatgpt.site/schemas/resource-budgets/v1/static-wakeup-preflight.schema.json",
+  "title": "Project Ambient settled-static wakeup automated preflight",
+  "oneOf": [
+    { "$ref": "#/$defs/currentPlanStop" }
+  ],
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^(?!0{64}$)[a-f0-9]{64}$"
+    },
+    "revision": {
+      "type": "string",
+      "pattern": "^(?!0{40}$)[a-f0-9]{40}$"
+    },
+    "candidate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "version", "sourceRevision", "releaseManifestSHA256",
+        "macosArchiveSHA256", "executableSHA256", "architecture",
+        "buildConfiguration", "artifactKind", "cleanSource"
+      ],
+      "properties": {
+        "version": {
+          "type": "string",
+          "pattern": "^[0-9]{1,5}[.][0-9]{1,5}[.][0-9]{1,5}$"
+        },
+        "sourceRevision": { "$ref": "#/$defs/revision" },
+        "releaseManifestSHA256": { "$ref": "#/$defs/sha256" },
+        "macosArchiveSHA256": { "$ref": "#/$defs/sha256" },
+        "executableSHA256": { "$ref": "#/$defs/sha256" },
+        "architecture": { "const": "arm64" },
+        "buildConfiguration": { "const": "release" },
+        "artifactKind": {
+          "enum": ["unsigned-candidate", "signed-notarized-candidate"]
+        },
+        "cleanSource": { "const": true }
+      }
+    },
+    "operatingSystem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["version", "build"],
+      "properties": {
+        "version": {
+          "type": "string",
+          "pattern": "^[0-9]{1,2}(?:[.][0-9]{1,2}){1,2}$"
+        },
+        "build": {
+          "type": "string",
+          "pattern": "^[0-9]{2}[A-Z][0-9]{1,4}[a-z]?$"
+        }
+      }
+    },
+    "checks": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "planCollectionReady", "candidateArtifactsMatch",
+        "runningExecutableMatches", "nativeArm64",
+        "prohibitedArgumentsAbsent", "freshProcessIdentity",
+        "publicMachineFactsMatch", "acPower", "lowPowerModeOff",
+        "thermalNominal", "persistedAmbientSubsetMatches",
+        "displayFixtureMatches"
+      ],
+      "properties": {
+        "planCollectionReady": { "type": "boolean" },
+        "candidateArtifactsMatch": { "type": "boolean" },
+        "runningExecutableMatches": { "type": "boolean" },
+        "nativeArm64": { "type": "boolean" },
+        "prohibitedArgumentsAbsent": { "type": "boolean" },
+        "freshProcessIdentity": { "type": "boolean" },
+        "publicMachineFactsMatch": { "type": "boolean" },
+        "acPower": { "type": "boolean" },
+        "lowPowerModeOff": { "type": "boolean" },
+        "thermalNominal": { "type": "boolean" },
+        "persistedAmbientSubsetMatches": { "type": "boolean" },
+        "displayFixtureMatches": { "type": "boolean" }
+      }
+    },
+    "result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schemaVersion", "contractId", "artifactKind", "claimScope",
+        "producerRevision", "qualificationPlanSHA256", "candidate",
+        "operatingSystem", "checks", "status", "stopReason",
+        "remainingOwnerAttestations"
+      ],
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "contractId": {
+          "const": "base-m4-static-settled-hidden-wakeups-preflight-v1"
+        },
+        "artifactKind": { "const": "automated-preflight-result" },
+        "claimScope": { "const": "automated-preflight-only" },
+        "producerRevision": { "$ref": "#/$defs/revision" },
+        "qualificationPlanSHA256": {
+          "const": "c071f4cd6032d4d961853df8aa3820365d31dd5c369c19edcd56e182d58c0069"
+        },
+        "candidate": {
+          "oneOf": [
+            { "type": "null" },
+            { "$ref": "#/$defs/candidate" }
+          ]
+        },
+        "operatingSystem": {
+          "oneOf": [
+            { "type": "null" },
+            { "$ref": "#/$defs/operatingSystem" }
+          ]
+        },
+        "checks": { "$ref": "#/$defs/checks" },
+        "status": { "enum": ["pass", "stop"] },
+        "stopReason": {
+          "oneOf": [
+            { "type": "null" },
+            {
+              "enum": [
+                "plan-not-collection-ready", "plan-binding-mismatch",
+                "candidate-artifacts-mismatch",
+                "running-executable-mismatch", "non-native-architecture",
+                "prohibited-arguments-present", "process-identity-mismatch",
+                "public-machine-facts-mismatch", "ac-power-required",
+                "low-power-mode-enabled", "thermal-state-not-nominal",
+                "persisted-state-mismatch", "display-fixture-mismatch",
+                "public-fact-unavailable"
+              ]
+            }
+          ]
+        },
+        "remainingOwnerAttestations": {
+          "const": [
+            "factory-base-machine-configuration", "hdr-off",
+            "fixed-still-applied-to-both-displays",
+            "ambient-windows-hidden", "no-user-interaction-or-transition",
+            "no-competing-controller-or-diagnostic"
+          ]
+        }
+      }
+    },
+    "currentPlanStop": {
+      "allOf": [
+        { "$ref": "#/$defs/result" },
+        {
+          "type": "object",
+          "properties": {
+            "candidate": { "type": "null" },
+            "operatingSystem": { "type": "null" },
+            "checks": {
+              "type": "object",
+              "properties": {
+                "planCollectionReady": { "const": false },
+                "candidateArtifactsMatch": { "const": false },
+                "runningExecutableMatches": { "const": false },
+                "nativeArm64": { "const": false },
+                "prohibitedArgumentsAbsent": { "const": false },
+                "freshProcessIdentity": { "const": false },
+                "publicMachineFactsMatch": { "const": false },
+                "acPower": { "const": false },
+                "lowPowerModeOff": { "const": false },
+                "thermalNominal": { "const": false },
+                "persistedAmbientSubsetMatches": { "const": false },
+                "displayFixtureMatches": { "const": false }
+              }
+            },
+            "status": { "const": "stop" },
+            "stopReason": {
+              "enum": [
+                "plan-not-collection-ready", "plan-binding-mismatch"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "hostFactUnavailable": {
+      "allOf": [
+        { "$ref": "#/$defs/result" },
+        {
+          "type": "object",
+          "properties": {
+            "candidate": { "type": "null" },
+            "operatingSystem": { "type": "null" },
+            "checks": {
+              "type": "object",
+              "properties": {
+                "planCollectionReady": { "const": true },
+                "candidateArtifactsMatch": { "const": false },
+                "runningExecutableMatches": { "const": false },
+                "nativeArm64": { "const": false },
+                "prohibitedArgumentsAbsent": { "const": false },
+                "freshProcessIdentity": { "const": false },
+                "publicMachineFactsMatch": { "const": false },
+                "acPower": { "const": false },
+                "lowPowerModeOff": { "const": false },
+                "thermalNominal": { "const": false },
+                "persistedAmbientSubsetMatches": { "const": false },
+                "displayFixtureMatches": { "const": false }
+              }
+            },
+            "status": { "const": "stop" },
+            "stopReason": { "const": "public-fact-unavailable" }
+          }
+        }
+      ]
+    },
+    "checkedStop": {
+      "allOf": [
+        { "$ref": "#/$defs/result" },
+        {
+          "type": "object",
+          "properties": {
+            "candidate": { "$ref": "#/$defs/candidate" },
+            "operatingSystem": { "$ref": "#/$defs/operatingSystem" },
+            "checks": {
+              "type": "object",
+              "properties": {
+                "planCollectionReady": { "const": true }
+              }
+            },
+            "status": { "const": "stop" },
+            "stopReason": {
+              "enum": [
+                "candidate-artifacts-mismatch", "running-executable-mismatch",
+                "non-native-architecture",
+                "prohibited-arguments-present", "process-identity-mismatch",
+                "public-machine-facts-mismatch", "ac-power-required",
+                "low-power-mode-enabled", "thermal-state-not-nominal",
+                "persisted-state-mismatch", "display-fixture-mismatch"
+              ]
+            }
+          }
+        },
+        {
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "checks": { "type": "object", "properties": { "candidateArtifactsMatch": { "const": false } } },
+                "stopReason": { "const": "candidate-artifacts-mismatch" }
+              }
+            },
+            {
+              "type": "object",
+              "properties": {
+                "checks": { "type": "object", "properties": { "candidateArtifactsMatch": { "const": true }, "runningExecutableMatches": { "const": false } } },
+                "stopReason": { "const": "running-executable-mismatch" }
+              }
+            },
+            {
+              "type": "object",
+              "properties": {
+                "checks": { "type": "object", "properties": { "candidateArtifactsMatch": { "const": true }, "runningExecutableMatches": { "const": true }, "nativeArm64": { "const": false } } },
+                "stopReason": { "const": "non-native-architecture" }
+              }
+            },
+            {
+              "type": "object",
+              "properties": {
+                "checks": { "type": "object", "properties": { "candidateArtifactsMatch": { "const": true }, "runningExecutableMatches": { "const": true }, "nativeArm64": { "const": true }, "prohibitedArgumentsAbsent": { "const": false } } },
+                "stopReason": { "const": "prohibited-arguments-present" }
+              }
+            },
+            {
+              "type": "object",
+              "properties": {
+                "checks": { "type": "object", "properties": { "candidateArtifactsMatch": { "const": true }, "runningExecutableMatches": { "const": true }, "nativeArm64": { "const": true }, "prohibitedArgumentsAbsent": { "const": true }, "freshProcessIdentity": { "const": false } } },
+                "stopReason": { "const": "process-identity-mismatch" }
+              }
+            },
+            {
+              "type": "object",
+              "properties": {
+                "checks": { "type": "object", "properties": { "candidateArtifactsMatch": { "const": true }, "runningExecutableMatches": { "const": true }, "nativeArm64": { "const": true }, "prohibitedArgumentsAbsent": { "const": true }, "freshProcessIdentity": { "const": true }, "publicMachineFactsMatch": { "const": false } } },
+                "stopReason": { "const": "public-machine-facts-mismatch" }
+              }
+            },
+            {
+              "type": "object",
+              "properties": {
+                "checks": { "type": "object", "properties": { "candidateArtifactsMatch": { "const": true }, "runningExecutableMatches": { "const": true }, "nativeArm64": { "const": true }, "prohibitedArgumentsAbsent": { "const": true }, "freshProcessIdentity": { "const": true }, "publicMachineFactsMatch": { "const": true }, "acPower": { "const": false } } },
+                "stopReason": { "const": "ac-power-required" }
+              }
+            },
+            {
+              "type": "object",
+              "properties": {
+                "checks": { "type": "object", "properties": { "candidateArtifactsMatch": { "const": true }, "runningExecutableMatches": { "const": true }, "nativeArm64": { "const": true }, "prohibitedArgumentsAbsent": { "const": true }, "freshProcessIdentity": { "const": true }, "publicMachineFactsMatch": { "const": true }, "acPower": { "const": true }, "lowPowerModeOff": { "const": false } } },
+                "stopReason": { "const": "low-power-mode-enabled" }
+              }
+            },
+            {
+              "type": "object",
+              "properties": {
+                "checks": { "type": "object", "properties": { "candidateArtifactsMatch": { "const": true }, "runningExecutableMatches": { "const": true }, "nativeArm64": { "const": true }, "prohibitedArgumentsAbsent": { "const": true }, "freshProcessIdentity": { "const": true }, "publicMachineFactsMatch": { "const": true }, "acPower": { "const": true }, "lowPowerModeOff": { "const": true }, "thermalNominal": { "const": false } } },
+                "stopReason": { "const": "thermal-state-not-nominal" }
+              }
+            },
+            {
+              "type": "object",
+              "properties": {
+                "checks": { "type": "object", "properties": { "candidateArtifactsMatch": { "const": true }, "runningExecutableMatches": { "const": true }, "nativeArm64": { "const": true }, "prohibitedArgumentsAbsent": { "const": true }, "freshProcessIdentity": { "const": true }, "publicMachineFactsMatch": { "const": true }, "acPower": { "const": true }, "lowPowerModeOff": { "const": true }, "thermalNominal": { "const": true }, "persistedAmbientSubsetMatches": { "const": false } } },
+                "stopReason": { "const": "persisted-state-mismatch" }
+              }
+            },
+            {
+              "type": "object",
+              "properties": {
+                "checks": { "type": "object", "properties": { "candidateArtifactsMatch": { "const": true }, "runningExecutableMatches": { "const": true }, "nativeArm64": { "const": true }, "prohibitedArgumentsAbsent": { "const": true }, "freshProcessIdentity": { "const": true }, "publicMachineFactsMatch": { "const": true }, "acPower": { "const": true }, "lowPowerModeOff": { "const": true }, "thermalNominal": { "const": true }, "persistedAmbientSubsetMatches": { "const": true }, "displayFixtureMatches": { "const": false } } },
+                "stopReason": { "const": "display-fixture-mismatch" }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "pass": {
+      "allOf": [
+        { "$ref": "#/$defs/result" },
+        {
+          "type": "object",
+          "properties": {
+            "candidate": { "$ref": "#/$defs/candidate" },
+            "operatingSystem": { "$ref": "#/$defs/operatingSystem" },
+            "checks": {
+              "type": "object",
+              "properties": {
+                "planCollectionReady": { "const": true },
+                "candidateArtifactsMatch": { "const": true },
+                "runningExecutableMatches": { "const": true },
+                "nativeArm64": { "const": true },
+                "prohibitedArgumentsAbsent": { "const": true },
+                "freshProcessIdentity": { "const": true },
+                "publicMachineFactsMatch": { "const": true },
+                "acPower": { "const": true },
+                "lowPowerModeOff": { "const": true },
+                "thermalNominal": { "const": true },
+                "persistedAmbientSubsetMatches": { "const": true },
+                "displayFixtureMatches": { "const": true }
+              }
+            },
+            "status": { "const": "pass" },
+            "stopReason": { "type": "null" }
+          }
+        }
+      ]
+    }
+  }
+}

@@ -49,9 +49,10 @@ jobs:
           done
       - name: Verify the Homebrew cask contract
         run: ./script/verify_homebrew_cask.sh
-      - name: Verify lockfile installation plans
+      - name: Install locked contract-validator dependencies
+        run: npm ci --ignore-scripts --prefix services/mcp
+      - name: Verify remaining lockfile installation plans
         run: |
-          npm ci --ignore-scripts --dry-run --prefix services/mcp
           npm ci --ignore-scripts --dry-run --prefix apps/site
           npm ci --ignore-scripts --dry-run --prefix script/mcpb-tooling
       - name: Check deterministic SBOM generator syntax
@@ -64,6 +65,8 @@ jobs:
         run: node script/validate_resource_budgets.mjs
       - name: Validate base-M4 static-wakeup qualification plan
         run: node script/validate_m4_static_wakeup_qualification.mjs
+      - name: Validate base-M4 static-wakeup automated preflight
+        run: node script/validate_m4_static_wakeup_preflight.mjs
       - name: Validate macOS media capability probe contract
         run: node script/validate_macos_media_capability_probe.mjs --self-test
       - name: Validate the exhaustive Aerial semantic-parity launch matrix
