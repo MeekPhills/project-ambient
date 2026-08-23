@@ -101,7 +101,7 @@ fails the offline validator.
   467 packages, MCP 124, and MCPB tooling 54 without lifecycle execution.
 - `node script/validate_npm_supply_chain.mjs`: passed; three workspaces, seven
   denied packages, zero exceptions, zero moderate/high/critical findings, one
-  tracked low finding, and 63 fail-closed tamper cases. Fresh audit JSON for all
+  tracked low finding, and 64 fail-closed tamper cases. Fresh audit JSON for all
   three workspaces reconciled exactly to the governed counts and residual rows.
 - `npm test` in `apps/site`: production build passed and 12/12 rendered-route
   tests passed with Vite 8.2.2.

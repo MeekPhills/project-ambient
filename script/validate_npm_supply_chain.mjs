@@ -203,6 +203,14 @@ function installCommandIsDenied(line) {
     for (const match of npmCommands) {
       const tokens = match[1].trim().split(/\s+/).filter(Boolean)
         .map((token) => token.replace(/^["'(`]+|["'),`]+$/g, ""));
+      const scriptControlIndices = tokens.flatMap((token, index) =>
+        /^--(?:no-)?ignore[-_]scripts(?:=|$)/.test(token) ? [index] : []);
+      const scriptControlFlags = scriptControlIndices.map((index) => tokens[index]);
+      if (scriptControlFlags.some((flag) => !["--ignore-scripts", "--ignore-scripts=true"].includes(flag))) return false;
+      if (scriptControlFlags.some((flag, index) =>
+        flag === "--ignore-scripts" &&
+        /^(?:true|false|0|1|yes|no|on|off)$/i.test(tokens[scriptControlIndices[index] + 1] ?? "")
+      )) return false;
       let operation = null;
       for (let index = 0; index < tokens.length; index += 1) {
         const token = tokens[index];
@@ -217,15 +225,7 @@ function installCommandIsDenied(line) {
       if (PROHIBITED_TRANSIENT_NPM_OPERATIONS.has(operation)) return false;
       if (NON_INSTALL_NPM_OPERATIONS.has(operation)) continue;
       if (!LIFECYCLE_CAPABLE_NPM_OPERATIONS.has(operation)) continue;
-      const scriptControlIndices = tokens.flatMap((token, index) =>
-        /^--(?:no-)?ignore[-_]scripts(?:=|$)/.test(token) ? [index] : []);
-      const scriptControlFlags = scriptControlIndices.map((index) => tokens[index]);
       if (scriptControlFlags.length !== 1) return false;
-      if (!["--ignore-scripts", "--ignore-scripts=true"].includes(scriptControlFlags[0])) return false;
-      if (
-        scriptControlFlags[0] === "--ignore-scripts" &&
-        /^(?:true|false|0|1|yes|no|on|off)$/i.test(tokens[scriptControlIndices[0] + 1] ?? "")
-      ) return false;
     }
   }
   return true;
@@ -808,6 +808,7 @@ for (const unsafeCommand of [
   "npm ci --ignore-scripts --ignore-scripts=false",
   "npm ci --ignore-scripts --no-ignore-scripts",
   "npm ci --ignore-scripts false",
+  "npm --ignore-scripts false ci",
 ]) {
   assert.equal(installCommandIsDenied(unsafeCommand), false, `unguarded install command: ${unsafeCommand}`);
   tamperCases.push(`unguarded install command: ${unsafeCommand}`);
