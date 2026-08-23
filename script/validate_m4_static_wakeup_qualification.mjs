@@ -16,6 +16,8 @@ const expectedSchemaSHA256 = "5b257b69b6175683b87410d6c01516f4a3fc18ab8fd5ce239b
 const expectedPlanSHA256 = "c071f4cd6032d4d961853df8aa3820365d31dd5c369c19edcd56e182d58c0069";
 const expectedPlanRevision = "827723f222bb2a335313743b830503d8c2bda71a";
 
+export { expectedPlanRevision };
+
 const expectedBinding = {
   fixtureId: "base-2024-m4-mac-mini-16gb-256gb",
   path: "fixtures/resource-budgets/v1/base-m4-mac-mini.json",
@@ -171,7 +173,7 @@ function approximatelyEqual(left, right) {
   return Math.abs(left - right) <= 1e-12;
 }
 
-function makePlanBinding(revision, bytes) {
+export function makePlanBinding(revision, bytes) {
   assert.match(revision, revisionPattern, "plan binding revision must be a commit SHA");
   assert.notEqual(revision, "0".repeat(40), "plan binding revision cannot be a placeholder");
   const plan = JSON.parse(Buffer.from(bytes).toString("utf8"));
@@ -182,7 +184,7 @@ function makePlanBinding(revision, bytes) {
   };
 }
 
-function validatePlan(plan, resourceFixtureBytes, resourceFixture, expectedFixedStillSHA256 = null) {
+export function validatePlan(plan, resourceFixtureBytes, resourceFixture, expectedFixedStillSHA256 = null) {
   exactKeys(plan, topPlanKeys, "plan");
   assert.equal(plan.schemaVersion, 1);
   assert.equal(plan.contractId, "base-m4-static-settled-hidden-wakeups-v1");
@@ -416,7 +418,7 @@ function assertNoRetainedIdentifiers(value, at = "result") {
   }
 }
 
-function validateResult(result, planBinding) {
+export function validateResult(result, planBinding) {
   exactKeys(planBinding, ["plan", "revision", "sha256"], "plan binding");
   assert.equal(planBinding.plan.schemaVersion, 1);
   assert.equal(planBinding.plan.contractId, "base-m4-static-settled-hidden-wakeups-v1");
@@ -830,7 +832,9 @@ async function main() {
   console.log(`Static-wakeup qualification contract valid: plan only, ${counts.positives} positive and ${counts.negatives} fail-closed cases passed; no host evidence collected.`);
 }
 
-main().catch((error) => {
-  console.error(`Static-wakeup qualification validation failed: ${error.message}`);
-  process.exitCode = 1;
-});
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  main().catch((error) => {
+    console.error(`Static-wakeup qualification validation failed: ${error.message}`);
+    process.exitCode = 1;
+  });
+}

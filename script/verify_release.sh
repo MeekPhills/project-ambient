@@ -28,6 +28,30 @@ run node "$ROOT_DIR/script/validate_resource_budgets.mjs"
 run node "$ROOT_DIR/script/validate_m4_static_wakeup_qualification.mjs"
 run node "$ROOT_DIR/script/validate_m4_static_wakeup_preflight.mjs"
 run node "$ROOT_DIR/script/summarize_process_rusage_series.mjs" --self-test
+run node "$ROOT_DIR/script/collect_m4_static_wakeup_qualification.mjs" --self-test
+printf '\n› validate blocked production static-wakeup collector entry point\n'
+set +e
+COLLECTOR_STOP_OUTPUT="$(node "$ROOT_DIR/script/collect_m4_static_wakeup_qualification.mjs" 2>&1)"
+COLLECTOR_STOP_STATUS=$?
+COLLECTOR_ARGUMENT_OUTPUT="$(node "$ROOT_DIR/script/collect_m4_static_wakeup_qualification.mjs" --live 2>&1)"
+COLLECTOR_ARGUMENT_STATUS=$?
+set -e
+[[ "$COLLECTOR_STOP_STATUS" -eq 1 ]] || {
+  printf '\nCurrent-plan collector must stop with exit status 1; received %s.\n' "$COLLECTOR_STOP_STATUS" >&2
+  exit 1
+}
+[[ "$COLLECTOR_STOP_OUTPUT" == "Static-wakeup collector stopped: plan-not-collection-ready; no preflight, host adapter, or process launch invoked." ]] || {
+  printf '\nCurrent-plan collector emitted unexpected output.\n' >&2
+  exit 1
+}
+[[ "$COLLECTOR_ARGUMENT_STATUS" -eq 2 ]] || {
+  printf '\nCollector must reject unsupported arguments with exit status 2; received %s.\n' "$COLLECTOR_ARGUMENT_STATUS" >&2
+  exit 1
+}
+[[ "$COLLECTOR_ARGUMENT_OUTPUT" == "usage: collect_m4_static_wakeup_qualification.mjs [--self-test]" ]] || {
+  printf '\nCollector argument rejection emitted unexpected output.\n' >&2
+  exit 1
+}
 run node "$ROOT_DIR/script/sanitize_m4_wakeup_signposts.mjs" --self-test
 run node "$ROOT_DIR/script/validate_macos_media_capability_probe.mjs" --self-test
 if [[ "$(uname -s)" == "Darwin" ]]; then

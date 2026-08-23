@@ -167,10 +167,11 @@ future collection-ready revision still requires a separately reviewed public
 host adapter. Synthetic facts are compiled only for the native self-test; no
 production flag can inject them, and CI never invokes a live host probe.
 
-The future collector and collection-ready public host adapter must automate
-every fact that can be checked safely and deterministically. Owner attestation
-is limited to facts for which this contract has no reviewed, non-identifying
-public probe.
+The strict collector protocol engine now freezes the orchestration and
+reduction rules behind synthetic-only test seams. The collection-ready public
+host adapter must automate every fact that can be checked safely and
+deterministically. Owner attestation is limited to facts for which this
+contract has no reviewed, non-identifying public probe.
 
 | Requirement | Enforcement before a result is eligible |
 | --- | --- |
@@ -192,11 +193,13 @@ verified, collection stops incomplete.
 
 ## Tooling and privacy boundary
 
-The strict collector and collection-ready host adapter remain later
-prerequisites. They must use documented public APIs and fixed protocol
-constants: callers may not
-change the warm-up, duration, cadence, repeat count, percentile method, rank,
-or ceiling. They must not use private Apple SPI, elevation, a privileged
+The strict collector protocol engine exists, but it has no production host
+adapter and grants no authority to collect. Its active production path stops
+before any adapter or process launch because the frozen plan still has a null
+still digest. The later collection-ready host adapter must use documented
+public APIs and the engine's fixed protocol constants: callers may not change
+the warm-up, duration, cadence, repeat count, percentile method, rank, or
+ceiling. Neither component may use private Apple SPI, elevation, a privileged
 helper, EDID or I/O Registry inspection, a profiler, System Trace, unified-log
 queries or streams, or another raw diagnostic capture.
 
@@ -251,13 +254,37 @@ validates the real current-plan stopped output and argument rejection, and
 proves that the active null-still plan invokes zero host callbacks. Neither
 validator runs a live host preflight or creates evidence.
 
+`node script/collect_m4_static_wakeup_qualification.mjs --self-test` exercises
+the strict five-trial protocol over synthetic rows only. Nine positive and 39
+fail-closed cases cover the current zero-call stop, inaccessible production
+host adapter, unavailable and malformed preflight, all six exact owner
+attestations, and collector-owned launch/warm-up/sample/finalize/terminate
+calls. For each trial, the adapter must consume a collector-minted one-shot
+launch capability exactly once and return its unforgeable receipt. The
+launcher-provided process-start identity must equal the identity in every
+adapter observation, so cleanup and measurement bind to the same process.
+Process start is bounded by paired clocks around that launch; the engine requests
+exactly 901 absolute deadlines after a 300-second warm-up, binds snapshot zero
+to the warm-up clock anchor and every snapshot to its requested deadline, and
+requires the final observation within two seconds of snapshot 901. It rejects
+phase-shifted, per-gap, or cumulative clock drift from the prelaunch anchor and
+retains the largest accepted boundary, individual-gap, or cumulative-series
+drift.
+Candidate/fixture/scenario continuity, fixed fifteen-minute
+normalization, rank-five P95, valid high-wakeup failure, privacy projection,
+guaranteed post-launch termination after ownership transfer even when launcher
+or adapter validation fails, an in-flight launch barrier before collector exit,
+and no-retry/replacement behavior are also fail-closed. The synthetic path
+requires an unexported module-local test token. The production entry point
+accepts no host or fixture arguments, emits no result artifact, and exits at
+`plan-not-collection-ready` before preflight, attestation, adapter, or process
+launch. The aggregate release gate verifies that real stopped invocation and
+its argument rejection.
+
 ## Prerequisites and next action
 
 Before any qualifying collection begins, separate reviewed slices must add:
 
-- a strict collector/orchestrator that enforces this fixed five-trial protocol,
-  uses absolute monotonic deadlines, retains raw rows only temporarily, and
-  emits a closed sanitized result;
 - the collection-ready public host adapter behind the closed preflight boundary
   for candidate identity, native architecture, prohibited-argument absence,
   non-identifying machine facts, persisted Ambient state, and exact display
@@ -266,8 +293,8 @@ Before any qualifying collection begins, separate reviewed slices must add:
   followed by its provenance/rightsholder/license manifest and immutable
   reviewed asset digest.
 
-Those tools must be synthetically tested against timing, arithmetic, identity,
-fixture, privacy, and tamper failures before they collect host evidence. Until
-all prerequisites exist and a complete five-trial set passes review, wakeups
-remain `unmeasured`, issue #28 remains open, and the canonical tracker remains
-20/100 on schema v3.
+The adapter and activated plan must be tested against timing, arithmetic,
+identity, fixture, privacy, and tamper failures before they collect host
+evidence. Until all prerequisites exist and a complete five-trial set passes
+review, wakeups remain `unmeasured`, issue #28 remains open, and the canonical
+tracker remains 20/100 on schema v3.
