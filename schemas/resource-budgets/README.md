@@ -7,12 +7,27 @@ future evidence protocol without changing the resource fixture: five fresh
 process instances of one exact candidate artifact, each with a 300-second
 warm-up and a 900-second signposts-off window, 901 absolute-deadline samples,
 and nearest-rank P95 rank five against the unchanged two-wakeup-per-minute
-ceiling. The plan is
-protocol-only; it contains no candidate, windows, result, coverage advance, or
-tracker credit. A collector, public preflight, fixed non-personal still, and
-complete reviewed run are separate prerequisites. Future sanitized windows must
-retain timing extrema and closed continuity/stability proof after temporary raw
-rows are deleted.
+ceiling. The plan is protocol-only; it contains no candidate, windows, result,
+coverage advance, or tracker credit. The sibling automated-preflight schema and
+native evaluator now define a closed future stop/pass boundary, but the active
+schema accepts only the current null-still stop, reached before any host
+callback, and the production host-fact adapter remains deliberately
+unavailable. A strict collector, collection-ready
+public host adapter, fixed non-personal still, and complete reviewed run remain
+separate prerequisites. Future sanitized windows must retain timing extrema and
+closed continuity/stability proof after temporary raw rows are deleted.
+
+The still cannot be added or frozen by inference: its delivery class,
+rightsholder, license, provenance, and rights-manifest binding require explicit
+owner approval first.
+
+The future-only preflight `pass` definition means only that its twelve fixed
+automated checks passed. It is not active under the null-still plan and is never
+collection authority, qualification evidence, coverage, or tracker credit. Its
+canonical result cannot retain process identifiers, paths,
+timestamps, raw topology, arguments, logs, or machine/media identifiers; the
+six remaining owner attestations stay explicit. Synthetic facts are available
+only in a test build, and no live probe runs in CI.
 
 The current schema's active artifact branches are plan and incomplete result;
 the validator pins the frozen plan bytes, and the current incomplete-result

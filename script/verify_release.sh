@@ -26,13 +26,53 @@ run node "$ROOT_DIR/script/validate_aerial_parity.mjs"
 run node "$ROOT_DIR/script/validate_display_control.mjs"
 run node "$ROOT_DIR/script/validate_resource_budgets.mjs"
 run node "$ROOT_DIR/script/validate_m4_static_wakeup_qualification.mjs"
+run node "$ROOT_DIR/script/validate_m4_static_wakeup_preflight.mjs"
 run node "$ROOT_DIR/script/summarize_process_rusage_series.mjs" --self-test
 run node "$ROOT_DIR/script/sanitize_m4_wakeup_signposts.mjs" --self-test
 run node "$ROOT_DIR/script/validate_macos_media_capability_probe.mjs" --self-test
 if [[ "$(uname -s)" == "Darwin" ]]; then
   run xcrun clang -std=c11 -Wall -Wextra -Werror -fsyntax-only "$ROOT_DIR/script/macos_process_rusage.c"
+  PREFLIGHT_PRODUCER_REVISION="b439193ed513811bec90ce2491ec30033aa2a4e4"
+  [[ "$PREFLIGHT_PRODUCER_REVISION" =~ ^[a-f0-9]{40}$ ]] || {
+    printf '\nStatic-wakeup preflight producer revision is invalid.\n' >&2
+    exit 1
+  }
+  PREFLIGHT_PRODUCTION_BINARY="$(mktemp "${TMPDIR:-/tmp}/ambient-static-wakeup-preflight-production.XXXXXX")"
+  PREFLIGHT_TEST_BINARY="$(mktemp "${TMPDIR:-/tmp}/ambient-static-wakeup-preflight-test.XXXXXX")"
+  PREFLIGHT_OUTPUT="$(mktemp "${TMPDIR:-/tmp}/ambient-static-wakeup-preflight-output.XXXXXX")"
   MEDIA_PROBE_BINARY="$(mktemp "${TMPDIR:-/tmp}/ambient-media-capability.XXXXXX")"
-  trap 'rm -f "$MEDIA_PROBE_BINARY"' EXIT
+  trap 'rm -f "$PREFLIGHT_PRODUCTION_BINARY" "$PREFLIGHT_TEST_BINARY" "$PREFLIGHT_OUTPUT" "$MEDIA_PROBE_BINARY"' EXIT
+  run xcrun clang -fobjc-arc -fblocks -fmodules -mmacosx-version-min=14.0 -Wall -Wextra -Werror \
+    "-DAMBIENT_PREFLIGHT_PRODUCER_REVISION=\"$PREFLIGHT_PRODUCER_REVISION\"" \
+    "$ROOT_DIR/script/macos_static_wakeup_preflight.m" \
+    -framework Foundation \
+    -o "$PREFLIGHT_PRODUCTION_BINARY"
+  printf '\n› validate blocked production static-wakeup preflight output\n'
+  set +e
+  (
+    cd "$ROOT_DIR"
+    "$PREFLIGHT_PRODUCTION_BINARY" > "$PREFLIGHT_OUTPUT"
+  )
+  PREFLIGHT_STATUS=$?
+  "$PREFLIGHT_PRODUCTION_BINARY" --self-test >/dev/null 2>&1
+  PREFLIGHT_ARGUMENT_STATUS=$?
+  set -e
+  [[ "$PREFLIGHT_STATUS" -eq 1 ]] || {
+    printf '\nCurrent-plan preflight must stop with exit status 1; received %s.\n' "$PREFLIGHT_STATUS" >&2
+    exit 1
+  }
+  [[ "$PREFLIGHT_ARGUMENT_STATUS" -eq 2 ]] || {
+    printf '\nProduction preflight must reject --self-test with exit status 2; received %s.\n' "$PREFLIGHT_ARGUMENT_STATUS" >&2
+    exit 1
+  }
+  run node "$ROOT_DIR/script/validate_m4_static_wakeup_preflight.mjs" --validate-output < "$PREFLIGHT_OUTPUT"
+  run xcrun clang -fobjc-arc -fblocks -fmodules -mmacosx-version-min=14.0 -Wall -Wextra -Werror \
+    "-DAMBIENT_PREFLIGHT_PRODUCER_REVISION=\"$PREFLIGHT_PRODUCER_REVISION\"" \
+    -DAMBIENT_PREFLIGHT_TESTING=1 \
+    "$ROOT_DIR/script/macos_static_wakeup_preflight.m" \
+    -framework Foundation \
+    -o "$PREFLIGHT_TEST_BINARY"
+  run "$PREFLIGHT_TEST_BINARY" --self-test
   run xcrun clang -fobjc-arc -fmodules -mmacosx-version-min=14.0 -Wall -Wextra -Werror \
     "$ROOT_DIR/script/macos_media_capability_probe.m" \
     -framework CoreMedia -framework Foundation -framework Metal -framework VideoToolbox \
