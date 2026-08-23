@@ -22,6 +22,11 @@ run swift build "${SWIFT_FLAGS[@]}"
 run swift test "${SWIFT_FLAGS[@]}"
 run node "$ROOT_DIR/script/validate_capabilities.mjs"
 run node "$ROOT_DIR/script/validate_npm_supply_chain.mjs"
+for NPM_AUDIT_WORKSPACE in apps/site script/mcpb-tooling services/mcp; do
+  printf '\n› validate live npm audit for %s\n' "$NPM_AUDIT_WORKSPACE"
+  npm --prefix "$ROOT_DIR/$NPM_AUDIT_WORKSPACE" audit --package-lock-only --audit-level=moderate --json |
+    node "$ROOT_DIR/script/validate_npm_supply_chain.mjs" --validate-audit-result "$NPM_AUDIT_WORKSPACE"
+done
 run node "$ROOT_DIR/script/validate_rights.mjs"
 run node "$ROOT_DIR/script/validate_aerial_parity.mjs"
 run node "$ROOT_DIR/script/validate_display_control.mjs"

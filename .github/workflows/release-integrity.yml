@@ -3,9 +3,21 @@ name: Release integrity
 on:
   pull_request:
     paths:
-      - ".github/workflows/release-integrity.yml"
+      - ".github/workflows/**"
+      - "package-lock.json"
       - "**/package-lock.json"
+      - "npm-shrinkwrap.json"
+      - "**/npm-shrinkwrap.json"
+      - ".npmrc"
       - "**/.npmrc"
+      - "**/*.sh"
+      - "package.json"
+      - "**/package.json"
+      - "**/*.mjs"
+      - "Dockerfile"
+      - "**/Dockerfile"
+      - "CLAUDE.md"
+      - "CONTRIBUTING.md"
       - "docs/security/**"
       - "distribution/**"
       - "docs/release-checklist.md"
@@ -64,9 +76,11 @@ jobs:
         run: node script/validate_npm_supply_chain.mjs
       - name: Reject moderate or higher npm advisories
         run: |
-          npm --prefix apps/site audit --package-lock-only --audit-level=moderate
-          npm --prefix services/mcp audit --package-lock-only --audit-level=moderate
-          npm --prefix script/mcpb-tooling audit --package-lock-only --audit-level=moderate
+          set -o pipefail
+          for workspace in apps/site script/mcpb-tooling services/mcp; do
+            npm --prefix "$workspace" audit --package-lock-only --audit-level=moderate --json |
+              node script/validate_npm_supply_chain.mjs --validate-audit-result "$workspace"
+          done
       - name: Validate platform capability and release-binding contracts
         run: node script/validate_capabilities.mjs
       - name: Validate media-rights and commercial-boundary contracts

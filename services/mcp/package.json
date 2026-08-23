@@ -36,7 +36,7 @@
     "test": "node --import tsx --test test/**/*.test.ts",
     "test:coverage": "node --import tsx --test --experimental-test-coverage test/**/*.test.ts",
     "validate:registry": "node scripts/validate-registry.mjs",
-    "pack:mcpb": "node scripts/pack-mcpb.mjs"
+    "pack:mcpb": "../../script/build_mcpb_release.sh ./project-ambient-control.mcpb"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.30.0",

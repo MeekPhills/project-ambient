@@ -165,9 +165,9 @@ git -C "$ROOT_DIR" archive --format=zip \
 
 npm_config_cache="$STAGE_DIR/.npm-cache" \
   npm_config_userconfig=/dev/null \
-  npm pack "$MCP_DIR" --pack-destination "$STAGE_DIR" >/dev/null
+  npm pack "$MCP_DIR" --pack-destination "$STAGE_DIR" --ignore-scripts >/dev/null
 MCP_PACKAGE_PATH="$(find "$STAGE_DIR" -maxdepth 1 -type f -name '*.tgz' -print -quit)"
-[[ -n "$MCP_PACKAGE_PATH" ]] || fail 'npm pack did not create an MCP package'
+[[ -n "$MCP_PACKAGE_PATH" ]] || fail 'the MCP package archive was not created'
 MCP_PACKAGE_NAME="$(basename "$MCP_PACKAGE_PATH")"
 
 MCP_BUNDLE_PATH="$STAGE_DIR/Project-Ambient-Control-$VERSION.mcpb"

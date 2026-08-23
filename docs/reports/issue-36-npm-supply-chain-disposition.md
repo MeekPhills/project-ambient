@@ -18,6 +18,16 @@ deny-by-default boundary: lifecycle scripts are disabled by workspace-local
 configuration and by explicit flags in CI, release packaging, documentation,
 and container installs. There are no package exceptions.
 
+Repository discovery covers root and nested lockfiles even below generated-name
+directories, rejects lock/config symlinks, and rejects `npm-shrinkwrap.json`
+because npm would give it precedence over the governed `package-lock.json`.
+Lifecycle-capable npm commands require one unambiguous true
+`--ignore-scripts` flag; false, duplicate, alias, chained, wrapped, and multiline
+forms fail closed. Root install/pack/publish lifecycle hooks and transient `npx`
+execution are prohibited. The MCPB command uses the exact committed tooling
+lock, and release `npm pack` is independently exercised with prepack, prepare,
+and postpack marker hooks to prove none run.
+
 Moderate, high, or critical advisories fail the release-integrity job. The
 machine-checked policy, lock digests, exact install-script inventory, captured
 audit counts, and residual disposition are in
@@ -60,6 +70,12 @@ workspaces.
 No unattended `npm audit fix --force`, blanket legacy-peer bypass, or advisory
 suppression is used.
 
+Each release gate obtains fresh npm audit JSON for all three workspaces and
+passes it directly to the policy validator. Severity counts and every retained
+low advisory's GHSA, package, node path, severity, and workspace must match the
+governed rows exactly; fabricated, duplicate, misplaced, or missing residuals
+fail even when the moderate threshold itself would exit successfully.
+
 ## Residual low finding
 
 `GHSA-4x5r-pxfx-6jf8` remains against development-only `@babel/core@7.29.0`
@@ -83,7 +99,8 @@ fails the offline validator.
   467 packages, MCP 124, and MCPB tooling 54 without lifecycle execution.
 - `node script/validate_npm_supply_chain.mjs`: passed; three workspaces, seven
   denied packages, zero exceptions, zero moderate/high/critical findings, one
-  tracked low finding, and 14 fail-closed tamper cases.
+  tracked low finding, and 44 fail-closed tamper cases. Fresh audit JSON for all
+  three workspaces reconciled exactly to the governed counts and residual rows.
 - `npm test` in `apps/site`: production build passed and 12/12 rendered-route
   tests passed with Vite 8.2.2.
 - `drizzle-kit check` and isolated `drizzle-kit generate`: passed; no schema

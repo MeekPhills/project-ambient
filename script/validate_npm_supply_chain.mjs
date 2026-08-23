@@ -1,8 +1,21 @@
 #!/usr/bin/env node
 
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { readFileSync, readdirSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  lstatSync,
+  existsSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  statSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
 import { dirname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -12,7 +25,30 @@ const EXPECTED_WORKSPACES = ["apps/site", "script/mcpb-tooling", "services/mcp"]
 const NPMRC_BYTES = "ignore-scripts=true\n";
 const DISPOSITION = "disabled-by-default-no-exception";
 const SEVERITIES = ["info", "low", "moderate", "high", "critical", "total"];
-const IGNORED_DISCOVERY_DIRECTORIES = new Set([".git", ".build", ".next", ".vinext", ".wrangler", "coverage", "dist", "node_modules"]);
+const PRUNED_DISCOVERY_DIRECTORIES = new Set([".git", "node_modules"]);
+const GENERATED_OPERATIONAL_DIRECTORIES = new Set([".build", ".next", ".vinext", ".wrangler", "coverage", "dist"]);
+const LIFECYCLE_CAPABLE_NPM_OPERATIONS = new Set([
+  "add", "ci", "clean-install", "dedupe", "i", "ic", "in", "ins", "inst",
+  "install", "install-clean", "link", "pack", "prune", "publish", "r", "rb",
+  "rebuild", "remove", "rm", "un", "uninstall", "unlink", "up", "update", "upgrade",
+]);
+const NON_INSTALL_NPM_OPERATIONS = new Set([
+  "access", "audit", "bugs", "cache", "completion", "config", "deprecate", "diff",
+  "dist-tag", "docs", "doctor", "edit", "exec", "explain", "explore", "find-dupes",
+  "fund", "help", "hook", "init", "ll", "login", "logout", "ls", "org", "outdated",
+  "owner", "ping", "pkg", "prefix", "profile", "query", "repo",
+  "restart", "root", "run", "run-script", "sbom", "search", "set", "shrinkwrap",
+  "star", "stars", "start", "stop", "team", "test", "token", "unpublish", "unstar",
+  "version", "view", "whoami",
+]);
+const NPM_OPTIONS_WITH_VALUES = new Set([
+  "--cache", "--location", "--loglevel", "--prefix", "--registry", "--scope",
+  "--userconfig", "--workspace", "-C", "-w",
+]);
+const PROHIBITED_ROOT_LIFECYCLE_SCRIPTS = new Set([
+  "dependencies", "install", "postinstall", "postpack", "postpublish", "preinstall",
+  "prepack", "prepare", "prepublish", "prepublishOnly", "publish",
+]);
 
 function readText(path) {
   return readFileSync(join(ROOT, path), "utf8");
@@ -26,29 +62,184 @@ function sha256(path) {
   return createHash("sha256").update(readFileSync(join(ROOT, path))).digest("hex");
 }
 
-function discoverRepositoryFiles(directory = ROOT, found = []) {
+function discoverRepositoryEntries(
+  directory = ROOT,
+  rootDirectory = directory,
+  found = { files: [], symlinks: [] },
+  generated = false,
+) {
   for (const entry of readdirSync(directory, { withFileTypes: true })) {
-    if (entry.isSymbolicLink()) continue;
-    if (entry.isDirectory()) {
-      if (!IGNORED_DISCOVERY_DIRECTORIES.has(entry.name)) discoverRepositoryFiles(join(directory, entry.name), found);
+    if (PRUNED_DISCOVERY_DIRECTORIES.has(entry.name)) continue;
+    const absolutePath = join(directory, entry.name);
+    const repositoryPath = relative(rootDirectory, absolutePath).split(sep).join("/");
+    if (entry.isSymbolicLink()) {
+      if (!generated || isPackageLockPath(repositoryPath) || isNpmShrinkwrapPath(repositoryPath) || isNpmrcPath(repositoryPath)) {
+        found.symlinks.push(repositoryPath);
+      }
       continue;
     }
-    if (entry.isFile()) found.push(relative(ROOT, join(directory, entry.name)).split(sep).join("/"));
+    if (entry.isDirectory()) {
+      discoverRepositoryEntries(
+        absolutePath,
+        rootDirectory,
+        found,
+        generated || GENERATED_OPERATIONAL_DIRECTORIES.has(entry.name),
+      );
+      continue;
+    }
+    if (entry.isFile()) found.files.push(repositoryPath);
   }
   return found;
 }
 
-function validateDiscoveredLockfiles(discovered, errors) {
-  const expected = EXPECTED_WORKSPACES.map((workspace) => `${workspace}/package-lock.json`);
-  if (JSON.stringify(discovered) !== JSON.stringify(expected)) {
+function discoverTrackedRepositoryEntries() {
+  const output = execFileSync("git", ["ls-files", "--stage", "-z"], {
+    cwd: ROOT,
+    encoding: "utf8",
+    maxBuffer: 16 * 1024 * 1024,
+  });
+  const found = { files: [], symlinks: [] };
+  for (const record of output.split("\0")) {
+    if (record.length === 0) continue;
+    const tab = record.indexOf("\t");
+    assert.ok(tab > 0, "git tracked-file discovery emitted an invalid record");
+    const metadata = record.slice(0, tab).split(" ");
+    const path = record.slice(tab + 1);
+    assert.equal(metadata.length, 3, `git tracked-file metadata is invalid for ${path}`);
+    const mode = metadata[0];
+    try {
+      lstatSync(join(ROOT, path));
+    } catch {
+      if (mode === "160000") found.symlinks.push(path);
+      continue;
+    }
+    if (mode === "100644" || mode === "100755") found.files.push(path);
+    else found.symlinks.push(path);
+  }
+  return found;
+}
+
+function discoverGovernedRepositoryEntries() {
+  const filesystem = discoverRepositoryEntries();
+  const tracked = discoverTrackedRepositoryEntries();
+  return {
+    files: [...new Set([...filesystem.files, ...tracked.files])],
+    symlinks: [...new Set([...filesystem.symlinks, ...tracked.symlinks])],
+  };
+}
+
+function isPackageLockPath(path) {
+  return path === "package-lock.json" || path.endsWith("/package-lock.json");
+}
+
+function isNpmShrinkwrapPath(path) {
+  return path === "npm-shrinkwrap.json" || path.endsWith("/npm-shrinkwrap.json");
+}
+
+function isNpmrcPath(path) {
+  return path === ".npmrc" || path.endsWith("/.npmrc");
+}
+
+function isControlledInstallFile(path) {
+  if (path.split("/").some((part) => GENERATED_OPERATIONAL_DIRECTORIES.has(part))) return false;
+  return (path.startsWith(".github/workflows/") && /\.ya?ml$/.test(path)) ||
+    path.endsWith(".sh") ||
+    path === "package.json" ||
+    path.endsWith("/package.json") ||
+    path.endsWith("/Dockerfile") ||
+    path === "Dockerfile" ||
+    path === "CLAUDE.md" ||
+    path === "README.md" ||
+    path === "CONTRIBUTING.md" ||
+    path === "apps/site/README.md" ||
+    path === "services/mcp/README.md";
+}
+
+function isControlledTransientExecutionFile(path) {
+  if (path === "script/validate_npm_supply_chain.mjs") return false;
+  return isControlledInstallFile(path) ||
+    ((path.startsWith("script/") || path.includes("/scripts/")) && /\.(?:[cm]?js|ts)$/.test(path));
+}
+
+function isControlledOperationalFile(path) {
+  return isControlledInstallFile(path) || isControlledTransientExecutionFile(path);
+}
+
+function validateDiscoveredSupplyChainFiles(lockfiles, shrinkwraps, npmrcs, symlinks, errors, rootDirectory = ROOT) {
+  const expectedLockfiles = EXPECTED_WORKSPACES.map((workspace) => `${workspace}/package-lock.json`);
+  const expectedNpmrcs = EXPECTED_WORKSPACES.map((workspace) => `${workspace}/.npmrc`);
+  if (JSON.stringify(lockfiles) !== JSON.stringify(expectedLockfiles)) {
     errors.push("repository package-lock.json discovery must match the three governed workspaces exactly");
+  }
+  if (JSON.stringify(npmrcs) !== JSON.stringify(expectedNpmrcs)) {
+    errors.push("repository .npmrc discovery must match the three governed workspaces exactly");
+  }
+  if (shrinkwraps.length !== 0) {
+    errors.push("npm-shrinkwrap.json is unsupported because it would override a governed package-lock.json");
+  }
+  for (const path of symlinks) {
+    let directoryTarget = false;
+    try {
+      directoryTarget = statSync(join(rootDirectory, path)).isDirectory();
+    } catch {
+      // A dangling or unreadable link cannot prove that supply-chain inputs are absent.
+      directoryTarget = true;
+    }
+    if (isPackageLockPath(path) || isNpmShrinkwrapPath(path) || isNpmrcPath(path) || isControlledOperationalFile(path) || directoryTarget) {
+      errors.push(`repository supply-chain discovery rejects symbolic link ${path}`);
+    }
   }
 }
 
 function installCommandIsDenied(line) {
-  const command = line.trim();
-  const installPattern = /^(?:run:\s*)?npm(?:\s+--prefix\s+\S+)?\s+(?:ci|install)\b/;
-  return !installPattern.test(command) || command.includes("--ignore-scripts");
+  const shellSegments = line.split(/&&|\|\||[;|]/);
+  for (const segment of shellSegments) {
+    const npmCommands = segment.matchAll(/(?:^|[\s:`>"'()/])npm\s+([^#]*)/g);
+    for (const match of npmCommands) {
+      const tokens = match[1].trim().split(/\s+/).filter(Boolean);
+      let operation = null;
+      for (let index = 0; index < tokens.length; index += 1) {
+        const token = tokens[index];
+        if (token.startsWith("-")) {
+          if (NPM_OPTIONS_WITH_VALUES.has(token)) index += 1;
+          continue;
+        }
+        operation = token;
+        break;
+      }
+      if (NON_INSTALL_NPM_OPERATIONS.has(operation)) continue;
+      const lifecycleOperation = LIFECYCLE_CAPABLE_NPM_OPERATIONS.has(operation) ||
+        tokens.some((token) => LIFECYCLE_CAPABLE_NPM_OPERATIONS.has(token));
+      if (!lifecycleOperation) continue;
+      const ignoreScriptFlags = tokens.filter((token) => token.startsWith("--ignore-scripts"));
+      if (ignoreScriptFlags.length !== 1) return false;
+      if (!["--ignore-scripts", "--ignore-scripts=true"].includes(ignoreScriptFlags[0])) return false;
+    }
+  }
+  return true;
+}
+
+function auditReportingIsSuppressed(line) {
+  return /\b(?:npm_config_audit|NPM_CONFIG_AUDIT)\s*=\s*["']?(?:false|0|no)["']?(?:\s|$)/i.test(line) ||
+    /(?:^|\s)(?:--no-audit|--audit=["']?(?:false|0|no)["']?)(?:\s|$)/i.test(line) ||
+    /(?:^|\s)npm\s+config\s+set\s+audit(?:\s+|=)["']?(?:false|0|no)["']?(?:\s|$)/i.test(line);
+}
+
+function transientNpxIsUsed(line) {
+  return /(?:^|[\s:`>"'()/])npx\b/.test(line);
+}
+
+function validateWorkspaceRootScripts(packageJSON, at, errors) {
+  if (packageJSON.scripts === undefined) return;
+  if (!isObject(packageJSON.scripts)) {
+    errors.push(`${at}.scripts must be an object when present`);
+    return;
+  }
+  for (const name of Object.keys(packageJSON.scripts)) {
+    if (PROHIBITED_ROOT_LIFECYCLE_SCRIPTS.has(name)) {
+      errors.push(`${at}.scripts.${name} is prohibited by the no-lifecycle execution policy`);
+    }
+  }
 }
 
 function isObject(value) {
@@ -162,6 +353,145 @@ function validatePolicyShape(policy) {
   return errors;
 }
 
+function sortIdentityRows(rows) {
+  return [...rows].sort((left, right) => JSON.stringify(left).localeCompare(JSON.stringify(right)));
+}
+
+function validateLiveAuditResult(policy, workspacePath, input) {
+  assert.ok(EXPECTED_WORKSPACES.includes(workspacePath), "live audit workspace is not governed");
+  assert.ok(Buffer.byteLength(input, "utf8") > 0, "live npm audit output is empty");
+  assert.ok(Buffer.byteLength(input, "utf8") <= 8 * 1024 * 1024, "live npm audit output exceeds 8 MiB");
+  const report = JSON.parse(input);
+  assert.equal(report.auditReportVersion, 2, "live npm audit report version must equal 2");
+  assert.ok(isObject(report.vulnerabilities), "live npm audit vulnerabilities must be an object");
+  assert.ok(isObject(report.metadata), "live npm audit metadata must be an object");
+  assert.ok(isObject(report.metadata.vulnerabilities), "live npm audit counts must be an object");
+  assert.deepEqual(Object.keys(report.metadata.vulnerabilities).sort(), [...SEVERITIES].sort(), "live npm audit count keys drifted");
+  for (const severity of SEVERITIES) {
+    assert.ok(Number.isInteger(report.metadata.vulnerabilities[severity]) && report.metadata.vulnerabilities[severity] >= 0, `live npm audit ${severity} count is invalid`);
+  }
+  const expectedWorkspace = policy.auditPolicy.workspaces.find((workspace) => workspace.path === workspacePath);
+  assert.ok(expectedWorkspace, "live npm audit workspace has no policy row");
+  assert.deepEqual(report.metadata.vulnerabilities, expectedWorkspace.counts, `live npm audit counts drifted for ${workspacePath}`);
+  assert.equal(Object.keys(report.vulnerabilities).length, report.metadata.vulnerabilities.total, "live npm audit vulnerability rows do not match total");
+  assert.equal(report.metadata.vulnerabilities.moderate, 0, "live npm audit retains a moderate advisory");
+  assert.equal(report.metadata.vulnerabilities.high, 0, "live npm audit retains a high advisory");
+  assert.equal(report.metadata.vulnerabilities.critical, 0, "live npm audit retains a critical advisory");
+
+  const actualResiduals = [];
+  for (const [packageName, vulnerability] of Object.entries(report.vulnerabilities)) {
+    assert.ok(isObject(vulnerability), `live npm audit vulnerability ${packageName} must be an object`);
+    assert.equal(vulnerability.name, packageName, `live npm audit vulnerability ${packageName} changed its package name`);
+    assert.equal(vulnerability.severity, "low", `live npm audit vulnerability ${packageName} is not low`);
+    assert.ok(Array.isArray(vulnerability.nodes) && vulnerability.nodes.length > 0, `live npm audit vulnerability ${packageName} has no node path`);
+    assert.ok(Array.isArray(vulnerability.via), `live npm audit vulnerability ${packageName} has no advisory path`);
+    const advisoryRows = vulnerability.via.filter(isObject);
+    assert.ok(advisoryRows.length > 0, `live npm audit vulnerability ${packageName} has no direct advisory identity`);
+    for (const advisory of advisoryRows) {
+      const identifier = typeof advisory.url === "string"
+        ? advisory.url.match(/(?:^|\/)(GHSA-[a-z0-9-]+)(?:$|[?#])/)?.[1]
+        : null;
+      assert.match(identifier ?? "", /^GHSA-[a-z0-9-]+$/, `live npm audit vulnerability ${packageName} has no canonical GHSA identity`);
+      assert.equal(advisory.name, packageName, `live npm audit advisory ${identifier} changed package identity`);
+      assert.equal(advisory.severity, "low", `live npm audit advisory ${identifier} is not low`);
+      for (const nodePath of vulnerability.nodes) {
+        assert.equal(typeof nodePath, "string", `live npm audit advisory ${identifier} has an invalid node path`);
+        actualResiduals.push({
+          advisory: identifier,
+          package: packageName,
+          nodePath,
+          severity: "low",
+          workspace: workspacePath,
+        });
+      }
+    }
+  }
+  const expectedResiduals = policy.auditPolicy.residualFindings
+    .filter((finding) => finding.workspace === workspacePath)
+    .map(({ advisory, package: packageName, nodePath, severity, workspace }) => ({
+      advisory,
+      package: packageName,
+      nodePath,
+      severity,
+      workspace,
+    }));
+  assert.deepEqual(
+    sortIdentityRows(actualResiduals),
+    sortIdentityRows(expectedResiduals),
+    `live npm audit residual identities drifted for ${workspacePath}`,
+  );
+}
+
+function makeLiveAuditFixture(policy, workspacePath) {
+  const workspace = policy.auditPolicy.workspaces.find((row) => row.path === workspacePath);
+  const residuals = policy.auditPolicy.residualFindings.filter((finding) => finding.workspace === workspacePath);
+  const vulnerabilities = Object.fromEntries(residuals.map((finding) => [finding.package, {
+    name: finding.package,
+    severity: finding.severity,
+    isDirect: false,
+    via: [{
+      source: 1,
+      name: finding.package,
+      dependency: finding.package,
+      title: "synthetic validator fixture",
+      url: `https://github.com/advisories/${finding.advisory}`,
+      severity: finding.severity,
+      cwe: [],
+      cvss: { score: 0, vectorString: null },
+      range: "*",
+    }],
+    effects: [],
+    range: "*",
+    nodes: [finding.nodePath],
+    fixAvailable: true,
+  }]));
+  return {
+    auditReportVersion: 2,
+    vulnerabilities,
+    metadata: {
+      vulnerabilities: structuredClone(workspace.counts),
+      dependencies: { prod: 0, dev: 0, optional: 0, peer: 0, peerOptional: 0, total: 0 },
+    },
+  };
+}
+
+function validateNpmPackLifecycleDenial() {
+  const fixtureRoot = mkdtempSync(join(tmpdir(), "ambient-npm-pack-denial-"));
+  const outputDirectory = join(fixtureRoot, "packed");
+  try {
+    mkdirSync(outputDirectory);
+    writeFileSync(join(fixtureRoot, "hook.mjs"), 'import { writeFileSync } from "node:fs"; writeFileSync(process.argv[2], "ran\\n");\n');
+    writeFileSync(join(fixtureRoot, "package.json"), `${JSON.stringify({
+      name: "ambient-npm-pack-denial-fixture",
+      version: "1.0.0",
+      scripts: {
+        prepack: "node hook.mjs prepack-marker",
+        prepare: "node hook.mjs prepare-marker",
+        postpack: "node hook.mjs postpack-marker",
+      },
+    }, null, 2)}\n`);
+    execFileSync("npm", [
+      "pack", fixtureRoot,
+      "--pack-destination", outputDirectory,
+      "--ignore-scripts",
+      "--json",
+    ], {
+      cwd: fixtureRoot,
+      env: {
+        ...process.env,
+        npm_config_cache: join(fixtureRoot, "npm-cache"),
+        npm_config_userconfig: "/dev/null",
+      },
+      stdio: "pipe",
+    });
+    for (const marker of ["prepack-marker", "prepare-marker", "postpack-marker"]) {
+      assert.equal(existsSync(join(fixtureRoot, marker)), false, `npm pack executed prohibited ${marker}`);
+    }
+  } finally {
+    rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+}
+
 function lockInstallScriptInventory(lock) {
   return Object.entries(lock.packages ?? {})
     .filter(([, value]) => value?.hasInstallScript === true)
@@ -176,9 +506,19 @@ function lockInstallScriptInventory(lock) {
 
 function validateRepository(policy) {
   const errors = [];
-  const repositoryFiles = discoverRepositoryFiles().sort();
-  const discoveredLockfiles = repositoryFiles.filter((path) => path.endsWith("/package-lock.json"));
-  validateDiscoveredLockfiles(discoveredLockfiles, errors);
+  const repositoryEntries = discoverGovernedRepositoryEntries();
+  const repositoryFiles = repositoryEntries.files.sort();
+  const repositorySymlinks = repositoryEntries.symlinks.sort();
+  const discoveredLockfiles = repositoryFiles.filter(isPackageLockPath);
+  const discoveredShrinkwraps = repositoryFiles.filter(isNpmShrinkwrapPath);
+  const discoveredNpmrcs = repositoryFiles.filter(isNpmrcPath);
+  validateDiscoveredSupplyChainFiles(
+    discoveredLockfiles,
+    discoveredShrinkwraps,
+    discoveredNpmrcs,
+    repositorySymlinks,
+    errors,
+  );
   for (const workspace of policy.installPolicy.workspaces) {
     const lockPath = `${workspace.path}/package-lock.json`;
     const packagePath = `${workspace.path}/package.json`;
@@ -187,6 +527,7 @@ function validateRepository(policy) {
     if (readText(npmrcPath) !== NPMRC_BYTES) errors.push(`${npmrcPath} must contain only the exact deny policy`);
     const lock = readJSON(lockPath);
     const packageJSON = readJSON(packagePath);
+    validateWorkspaceRootScripts(packageJSON, packagePath, errors);
     if (lock.lockfileVersion !== 3) errors.push(`${lockPath} must use lockfileVersion 3`);
     const rootPackage = lock.packages?.[""];
     if (!rootPackage || rootPackage.name !== packageJSON.name || rootPackage.version !== packageJSON.version) errors.push(`${lockPath} root package does not match package.json`);
@@ -194,28 +535,73 @@ function validateRepository(policy) {
     if (JSON.stringify(actualInventory) !== JSON.stringify(workspace.installScriptPackages)) errors.push(`${lockPath} install-script inventory drifted`);
   }
 
-  const controlledInstallFiles = repositoryFiles.filter((path) =>
-    (path.startsWith(".github/workflows/") && /\.ya?ml$/.test(path)) ||
-    path.endsWith(".sh") ||
-    path.endsWith("/Dockerfile") ||
-    path === "Dockerfile" ||
-    path === "CLAUDE.md" ||
-    path === "apps/site/README.md" ||
-    path === "services/mcp/README.md"
-  );
+  const controlledInstallFiles = repositoryFiles.filter(isControlledInstallFile);
   for (const path of controlledInstallFiles) {
     for (const [index, line] of readText(path).split("\n").entries()) {
       if (!installCommandIsDenied(line)) errors.push(`${path}:${index + 1} npm install command must explicitly disable lifecycle scripts`);
+      if (auditReportingIsSuppressed(line)) errors.push(`${path}:${index + 1} npm advisory reporting must not be suppressed`);
+    }
+  }
+  for (const path of repositoryFiles.filter(isControlledTransientExecutionFile)) {
+    for (const [index, line] of readText(path).split("\n").entries()) {
+      if (transientNpxIsUsed(line)) errors.push(`${path}:${index + 1} transient npx execution is prohibited; use committed locked tooling`);
     }
   }
   const aggregate = readText("script/verify_release.sh");
   if (!aggregate.includes("validate_npm_supply_chain.mjs")) errors.push("script/verify_release.sh must invoke the npm supply-chain validator");
   const workflow = readText(".github/workflows/release-integrity.yml");
   if (!workflow.includes("node script/validate_npm_supply_chain.mjs")) errors.push("release-integrity.yml must invoke the npm supply-chain validator");
-  for (const trigger of ["**/package-lock.json", "**/.npmrc", "docs/security/**"]) {
+  for (const [path, content] of [
+    ["script/verify_release.sh", aggregate],
+    [".github/workflows/release-integrity.yml", workflow],
+  ]) {
+    if (!content.includes("audit --package-lock-only --audit-level=moderate --json")) errors.push(`${path} must collect live npm audit JSON`);
+    if (!content.includes("--validate-audit-result")) errors.push(`${path} must reconcile live npm audit identities`);
+  }
+  for (const trigger of [
+    ".github/workflows/**",
+    "package-lock.json",
+    "**/package-lock.json",
+    "npm-shrinkwrap.json",
+    "**/npm-shrinkwrap.json",
+    ".npmrc",
+    "**/.npmrc",
+    "**/*.sh",
+    "package.json",
+    "**/package.json",
+    "**/*.mjs",
+    "Dockerfile",
+    "**/Dockerfile",
+    "CLAUDE.md",
+    "CONTRIBUTING.md",
+    "docs/security/**",
+  ]) {
     if (!workflow.includes(`- "${trigger}"`)) errors.push(`release-integrity.yml must trigger on ${trigger}`);
   }
+  const mcpPackage = readJSON("services/mcp/package.json");
+  if (mcpPackage.scripts?.["pack:mcpb"] !== "../../script/build_mcpb_release.sh ./project-ambient-control.mcpb") {
+    errors.push("services/mcp pack:mcpb must use the committed locked MCPB builder");
+  }
+  if (repositoryFiles.includes("services/mcp/scripts/pack-mcpb.mjs")) {
+    errors.push("the retired transient MCPB packer must not return");
+  }
   return errors;
+}
+
+function withDiscoveryFixture(setup, verify) {
+  const fixtureRoot = mkdtempSync(join(tmpdir(), "ambient-npm-policy-discovery-"));
+  try {
+    for (const workspace of EXPECTED_WORKSPACES) {
+      mkdirSync(join(fixtureRoot, workspace), { recursive: true });
+      writeFileSync(join(fixtureRoot, workspace, "package-lock.json"), "{}\n");
+      writeFileSync(join(fixtureRoot, workspace, ".npmrc"), NPMRC_BYTES);
+    }
+    setup(fixtureRoot);
+    const entries = discoverRepositoryEntries(fixtureRoot);
+    verify(entries, fixtureRoot);
+  } finally {
+    rmSync(fixtureRoot, { recursive: true, force: true });
+  }
 }
 
 function assertInvalid(candidate, label) {
@@ -231,6 +617,14 @@ function assertInvalid(candidate, label) {
 }
 
 const policy = readJSON(POLICY_PATH);
+const arguments_ = process.argv.slice(2);
+if (arguments_.length > 0) {
+  assert.deepEqual(arguments_.slice(0, 1), ["--validate-audit-result"], "usage: validate_npm_supply_chain.mjs [--validate-audit-result workspace]");
+  assert.equal(arguments_.length, 2, "usage: validate_npm_supply_chain.mjs [--validate-audit-result workspace]");
+  validateLiveAuditResult(policy, arguments_[1], readFileSync(0, "utf8"));
+  console.log(`OK: live npm audit exactly matches the governed counts and residual identities for ${arguments_[1]}`);
+  process.exit(0);
+}
 const tamperCases = [];
 function tamper(label, mutate) {
   const candidate = structuredClone(policy);
@@ -251,13 +645,174 @@ tamper("moderate advisory retained", (value) => { value.auditPolicy.workspaces[0
 tamper("residual severity promoted", (value) => { value.auditPolicy.residualFindings[0].severity = "high"; });
 tamper("residual path hidden", (value) => { value.auditPolicy.residualFindings[0].nodePath = "unknown"; });
 tamper("tracker credit changed", (value) => { value.tracker.creditChange = 1; });
-const discoveryErrors = [];
-validateDiscoveredLockfiles([...EXPECTED_WORKSPACES.map((workspace) => `${workspace}/package-lock.json`), "unreviewed/package-lock.json"], discoveryErrors);
-assert.ok(discoveryErrors.length > 0, "unreviewed lockfile discovery");
-tamperCases.push("unreviewed lockfile discovery");
-assert.equal(installCommandIsDenied("npm ci"), false, "unguarded install command");
-assert.equal(installCommandIsDenied("npm ci --ignore-scripts"), true, "guarded install command");
-tamperCases.push("unguarded install command");
+withDiscoveryFixture(
+  () => {},
+  (entries, fixtureRoot) => {
+    const errors = [];
+    validateDiscoveredSupplyChainFiles(
+      entries.files.filter(isPackageLockPath).sort(),
+      entries.files.filter(isNpmShrinkwrapPath).sort(),
+      entries.files.filter(isNpmrcPath).sort(),
+      entries.symlinks.sort(),
+      errors,
+      fixtureRoot,
+    );
+    assert.deepEqual(errors, [], "baseline supply-chain discovery fixture");
+  },
+);
+withDiscoveryFixture(
+  (fixtureRoot) => writeFileSync(join(fixtureRoot, "package-lock.json"), "{}\n"),
+  (entries, fixtureRoot) => {
+    const errors = [];
+    validateDiscoveredSupplyChainFiles(
+      entries.files.filter(isPackageLockPath).sort(),
+      entries.files.filter(isNpmShrinkwrapPath).sort(),
+      entries.files.filter(isNpmrcPath).sort(),
+      entries.symlinks.sort(),
+      errors,
+      fixtureRoot,
+    );
+    assert.ok(errors.some((error) => error.includes("package-lock.json discovery")), "repository-root lockfile discovery");
+  },
+);
+tamperCases.push("repository-root lockfile discovery");
+withDiscoveryFixture(
+  (fixtureRoot) => {
+    mkdirSync(join(fixtureRoot, "review-fixtures/dist"), { recursive: true });
+    writeFileSync(join(fixtureRoot, "review-fixtures/dist/package-lock.json"), "{}\n");
+  },
+  (entries, fixtureRoot) => {
+    const errors = [];
+    validateDiscoveredSupplyChainFiles(
+      entries.files.filter(isPackageLockPath).sort(),
+      entries.files.filter(isNpmShrinkwrapPath).sort(),
+      entries.files.filter(isNpmrcPath).sort(),
+      entries.symlinks.sort(),
+      errors,
+      fixtureRoot,
+    );
+    assert.ok(errors.some((error) => error.includes("package-lock.json discovery")), "generated-name lockfile discovery");
+  },
+);
+tamperCases.push("generated-name lockfile discovery");
+withDiscoveryFixture(
+  (fixtureRoot) => writeFileSync(join(fixtureRoot, "services/mcp/npm-shrinkwrap.json"), "{}\n"),
+  (entries, fixtureRoot) => {
+    const errors = [];
+    validateDiscoveredSupplyChainFiles(
+      entries.files.filter(isPackageLockPath).sort(),
+      entries.files.filter(isNpmShrinkwrapPath).sort(),
+      entries.files.filter(isNpmrcPath).sort(),
+      entries.symlinks.sort(),
+      errors,
+      fixtureRoot,
+    );
+    assert.ok(errors.some((error) => error.includes("npm-shrinkwrap.json is unsupported")), "npm shrinkwrap discovery");
+  },
+);
+tamperCases.push("npm shrinkwrap discovery");
+withDiscoveryFixture(
+  (fixtureRoot) => {
+    writeFileSync(join(fixtureRoot, "unreviewed-lock.json"), "{}\n");
+    mkdirSync(join(fixtureRoot, "unreviewed"), { recursive: true });
+    symlinkSync("../unreviewed-lock.json", join(fixtureRoot, "unreviewed/package-lock.json"));
+  },
+  (entries, fixtureRoot) => {
+    const errors = [];
+    validateDiscoveredSupplyChainFiles(
+      entries.files.filter(isPackageLockPath).sort(),
+      entries.files.filter(isNpmShrinkwrapPath).sort(),
+      entries.files.filter(isNpmrcPath).sort(),
+      entries.symlinks.sort(),
+      errors,
+      fixtureRoot,
+    );
+    assert.ok(errors.some((error) => error.includes("symbolic link unreviewed/package-lock.json")), "symbolic-link lockfile discovery");
+  },
+);
+tamperCases.push("symbolic-link lockfile discovery");
+withDiscoveryFixture(
+  (fixtureRoot) => writeFileSync(join(fixtureRoot, ".npmrc"), NPMRC_BYTES),
+  (entries, fixtureRoot) => {
+    const errors = [];
+    validateDiscoveredSupplyChainFiles(
+      entries.files.filter(isPackageLockPath).sort(),
+      entries.files.filter(isNpmShrinkwrapPath).sort(),
+      entries.files.filter(isNpmrcPath).sort(),
+      entries.symlinks.sort(),
+      errors,
+      fixtureRoot,
+    );
+    assert.ok(errors.some((error) => error.includes(".npmrc discovery")), "repository-root npmrc discovery");
+  },
+);
+tamperCases.push("repository-root npmrc discovery");
+for (const unsafeCommand of [
+  "npm ci",
+  "RUN npm ci",
+  "- run: npm ci",
+  "cd services/mcp && npm ci",
+  "npm ci --ignore-scripts=false",
+  "/usr/bin/npm ci",
+  "npm i",
+  "npm rebuild",
+  "npm pack .",
+  "npm publish",
+  "npm ci \\",
+  "npm ci $NPM_FLAGS",
+  "npm ci --no-ignore-scripts",
+  "npm ci --ignore-scripts --ignore-scripts=false",
+]) {
+  assert.equal(installCommandIsDenied(unsafeCommand), false, `unguarded install command: ${unsafeCommand}`);
+  tamperCases.push(`unguarded install command: ${unsafeCommand}`);
+}
+for (const safeCommand of [
+  "npm ci --ignore-scripts",
+  "RUN npm ci --ignore-scripts=true",
+  "cd services/mcp && npm ci --ignore-scripts && npm test",
+  "npm --prefix services/mcp ci --ignore-scripts",
+  "npm run ci",
+  "npm pack . --ignore-scripts",
+]) {
+  assert.equal(installCommandIsDenied(safeCommand), true, `guarded install command: ${safeCommand}`);
+}
+const lifecycleScriptErrors = [];
+validateWorkspaceRootScripts({ scripts: { prepack: "node prepack.js" } }, "fixture/package.json", lifecycleScriptErrors);
+assert.ok(lifecycleScriptErrors.some((error) => error.includes("scripts.prepack")), "root prepack hook tamper");
+tamperCases.push("root prepack hook tamper");
+assert.equal(transientNpxIsUsed('await run("npx", ["--yes", "package"])'), true, "transient npx execution");
+tamperCases.push("transient npx execution");
+for (const suppressedAudit of [
+  "export npm_config_audit=false",
+  "export npm_config_audit='false'",
+  "NPM_CONFIG_AUDIT=0 npm ci --ignore-scripts",
+  "npm ci --ignore-scripts --no-audit",
+  "npm ci --ignore-scripts --audit=\"false\"",
+  "npm config set audit false",
+  "npm config set audit=false",
+]) {
+  assert.equal(auditReportingIsSuppressed(suppressedAudit), true, `suppressed npm audit: ${suppressedAudit}`);
+  tamperCases.push(`suppressed npm audit: ${suppressedAudit}`);
+}
+for (const workspace of EXPECTED_WORKSPACES) {
+  validateLiveAuditResult(policy, workspace, JSON.stringify(makeLiveAuditFixture(policy, workspace)));
+}
+validateNpmPackLifecycleDenial();
+for (const [label, mutate] of [
+  ["fabricated residual advisory identity", (value) => { value.auditPolicy.residualFindings[0].advisory = "GHSA-aaaa-bbbb-cccc"; }],
+  ["duplicate residual advisory identity", (value) => { value.auditPolicy.residualFindings.push(structuredClone(value.auditPolicy.residualFindings[0])); }],
+  ["wrong-workspace residual advisory identity", (value) => { value.auditPolicy.residualFindings[0].workspace = "services/mcp"; }],
+  ["missing residual advisory identity", (value) => { value.auditPolicy.residualFindings = []; }],
+]) {
+  const candidate = structuredClone(policy);
+  mutate(candidate);
+  assert.throws(
+    () => validateLiveAuditResult(candidate, "apps/site", JSON.stringify(makeLiveAuditFixture(policy, "apps/site"))),
+    /live npm audit residual identities drifted/,
+    label,
+  );
+  tamperCases.push(label);
+}
 
 const shapeErrors = validatePolicyShape(policy);
 assert.deepEqual(shapeErrors, [], `invalid npm supply-chain policy:\n${shapeErrors.join("\n")}`);

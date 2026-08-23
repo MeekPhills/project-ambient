@@ -64,7 +64,6 @@ cp "$MCPB_TOOLING_DIR/package.json" "$MCPB_TOOLING_DIR/package-lock.json" "$TOOL
 (
   export npm_config_cache="$NPM_CACHE"
   export npm_config_userconfig=/dev/null
-  export npm_config_audit=false
   export npm_config_fund=false
   export npm_config_update_notifier=false
   npm --prefix "$TOOLING_STAGE_DIR" ci --ignore-scripts

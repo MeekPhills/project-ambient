@@ -13,8 +13,8 @@ Thank you for helping make macOS ambience more private, reliable, and understand
 
 ```bash
 swift test --package-path apps/macos
-cd services/mcp && npm ci && npm run check && npm test
-cd apps/site && npm ci && npm run build
+cd services/mcp && npm ci --ignore-scripts && npm run check && npm test
+cd apps/site && npm ci --ignore-scripts && npm run build
 ```
 
 Run `./script/verify_release.sh` before opening a release-related pull request.
