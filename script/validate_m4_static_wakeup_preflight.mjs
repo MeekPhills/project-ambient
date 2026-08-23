@@ -12,7 +12,8 @@ const schemaPath = path.join(root, "schemas/resource-budgets/v1/static-wakeup-pr
 const sourcePath = path.join(root, "script/macos_static_wakeup_preflight.m");
 const planPath = path.join(root, "fixtures/resource-budgets/v1/base-m4-static-wakeup-qualification-plan.json");
 const expectedPlanSHA256 = "c071f4cd6032d4d961853df8aa3820365d31dd5c369c19edcd56e182d58c0069";
-const expectedSchemaSHA256 = "781694c46da64959288e0c24c17b3c7edb3154235775ecd22b08b1b2a1e7852b";
+const expectedProducerRevision = "d97acf7d042a3138fae086e02f5aada2cfcc8116";
+const expectedSchemaSHA256 = "52112392f43cbf7fd7a1038f70a24a4b5c82e1ff8db2e0a4bcf1568fb755a9e0";
 const expectedSourceSHA256 = "1289afa2119d64cdbdb9d0ebbd46c6b5f42183d0dc3a0b1d0b6cd7371752612d";
 const sha256Pattern = /^(?!0{64}$)[a-f0-9]{64}$/;
 const revisionPattern = /^(?!0{40}$)[a-f0-9]{40}$/;
@@ -114,7 +115,7 @@ function validateResult(value, { allowCollectionReady = false } = {}) {
   assert.equal(value.contractId, "base-m4-static-settled-hidden-wakeups-preflight-v1");
   assert.equal(value.artifactKind, "automated-preflight-result");
   assert.equal(value.claimScope, "automated-preflight-only");
-  assert.match(value.producerRevision, revisionPattern);
+  assert.equal(value.producerRevision, expectedProducerRevision, "preflight output must bind the exact native source producer revision");
   assert.equal(value.qualificationPlanSHA256, expectedPlanSHA256);
   assert.deepEqual(value.remainingOwnerAttestations, ownerAttestations);
   exactKeys(value.checks, checkKeys, "preflight.checks");
@@ -191,7 +192,7 @@ function makeResult(overrides = {}) {
     contractId: "base-m4-static-settled-hidden-wakeups-preflight-v1",
     artifactKind: "automated-preflight-result",
     claimScope: "automated-preflight-only",
-    producerRevision: "a".repeat(40),
+    producerRevision: expectedProducerRevision,
     qualificationPlanSHA256: expectedPlanSHA256,
     candidate: makeCandidate(),
     operatingSystem: { version: "15.0", build: "24A1" },
@@ -242,6 +243,7 @@ function validateSchemaContract(schema) {
   assert.equal(schema.$defs.result.properties.contractId.const, "base-m4-static-settled-hidden-wakeups-preflight-v1");
   assert.equal(schema.$defs.result.properties.artifactKind.const, "automated-preflight-result");
   assert.equal(schema.$defs.result.properties.claimScope.const, "automated-preflight-only");
+  assert.equal(schema.$defs.result.properties.producerRevision.const, expectedProducerRevision);
   assert.equal(schema.$defs.result.properties.qualificationPlanSHA256.const, expectedPlanSHA256);
   assert.deepEqual(schema.$defs.result.properties.remainingOwnerAttestations.const, ownerAttestations);
   assert.equal(schema.$defs.candidate.properties.version.pattern, "^[0-9]{1,5}[.][0-9]{1,5}[.][0-9]{1,5}$");
@@ -367,6 +369,7 @@ function runSelfTests(schema, schemaBytes, source, planBytes) {
     (x) => { x.artifactKind = "qualification-result"; },
     (x) => { x.claimScope = "collection-authority"; },
     (x) => { x.producerRevision = "0".repeat(40); },
+    (x) => { x.producerRevision = "c".repeat(40); },
     (x) => { x.qualificationPlanSHA256 = "9".repeat(64); },
     (x) => { x.candidate.architecture = "x86_64"; },
     (x) => { x.candidate.executableSHA256 = "0".repeat(64); },
@@ -438,6 +441,7 @@ function runSelfTests(schema, schemaBytes, source, planBytes) {
     (x) => { x.$defs.result.required.pop(); },
     (x) => { x.$defs.checks.required.pop(); },
     (x) => { x.$defs.result.properties.claimScope.const = "qualification"; },
+    (x) => { x.$defs.result.properties.producerRevision.const = "c".repeat(40); },
     (x) => { x.$defs.result.properties.qualificationPlanSHA256.const = "9".repeat(64); },
     (x) => { x.oneOf.push({ $ref: "#/$defs/pass" }); },
     (x) => { x.$defs.currentPlanStop.allOf[1].properties.checks.properties.planCollectionReady.const = true; },

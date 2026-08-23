@@ -96,7 +96,9 @@
         },
         "artifactKind": { "const": "automated-preflight-result" },
         "claimScope": { "const": "automated-preflight-only" },
-        "producerRevision": { "$ref": "#/$defs/revision" },
+        "producerRevision": {
+          "const": "d97acf7d042a3138fae086e02f5aada2cfcc8116"
+        },
         "qualificationPlanSHA256": {
           "const": "c071f4cd6032d4d961853df8aa3820365d31dd5c369c19edcd56e182d58c0069"
         },

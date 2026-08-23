@@ -32,7 +32,7 @@ run node "$ROOT_DIR/script/sanitize_m4_wakeup_signposts.mjs" --self-test
 run node "$ROOT_DIR/script/validate_macos_media_capability_probe.mjs" --self-test
 if [[ "$(uname -s)" == "Darwin" ]]; then
   run xcrun clang -std=c11 -Wall -Wextra -Werror -fsyntax-only "$ROOT_DIR/script/macos_process_rusage.c"
-  PREFLIGHT_PRODUCER_REVISION="$(git -C "$ROOT_DIR" rev-parse HEAD)"
+  PREFLIGHT_PRODUCER_REVISION="d97acf7d042a3138fae086e02f5aada2cfcc8116"
   [[ "$PREFLIGHT_PRODUCER_REVISION" =~ ^[a-f0-9]{40}$ ]] || {
     printf '\nStatic-wakeup preflight producer revision is invalid.\n' >&2
     exit 1
