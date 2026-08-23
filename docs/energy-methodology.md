@@ -42,6 +42,26 @@ it does not replace a P95 ceiling. Missing, malformed, interrupted, identity-
 changed, or fixture-mismatched samples make that measure unqualified rather
 than permitting extrapolation from a shorter window.
 
+The settled-static wakeup scenario uses five predeclared trials, each launching
+a fresh process instance of the same exact candidate artifact. Each trial
+completes a separate 300-second warm-up before a 900-second
+signposts-off window containing 901 snapshots on absolute one-second monotonic
+deadlines. Normalize every valid window against the fixed fifteen-minute
+duration, then apply nearest-rank P95 across all five rates; rank five is the
+maximum observed rate. A missing, replaced, extra, or invalid trial makes the
+set incomplete. Never select the best five attempts, pool per-second zeroes, or
+divide by an unexpectedly long elapsed time to dilute a wakeup rate.
+The retained window summary must preserve fresh-process and warm-up completion,
+observed sampling-gap extrema, maximum cross-clock drift, process/candidate
+continuity, and fixture/scenario stability so raw-row deletion does not make an
+eligibility decision unauditable.
+Each window's eligibility must equal the conjunction of those retained proofs;
+it cannot be set false to discard a valid high trial. Every result must also
+bind the exact qualification-plan producer revision, plan-byte digest, and
+fixed-still digest. A plan with no frozen still cannot produce a complete
+qualification result or retain partial wakeup windows; its incomplete result
+must remain zero-window and `unmeasured`.
+
 Hardware capability is not runtime activity. A public report that HEVC hardware
 decode is supported does not prove that a decoder session was created, that a
 particular session is hardware-backed, or that resources remain available for

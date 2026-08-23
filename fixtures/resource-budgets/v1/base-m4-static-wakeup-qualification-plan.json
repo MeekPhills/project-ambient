@@ -1,0 +1,126 @@
+{
+  "schemaVersion": 1,
+  "contractId": "base-m4-static-settled-hidden-wakeups-v1",
+  "artifactKind": "qualification-plan",
+  "claimScope": "protocol-only",
+  "resourceFixtureBinding": {
+    "fixtureId": "base-2024-m4-mac-mini-16gb-256gb",
+    "path": "fixtures/resource-budgets/v1/base-m4-mac-mini.json",
+    "revision": "1d089dd4ee315d4750773389b7499810764aa4d2",
+    "sha256": "b2adbdac201b42d70d77a7734fcb71c3e278684fc0c7903619868a98e837c54b"
+  },
+  "protocol": {
+    "repeatCount": 5,
+    "freshProcessInstancePerTrial": true,
+    "warmupSeconds": 300,
+    "measurementSeconds": 900,
+    "samplesPerWindow": 901,
+    "samplingIntervalSeconds": 1,
+    "deadlineMode": "absolute-monotonic",
+    "samplingGapSeconds": { "minimum": 0.5, "maximum": 2 },
+    "crossClockDriftMillisecondsMax": 100,
+    "acceptedElapsedSeconds": { "minimum": 900, "maximum": 905 },
+    "signpostsEnabled": false,
+    "diagnosticsEnabled": false,
+    "normalizationMinutes": 15,
+    "percentile": 95,
+    "percentileMethod": "nearest-rank",
+    "selectedRank": 5,
+    "wakeupsPerMinuteCeiling": 2,
+    "extraAttemptsAllowed": false,
+    "replacementAttemptsAllowed": false
+  },
+  "candidateRequirements": {
+    "sameArtifactEveryTrial": true,
+    "cleanSourceRequired": true,
+    "sourceRevisionRequired": true,
+    "releaseManifestSHA256Required": true,
+    "macosArchiveSHA256Required": true,
+    "executableSHA256Required": true,
+    "architecture": "arm64",
+    "buildConfiguration": "release",
+    "allowedArtifactKinds": ["unsigned-candidate", "signed-notarized-candidate"],
+    "prohibitedArgument": "--wakeup-attribution-signposts"
+  },
+  "machineFixture": {
+    "model": "Mac mini (2024)",
+    "operatingSystem": "macOS",
+    "operatingSystemVersionRequiredBeforeCollection": true,
+    "operatingSystemBuildRequiredBeforeCollection": true,
+    "chip": "Apple M4",
+    "cpuCores": 10,
+    "gpuCores": 10,
+    "memoryGiB": 16,
+    "storageGiB": 256,
+    "acPower": true,
+    "lowPowerMode": false,
+    "thermalState": "nominal",
+    "hdr": "off",
+    "displays": [
+      { "logicalResolution": "3008x1692", "refreshHz": 240, "hiDPI": true, "awake": true, "mirrored": false },
+      { "logicalResolution": "2560x1440", "refreshHz": 60, "hiDPI": true, "awake": true, "mirrored": false }
+    ]
+  },
+  "scenario": {
+    "mode": "static",
+    "powerPolicy": "minimal",
+    "playbackStatus": "playing",
+    "rotationTrigger": "screen-lock",
+    "mediaType": "image",
+    "mediaDynamicRange": "sdr",
+    "fixedNonPersonalStillSHA256": null,
+    "fixedStillRequiredBeforeCollection": true,
+    "rulesEnabled": false,
+    "temporaryChannelActive": false,
+    "timedPauseActive": false,
+    "transitionInFlight": false,
+    "importOrScanInFlight": false,
+    "mainWindowVisible": false,
+    "settingsWindowVisible": false,
+    "importSheetVisible": false,
+    "menuBarPopoverVisible": false,
+    "userSessionUnlocked": true,
+    "interactionAllowed": false,
+    "competingControllerAllowed": false
+  },
+  "attestationPolicy": {
+    "ownerRequiredFor": [
+      "factory-base-machine-configuration",
+      "hdr-off",
+      "fixed-still-applied-to-both-displays",
+      "ambient-windows-hidden",
+      "no-user-interaction-or-transition",
+      "no-competing-controller-or-diagnostic"
+    ],
+    "automatedMismatchOverridesOwner": true,
+    "missingAutomatedCheckStopsCollection": true
+  },
+  "retentionPolicy": {
+    "rawRows": "temporary-auto-delete",
+    "retainedArtifact": "closed-sanitized-aggregates-only",
+    "prohibitedFields": [
+      "pid", "processStartToken", "absoluteTimestamp", "path", "filename",
+      "username", "hostUUID", "bootUUID", "hardwareSerial", "displayID",
+      "displaySerial", "vendorID", "productID", "edid", "registryID",
+      "environment", "logPayload"
+    ],
+    "prohibitedTools": [
+      "private-apple-spi", "elevated-helper", "edid-or-ioregistry",
+      "instruments-or-profiler", "system-trace", "unified-log-query-or-stream"
+    ]
+  },
+  "collectionState": {
+    "candidate": null,
+    "windows": [],
+    "aggregate": {
+      "acceptedWindowCount": 0,
+      "medianWakeupsPerMinute": null,
+      "rangeWakeupsPerMinute": null,
+      "p95WakeupsPerMinute": null,
+      "contractConformance": null,
+      "reason": "not-collected"
+    },
+    "coverage": { "scenarioWakeups": "unmeasured", "globalWakeups": "unmeasured" },
+    "qualification": "plan-only"
+  }
+}

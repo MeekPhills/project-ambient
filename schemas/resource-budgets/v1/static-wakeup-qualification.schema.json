@@ -1,0 +1,604 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://project-ambient.meekphillies.chatgpt.site/schemas/resource-budgets/v1/static-wakeup-qualification.schema.json",
+  "title": "Project Ambient settled-static wakeup qualification protocol",
+  "oneOf": [
+    { "$ref": "#/$defs/plan" },
+    { "$ref": "#/$defs/incompleteResult" }
+  ],
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^(?!0{64}$)[a-f0-9]{64}$" },
+    "revision": { "type": "string", "pattern": "^(?!0{40}$)[a-f0-9]{40}$" },
+    "resourceFixtureBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["fixtureId", "path", "revision", "sha256"],
+      "properties": {
+        "fixtureId": { "const": "base-2024-m4-mac-mini-16gb-256gb" },
+        "path": { "const": "fixtures/resource-budgets/v1/base-m4-mac-mini.json" },
+        "revision": { "const": "1d089dd4ee315d4750773389b7499810764aa4d2" },
+        "sha256": { "const": "b2adbdac201b42d70d77a7734fcb71c3e278684fc0c7903619868a98e837c54b" }
+      }
+    },
+    "range": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["minimum", "maximum"],
+      "properties": {
+        "minimum": { "type": "number" },
+        "maximum": { "type": "number" }
+      }
+    },
+    "protocol": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "repeatCount", "freshProcessInstancePerTrial", "warmupSeconds",
+        "measurementSeconds", "samplesPerWindow", "samplingIntervalSeconds",
+        "deadlineMode", "samplingGapSeconds",
+        "crossClockDriftMillisecondsMax", "acceptedElapsedSeconds",
+        "signpostsEnabled", "diagnosticsEnabled", "normalizationMinutes",
+        "percentile", "percentileMethod", "selectedRank",
+        "wakeupsPerMinuteCeiling", "extraAttemptsAllowed",
+        "replacementAttemptsAllowed"
+      ],
+      "properties": {
+        "repeatCount": { "const": 5 },
+        "freshProcessInstancePerTrial": { "const": true },
+        "warmupSeconds": { "const": 300 },
+        "measurementSeconds": { "const": 900 },
+        "samplesPerWindow": { "const": 901 },
+        "samplingIntervalSeconds": { "const": 1 },
+        "deadlineMode": { "const": "absolute-monotonic" },
+        "samplingGapSeconds": {
+          "allOf": [
+            { "$ref": "#/$defs/range" },
+            { "type": "object", "properties": { "minimum": { "const": 0.5 }, "maximum": { "const": 2 } } }
+          ]
+        },
+        "crossClockDriftMillisecondsMax": { "const": 100 },
+        "acceptedElapsedSeconds": {
+          "allOf": [
+            { "$ref": "#/$defs/range" },
+            { "type": "object", "properties": { "minimum": { "const": 900 }, "maximum": { "const": 905 } } }
+          ]
+        },
+        "signpostsEnabled": { "const": false },
+        "diagnosticsEnabled": { "const": false },
+        "normalizationMinutes": { "const": 15 },
+        "percentile": { "const": 95 },
+        "percentileMethod": { "const": "nearest-rank" },
+        "selectedRank": { "const": 5 },
+        "wakeupsPerMinuteCeiling": { "const": 2 },
+        "extraAttemptsAllowed": { "const": false },
+        "replacementAttemptsAllowed": { "const": false }
+      }
+    },
+    "candidateRequirements": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "sameArtifactEveryTrial", "cleanSourceRequired",
+        "sourceRevisionRequired", "releaseManifestSHA256Required",
+        "macosArchiveSHA256Required", "executableSHA256Required",
+        "architecture", "buildConfiguration", "allowedArtifactKinds",
+        "prohibitedArgument"
+      ],
+      "properties": {
+        "sameArtifactEveryTrial": { "const": true },
+        "cleanSourceRequired": { "const": true },
+        "sourceRevisionRequired": { "const": true },
+        "releaseManifestSHA256Required": { "const": true },
+        "macosArchiveSHA256Required": { "const": true },
+        "executableSHA256Required": { "const": true },
+        "architecture": { "const": "arm64" },
+        "buildConfiguration": { "const": "release" },
+        "allowedArtifactKinds": { "const": ["unsigned-candidate", "signed-notarized-candidate"] },
+        "prohibitedArgument": { "const": "--wakeup-attribution-signposts" }
+      }
+    },
+    "display": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["logicalResolution", "refreshHz", "hiDPI", "awake", "mirrored"],
+      "properties": {
+        "logicalResolution": { "type": "string" },
+        "refreshHz": { "type": "number" },
+        "hiDPI": { "const": true },
+        "awake": { "const": true },
+        "mirrored": { "const": false }
+      }
+    },
+    "machineFixture": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "model", "operatingSystem", "operatingSystemVersionRequiredBeforeCollection",
+        "operatingSystemBuildRequiredBeforeCollection", "chip", "cpuCores",
+        "gpuCores", "memoryGiB", "storageGiB",
+        "acPower", "lowPowerMode", "thermalState", "hdr", "displays"
+      ],
+      "properties": {
+        "model": { "const": "Mac mini (2024)" },
+        "operatingSystem": { "const": "macOS" },
+        "operatingSystemVersionRequiredBeforeCollection": { "const": true },
+        "operatingSystemBuildRequiredBeforeCollection": { "const": true },
+        "chip": { "const": "Apple M4" },
+        "cpuCores": { "const": 10 },
+        "gpuCores": { "const": 10 },
+        "memoryGiB": { "const": 16 },
+        "storageGiB": { "const": 256 },
+        "acPower": { "const": true },
+        "lowPowerMode": { "const": false },
+        "thermalState": { "const": "nominal" },
+        "hdr": { "const": "off" },
+        "displays": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "prefixItems": [
+            {
+              "allOf": [
+                { "$ref": "#/$defs/display" },
+                { "type": "object", "properties": { "logicalResolution": { "const": "3008x1692" }, "refreshHz": { "const": 240 } } }
+              ]
+            },
+            {
+              "allOf": [
+                { "$ref": "#/$defs/display" },
+                { "type": "object", "properties": { "logicalResolution": { "const": "2560x1440" }, "refreshHz": { "const": 60 } } }
+              ]
+            }
+          ],
+          "items": false
+        }
+      }
+    },
+    "scenario": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mode", "powerPolicy", "playbackStatus", "rotationTrigger",
+        "mediaType", "mediaDynamicRange", "fixedNonPersonalStillSHA256",
+        "fixedStillRequiredBeforeCollection", "rulesEnabled",
+        "temporaryChannelActive", "timedPauseActive", "transitionInFlight",
+        "importOrScanInFlight", "mainWindowVisible", "settingsWindowVisible",
+        "importSheetVisible", "menuBarPopoverVisible", "userSessionUnlocked",
+        "interactionAllowed", "competingControllerAllowed"
+      ],
+      "properties": {
+        "mode": { "const": "static" },
+        "powerPolicy": { "const": "minimal" },
+        "playbackStatus": { "const": "playing" },
+        "rotationTrigger": { "const": "screen-lock" },
+        "mediaType": { "const": "image" },
+        "mediaDynamicRange": { "const": "sdr" },
+        "fixedNonPersonalStillSHA256": {
+          "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/sha256" }]
+        },
+        "fixedStillRequiredBeforeCollection": { "const": true },
+        "rulesEnabled": { "const": false },
+        "temporaryChannelActive": { "const": false },
+        "timedPauseActive": { "const": false },
+        "transitionInFlight": { "const": false },
+        "importOrScanInFlight": { "const": false },
+        "mainWindowVisible": { "const": false },
+        "settingsWindowVisible": { "const": false },
+        "importSheetVisible": { "const": false },
+        "menuBarPopoverVisible": { "const": false },
+        "userSessionUnlocked": { "const": true },
+        "interactionAllowed": { "const": false },
+        "competingControllerAllowed": { "const": false }
+      }
+    },
+    "attestationPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ownerRequiredFor", "automatedMismatchOverridesOwner", "missingAutomatedCheckStopsCollection"],
+      "properties": {
+        "ownerRequiredFor": {
+          "const": [
+            "factory-base-machine-configuration",
+            "hdr-off",
+            "fixed-still-applied-to-both-displays",
+            "ambient-windows-hidden",
+            "no-user-interaction-or-transition",
+            "no-competing-controller-or-diagnostic"
+          ]
+        },
+        "automatedMismatchOverridesOwner": { "const": true },
+        "missingAutomatedCheckStopsCollection": { "const": true }
+      }
+    },
+    "retentionPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["rawRows", "retainedArtifact", "prohibitedFields", "prohibitedTools"],
+      "properties": {
+        "rawRows": { "const": "temporary-auto-delete" },
+        "retainedArtifact": { "const": "closed-sanitized-aggregates-only" },
+        "prohibitedFields": {
+          "const": [
+            "pid", "processStartToken", "absoluteTimestamp", "path", "filename",
+            "username", "hostUUID", "bootUUID", "hardwareSerial", "displayID",
+            "displaySerial", "vendorID", "productID", "edid", "registryID",
+            "environment", "logPayload"
+          ]
+        },
+        "prohibitedTools": {
+          "const": [
+            "private-apple-spi", "elevated-helper", "edid-or-ioregistry",
+            "instruments-or-profiler", "system-trace", "unified-log-query-or-stream"
+          ]
+        }
+      }
+    },
+    "planCollectionState": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["candidate", "windows", "aggregate", "coverage", "qualification"],
+      "properties": {
+        "candidate": { "type": "null" },
+        "windows": { "const": [] },
+        "aggregate": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "acceptedWindowCount", "medianWakeupsPerMinute",
+            "rangeWakeupsPerMinute", "p95WakeupsPerMinute",
+            "contractConformance", "reason"
+          ],
+          "properties": {
+            "acceptedWindowCount": { "const": 0 },
+            "medianWakeupsPerMinute": { "type": "null" },
+            "rangeWakeupsPerMinute": { "type": "null" },
+            "p95WakeupsPerMinute": { "type": "null" },
+            "contractConformance": { "type": "null" },
+            "reason": { "const": "not-collected" }
+          }
+        },
+        "coverage": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["scenarioWakeups", "globalWakeups"],
+          "properties": {
+            "scenarioWakeups": { "const": "unmeasured" },
+            "globalWakeups": { "const": "unmeasured" }
+          }
+        },
+        "qualification": { "const": "plan-only" }
+      }
+    },
+    "plan": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schemaVersion", "contractId", "artifactKind", "claimScope",
+        "resourceFixtureBinding", "protocol", "candidateRequirements",
+        "machineFixture", "scenario", "attestationPolicy",
+        "retentionPolicy", "collectionState"
+      ],
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "contractId": { "const": "base-m4-static-settled-hidden-wakeups-v1" },
+        "artifactKind": { "const": "qualification-plan" },
+        "claimScope": { "const": "protocol-only" },
+        "resourceFixtureBinding": { "$ref": "#/$defs/resourceFixtureBinding" },
+        "protocol": { "$ref": "#/$defs/protocol" },
+        "candidateRequirements": { "$ref": "#/$defs/candidateRequirements" },
+        "machineFixture": { "$ref": "#/$defs/machineFixture" },
+        "scenario": { "$ref": "#/$defs/scenario" },
+        "attestationPolicy": { "$ref": "#/$defs/attestationPolicy" },
+        "retentionPolicy": { "$ref": "#/$defs/retentionPolicy" },
+        "collectionState": { "$ref": "#/$defs/planCollectionState" }
+      }
+    },
+    "candidate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "sourceRevision", "version", "releaseManifestSHA256",
+        "macosArchiveSHA256", "executableSHA256", "architecture",
+        "buildConfiguration", "artifactKind", "cleanSource"
+      ],
+      "properties": {
+        "sourceRevision": { "$ref": "#/$defs/revision" },
+        "version": { "type": "string", "pattern": "^[0-9]+[.][0-9]+[.][0-9]+$" },
+        "releaseManifestSHA256": { "$ref": "#/$defs/sha256" },
+        "macosArchiveSHA256": { "$ref": "#/$defs/sha256" },
+        "executableSHA256": { "$ref": "#/$defs/sha256" },
+        "architecture": { "const": "arm64" },
+        "buildConfiguration": { "const": "release" },
+        "artifactKind": { "enum": ["unsigned-candidate", "signed-notarized-candidate"] },
+        "cleanSource": { "const": true }
+      }
+    },
+    "fixtureMatch": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "referenceMachine", "dualDisplay", "operatingSystemVersion",
+        "operatingSystemBuild", "operatingSystemStableAcrossEveryTrial",
+        "stableAcrossEveryTrial"
+      ],
+      "properties": {
+        "referenceMachine": { "type": "boolean" },
+        "dualDisplay": { "type": "boolean" },
+        "operatingSystemVersion": {
+          "type": "string",
+          "pattern": "^[0-9]+(?:[.][0-9]+){1,2}$"
+        },
+        "operatingSystemBuild": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9]+$"
+        },
+        "operatingSystemStableAcrossEveryTrial": { "type": "boolean" },
+        "stableAcrossEveryTrial": { "type": "boolean" }
+      }
+    },
+    "scenarioAttestation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "fixedStillSHA256", "planScenarioMatched", "settledStatic",
+        "windowsHidden", "signpostsDisabled", "diagnosticsDisabled",
+        "noInteractionOrTransition", "noCompetingControllerOrDiagnostics",
+        "complete"
+      ],
+      "properties": {
+        "fixedStillSHA256": {
+          "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/sha256" }]
+        },
+        "planScenarioMatched": { "type": "boolean" },
+        "settledStatic": { "type": "boolean" },
+        "windowsHidden": { "type": "boolean" },
+        "signpostsDisabled": { "type": "boolean" },
+        "diagnosticsDisabled": { "type": "boolean" },
+        "noInteractionOrTransition": { "type": "boolean" },
+        "noCompetingControllerOrDiagnostics": { "type": "boolean" },
+        "complete": { "type": "boolean" }
+      }
+    },
+    "window": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "index", "snapshotCount", "elapsedSeconds", "interruptWakeups",
+        "packageIdleWakeups", "normalizedWakeupsPerMinute",
+        "freshProcessInstance", "warmupCompleted",
+        "samplingGapSecondsMinimum", "samplingGapSecondsMaximum",
+        "crossClockDriftMillisecondsMaximum",
+        "processIdentityContinuous", "candidateIdentityContinuous",
+        "fixtureStable", "scenarioStable", "eligible"
+      ],
+      "properties": {
+        "index": { "type": "integer", "minimum": 1, "maximum": 5 },
+        "snapshotCount": { "const": 901 },
+        "elapsedSeconds": { "type": "number", "minimum": 900, "maximum": 905 },
+        "interruptWakeups": { "type": "integer", "minimum": 0 },
+        "packageIdleWakeups": { "type": "integer", "minimum": 0 },
+        "normalizedWakeupsPerMinute": { "type": "number", "minimum": 0 },
+        "freshProcessInstance": { "type": "boolean" },
+        "warmupCompleted": { "type": "boolean" },
+        "samplingGapSecondsMinimum": { "type": "number", "minimum": 0.5, "maximum": 2 },
+        "samplingGapSecondsMaximum": { "type": "number", "minimum": 0.5, "maximum": 2 },
+        "crossClockDriftMillisecondsMaximum": { "type": "number", "minimum": 0, "maximum": 100 },
+        "processIdentityContinuous": { "type": "boolean" },
+        "candidateIdentityContinuous": { "type": "boolean" },
+        "fixtureStable": { "type": "boolean" },
+        "scenarioStable": { "type": "boolean" },
+        "eligible": { "type": "boolean" }
+      },
+      "allOf": [
+        {
+          "if": {
+            "required": [
+              "freshProcessInstance", "warmupCompleted",
+              "processIdentityContinuous", "candidateIdentityContinuous",
+              "fixtureStable", "scenarioStable"
+            ],
+            "properties": {
+              "freshProcessInstance": { "const": true },
+              "warmupCompleted": { "const": true },
+              "processIdentityContinuous": { "const": true },
+              "candidateIdentityContinuous": { "const": true },
+              "fixtureStable": { "const": true },
+              "scenarioStable": { "const": true }
+            }
+          },
+          "then": { "properties": { "eligible": { "const": true } } },
+          "else": { "properties": { "eligible": { "const": false } } }
+        }
+      ]
+    },
+    "resultBase": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schemaVersion", "contractId", "artifactKind", "planRevision",
+        "planSHA256",
+        "resourceFixtureBinding", "candidate", "fixtureMatch",
+        "scenarioAttestation", "protocol", "windows", "aggregate",
+        "coverage", "qualification"
+      ],
+      "properties": {
+        "schemaVersion": {},
+        "contractId": {},
+        "artifactKind": {},
+        "planRevision": {},
+        "planSHA256": {},
+        "resourceFixtureBinding": {},
+        "candidate": {},
+        "fixtureMatch": {},
+        "scenarioAttestation": {},
+        "protocol": {},
+        "windows": {},
+        "aggregate": {},
+        "coverage": {},
+        "qualification": {}
+      }
+    },
+    "incompleteResult": {
+      "allOf": [
+        { "$ref": "#/$defs/resultBase" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "schemaVersion": { "const": 1 },
+            "contractId": { "const": "base-m4-static-settled-hidden-wakeups-v1" },
+            "artifactKind": { "const": "qualification-result" },
+            "planRevision": { "const": "827723f222bb2a335313743b830503d8c2bda71a" },
+            "planSHA256": { "const": "c071f4cd6032d4d961853df8aa3820365d31dd5c369c19edcd56e182d58c0069" },
+            "resourceFixtureBinding": { "$ref": "#/$defs/resourceFixtureBinding" },
+            "candidate": { "$ref": "#/$defs/candidate" },
+            "fixtureMatch": { "$ref": "#/$defs/fixtureMatch" },
+            "scenarioAttestation": {
+              "allOf": [
+                { "$ref": "#/$defs/scenarioAttestation" },
+                {
+                  "type": "object",
+                  "properties": {
+                    "fixedStillSHA256": { "type": "null" },
+                    "planScenarioMatched": { "const": false },
+                    "complete": { "const": false }
+                  }
+                }
+              ]
+            },
+            "protocol": { "$ref": "#/$defs/protocol" },
+            "windows": { "const": [] },
+            "aggregate": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "acceptedWindowCount", "medianWakeupsPerMinute",
+                "rangeWakeupsPerMinute", "p95WakeupsPerMinute",
+                "contractConformance", "reason"
+              ],
+              "properties": {
+                "acceptedWindowCount": { "const": 0 },
+                "medianWakeupsPerMinute": { "type": "null" },
+                "rangeWakeupsPerMinute": { "type": "null" },
+                "p95WakeupsPerMinute": { "type": "null" },
+                "contractConformance": { "type": "null" },
+                "reason": { "const": "missing-attestation" }
+              }
+            },
+            "coverage": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["scenarioWakeups", "globalWakeups"],
+              "properties": {
+                "scenarioWakeups": { "const": "unmeasured" },
+                "globalWakeups": { "const": "unmeasured" }
+              }
+            },
+            "qualification": { "const": "incomplete" }
+          }
+        }
+      ]
+    },
+    "completeResult": {
+      "allOf": [
+        { "$ref": "#/$defs/resultBase" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "schemaVersion": { "const": 1 },
+            "contractId": { "const": "base-m4-static-settled-hidden-wakeups-v1" },
+            "artifactKind": { "const": "qualification-result" },
+            "planRevision": { "$ref": "#/$defs/revision" },
+            "planSHA256": { "$ref": "#/$defs/sha256" },
+            "resourceFixtureBinding": { "$ref": "#/$defs/resourceFixtureBinding" },
+            "candidate": { "$ref": "#/$defs/candidate" },
+            "fixtureMatch": {
+              "allOf": [
+                { "$ref": "#/$defs/fixtureMatch" },
+                {
+                  "type": "object",
+                  "properties": {
+                    "referenceMachine": { "const": true },
+                    "dualDisplay": { "const": true },
+                    "operatingSystemStableAcrossEveryTrial": { "const": true },
+                    "stableAcrossEveryTrial": { "const": true }
+                  }
+                }
+              ]
+            },
+            "scenarioAttestation": {
+              "allOf": [
+                { "$ref": "#/$defs/scenarioAttestation" },
+                {
+                  "type": "object",
+                  "properties": {
+                    "fixedStillSHA256": { "$ref": "#/$defs/sha256" },
+                    "planScenarioMatched": { "const": true },
+                    "settledStatic": { "const": true },
+                    "windowsHidden": { "const": true },
+                    "signpostsDisabled": { "const": true },
+                    "diagnosticsDisabled": { "const": true },
+                    "noInteractionOrTransition": { "const": true },
+                    "noCompetingControllerOrDiagnostics": { "const": true },
+                    "complete": { "const": true }
+                  }
+                }
+              ]
+            },
+            "protocol": { "$ref": "#/$defs/protocol" },
+            "windows": {
+              "type": "array",
+              "minItems": 5,
+              "maxItems": 5,
+              "items": {
+                "allOf": [
+                  { "$ref": "#/$defs/window" },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "freshProcessInstance": { "const": true },
+                      "warmupCompleted": { "const": true },
+                      "processIdentityContinuous": { "const": true },
+                      "candidateIdentityContinuous": { "const": true },
+                      "fixtureStable": { "const": true },
+                      "scenarioStable": { "const": true },
+                      "eligible": { "const": true }
+                    }
+                  }
+                ]
+              }
+            },
+            "aggregate": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "acceptedWindowCount", "medianWakeupsPerMinute",
+                "rangeWakeupsPerMinute", "p95WakeupsPerMinute",
+                "contractConformance", "reason"
+              ],
+              "properties": {
+                "acceptedWindowCount": { "const": 5 },
+                "medianWakeupsPerMinute": { "type": "number", "minimum": 0 },
+                "rangeWakeupsPerMinute": { "$ref": "#/$defs/range" },
+                "p95WakeupsPerMinute": { "type": "number", "minimum": 0 },
+                "contractConformance": { "type": "boolean" },
+                "reason": { "type": "null" }
+              }
+            },
+            "coverage": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["scenarioWakeups", "globalWakeups"],
+              "properties": {
+                "scenarioWakeups": { "const": "measured" },
+                "globalWakeups": { "const": "partial" }
+              }
+            },
+            "qualification": { "enum": ["scenario-pass", "scenario-fail"] }
+          }
+        }
+      ]
+    }
+  }
+}

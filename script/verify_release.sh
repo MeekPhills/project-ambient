@@ -25,6 +25,7 @@ run node "$ROOT_DIR/script/validate_rights.mjs"
 run node "$ROOT_DIR/script/validate_aerial_parity.mjs"
 run node "$ROOT_DIR/script/validate_display_control.mjs"
 run node "$ROOT_DIR/script/validate_resource_budgets.mjs"
+run node "$ROOT_DIR/script/validate_m4_static_wakeup_qualification.mjs"
 run node "$ROOT_DIR/script/summarize_process_rusage_series.mjs" --self-test
 run node "$ROOT_DIR/script/sanitize_m4_wakeup_signposts.mjs" --self-test
 run node "$ROOT_DIR/script/validate_macos_media_capability_probe.mjs" --self-test
