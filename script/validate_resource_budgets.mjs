@@ -25,9 +25,14 @@ function validate(fixture) {
   assert.equal(fixture.referenceMachine.chip, "Apple M4", "reference chip must be Apple M4");
   assert.equal(fixture.referenceMachine.memoryGiB, 16, "reference memory must be 16 GiB");
   assert.equal(fixture.referenceMachine.storageGiB, 256, "reference storage must be 256 GiB");
-  exactKeys(fixture.displayFixture, ["required", "hdr"], "displayFixture");
+  exactKeys(fixture.displayFixture, ["required", "requiredDisplayCount", "hdr", "displays"], "displayFixture");
   assert.equal(fixture.displayFixture.required, true, "dual-display fixture is mandatory");
+  assert.equal(fixture.displayFixture.requiredDisplayCount, 2, "display fixture must require two displays");
   assert.equal(fixture.displayFixture.hdr, "off", "fixture requires HDR off");
+  assert.deepEqual(fixture.displayFixture.displays, [
+    { logicalResolution: "3008x1692", refreshHz: 240 },
+    { logicalResolution: "2560x1440", refreshHz: 60 },
+  ], "required display modes drifted");
   exactKeys(fixture.budgets, budgetKeys, "budgets");
   const staticBudget = fixture.budgets.staticSettled;
   assert.equal(staticBudget.cpuPercentP95Max, 0.2, "static CPU ceiling drifted");
@@ -63,6 +68,7 @@ const tamperCases = [
   (x) => { x.measurementCoverage.wakeups = "measured"; x.qualificationStatus = "qualified"; },
   (x) => { x.budgets.staticSettled.cpuPercentP95Max = 1; }, (x) => { x.budgets.sameSourceVideo.decoderSessionsMax = 2; },
   (x) => { x.budgets.chat.listenerAfterClose = true; }, (x) => { x.displayFixture.required = false; },
+  (x) => { x.displayFixture.displays[0].refreshHz = 120; },
   (x) => { x.trackerCredit = 1; }
 ];
 for (const tamper of tamperCases) { const candidate = clone(fixture); tamper(candidate); assert.throws(() => validate(candidate)); }
