@@ -112,7 +112,8 @@ static BOOL AmbientValidCandidate(NSDictionary *candidate) {
         && [candidate[@"architecture"] isEqual:@"arm64"]
         && [candidate[@"buildConfiguration"] isEqual:@"release"]
         && [artifactKinds containsObject:candidate[@"artifactKind"]]
-        && [candidate[@"cleanSource"] isEqual:@YES];
+        && CFGetTypeID((__bridge CFTypeRef)candidate[@"cleanSource"]) == CFBooleanGetTypeID()
+        && [candidate[@"cleanSource"] boolValue];
 }
 
 static BOOL AmbientValidOperatingSystem(NSDictionary *operatingSystem) {
@@ -357,6 +358,17 @@ static BOOL AmbientRunSelfTest(NSString *producerRevision) {
             fprintf(stderr, "empty synthetic candidate field did not stop for %s.\n", key.UTF8String);
             return NO;
         }
+    }
+    NSMutableDictionary *numericBooleanFacts = [AmbientSyntheticFacts() mutableCopy];
+    NSMutableDictionary *numericBooleanCandidate = [numericBooleanFacts[@"candidate"] mutableCopy];
+    numericBooleanCandidate[@"cleanSource"] = @1;
+    numericBooleanFacts[@"candidate"] = [numericBooleanCandidate copy];
+    NSDictionary *numericBooleanStopped = AmbientEvaluateFacts(numericBooleanFacts, producerRevision);
+    if (![numericBooleanStopped[@"status"] isEqual:@"stop"]
+        || ![numericBooleanStopped[@"stopReason"] isEqual:@"public-fact-unavailable"]
+        || ![numericBooleanStopped[@"checks"][@"planCollectionReady"] boolValue]) {
+        fprintf(stderr, "numeric synthetic clean-source value did not stop.\n");
+        return NO;
     }
     for (NSString *key in @[@"version", @"build"]) {
         NSMutableDictionary *facts = [AmbientSyntheticFacts() mutableCopy];

@@ -241,11 +241,10 @@ global-proof requirements. The command accepts no result path, runs no host
 probe, and collects no evidence.
 
 `node script/validate_m4_static_wakeup_preflight.mjs` pins the active plan and
-native evaluator at producer revision
-`d97acf7d042a3138fae086e02f5aada2cfcc8116`, requires every output to bind that
+native evaluator, requires every output to bind the final source-producing
 revision exactly, byte-pins the schema, and runs current/future synthetic cases
 through strict Draft 2020-12 validation. It exercises 15 pass/stop cases and
-rejects 77 claim, privacy, framing, schema, source, and semantic tamper cases.
+rejects 78 claim, privacy, framing, schema, source, and semantic tamper cases.
 The Darwin release gate compiles both production and test configurations,
 validates the real current-plan stopped output and argument rejection, and
 proves that the active null-still plan invokes zero host callbacks. Neither

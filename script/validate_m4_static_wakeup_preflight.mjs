@@ -14,7 +14,7 @@ const planPath = path.join(root, "fixtures/resource-budgets/v1/base-m4-static-wa
 const expectedPlanSHA256 = "c071f4cd6032d4d961853df8aa3820365d31dd5c369c19edcd56e182d58c0069";
 const expectedProducerRevision = "d97acf7d042a3138fae086e02f5aada2cfcc8116";
 const expectedSchemaSHA256 = "52112392f43cbf7fd7a1038f70a24a4b5c82e1ff8db2e0a4bcf1568fb755a9e0";
-const expectedSourceSHA256 = "1289afa2119d64cdbdb9d0ebbd46c6b5f42183d0dc3a0b1d0b6cd7371752612d";
+const expectedSourceSHA256 = "6a959914532e033862967a95826fe6821a7313809c3092a8fa5fd91fcbb5728d";
 const sha256Pattern = /^(?!0{64}$)[a-f0-9]{64}$/;
 const revisionPattern = /^(?!0{40}$)[a-f0-9]{40}$/;
 
@@ -373,6 +373,7 @@ function runSelfTests(schema, schemaBytes, source, planBytes) {
     (x) => { x.qualificationPlanSHA256 = "9".repeat(64); },
     (x) => { x.candidate.architecture = "x86_64"; },
     (x) => { x.candidate.executableSHA256 = "0".repeat(64); },
+    (x) => { x.candidate.cleanSource = 1; },
     (x) => { x.operatingSystem.version = "123.0"; },
     (x) => { x.operatingSystem.build = "C02Z91ABCDEF"; },
     (x) => { x.operatingSystem.build = "24A12345"; },
